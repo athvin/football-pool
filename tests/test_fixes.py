@@ -104,3 +104,18 @@ def test_reg_games_remaining_is_zero_during_the_playoffs(season, games_2025):
     state = _pool_state(_ctx(season, mid), [])
     assert state["reg_games_remaining"] == 0
     assert state["games_remaining"] > 0  # the pair the forecast page branches on
+
+
+def test_cli_standings_awards_berth_bonuses(monkeypatch, season, games_2025, capsys):
+    """The CLI and the site must not disagree in January."""
+    monkeypatch.setattr(cli, "load_season", lambda year: season)
+    monkeypatch.setattr(
+        "football_pool.nflverse.fetch_games", lambda *a, **k: _gd(games_2025)
+    )
+    assert cli.main(["standings"]) == 0
+    out = capsys.readouterr().out
+
+    seeded = entrant_scores(
+        season, score_teams(season, games_2025, final_seeds(season, games_2025))
+    )
+    assert f"{float(seeded['total'].iloc[0]):.2f}" in out
