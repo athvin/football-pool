@@ -420,10 +420,20 @@ a { color: inherit; }
   text-shadow: none;
 }
 
+/* A team that has not scored yet is dimmed rather than hidden. The mix has to
+   be per-theme: 22% of a dark club colour over a dark surface stays dark and
+   keeps its hue, but the same mix over a near-white surface comes out pastel
+   and every chip on the page looks bleached in the preseason. */
 .team-chip[style*='--team-bg'].dim {
   background: color-mix(in srgb, var(--team-bg) 22%, var(--surface));
   color: var(--chalk-dim);
   border-color: color-mix(in srgb, var(--team-edge) 35%, var(--rule));
+}
+
+:root[data-theme='light'] .team-chip[style*='--team-bg'].dim {
+  background: color-mix(in srgb, var(--team-bg) 45%, var(--surface));
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--team-edge) 55%, var(--rule));
 }
 
 a.team-chip { text-decoration: none; transition: transform 0.14s ease, filter 0.14s ease; }
