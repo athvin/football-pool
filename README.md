@@ -234,11 +234,11 @@ off, and nothing else changes.
   the projection table.
 - **Schedule** — the NFL slate week by week, opening on the week being played,
   with what each side of every game is worth and who in the pool holds it.
-- **Scoreboard** — points scored in each week and the standings as they stood
-  after it. (Served from `/weeks/`; the tab was renamed because "Weeks" and
-  "Schedule" side by side told you nothing about which was which.)
-- **Trends** — points and rank over the season, leverage, who is carrying whom,
-  and the gaps between neighbours.
+- **Season** — what happened and how it moved, in one place: points scored in
+  each week, the standings as they stood after it, points and rank over the
+  season, leverage, who is carrying whom, and the gaps between neighbours. The
+  old `/weeks/` and `/trends/` addresses forward here, because a year of
+  group-chat links points at them.
 - **Forecast** — where the model thinks it ends: chance of every finishing
   place, the range of final scores, and every head-to-head.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
@@ -288,7 +288,7 @@ splitting evenly so opposite cells always add to 100%. The number is printed in
 every cell and colour is only reinforcement, so it reads in greyscale and with
 any colour vision.
 
-The Trends page carries two kinds of chart, because they answer two different
+The Season page carries two kinds of chart, because they answer two different
 questions.
 
 **Compare** is the one you will use. Pick up to six people and their lines come

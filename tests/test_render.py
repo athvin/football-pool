@@ -997,17 +997,21 @@ def test_the_schedule_offers_every_entrant_their_own_stake(pool, game_data, tmp_
 
 def test_the_schedule_tab_is_in_the_nav_on_every_page(pool, game_data, tmp_path):
     written = render_site(pool, game_data, tmp_path)
-    for path in (p for p in written if p.suffix == ".html"):
-        assert 'href="/schedule/"' in path.read_text(), path
+    for page, text in _real_pages(written):
+        assert 'href="/schedule/"' in text, page
 
 
-def test_the_weeks_tab_says_what_it_actually_shows(pool, game_data, tmp_path):
-    """It sat next to "Schedule" as two tabs that both sounded like week stuff."""
+def test_the_season_tab_replaces_the_two_it_merged(pool, game_data, tmp_path):
+    """Weeks and Trends told one story between them; Season tells it in one tab."""
     render_site(pool, game_data, tmp_path)
     html = (tmp_path / "index.html").read_text()
 
-    assert ">Scoreboard</a>" in html
-    assert 'href="/weeks/"' in html  # the URL is in people's history; only the label moved
+    assert ">Season</a>" in html
+    assert 'href="/season/"' in html
+    # The old addresses still resolve — test_weeks_and_trends_forward_to_season
+    # covers that — but nothing on the site should route a reader through a stub.
+    assert 'href="/weeks/"' not in html
+    assert 'href="/trends/"' not in html
 
 
 def test_the_schedule_shows_no_model_numbers_when_the_model_is_off(
