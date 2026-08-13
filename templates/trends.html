@@ -8,10 +8,9 @@
 <div class="page-head">
   <h1 class="page-title">Trends</h1>
   <p class="page-sub">
-    Every entrant is drawn; the current top few are brought forward and labelled.
-    Hover any line to pick it out — everyone gets one colour on purpose, because
-    thirty colours would be unreadable and colouring by rank would mean people
-    change colour week to week.
+    How the season has actually moved. Start with <strong>Compare</strong> to put
+    your own line against whoever you are chasing, then read the charts below it
+    for the shape of the whole field.
   </p>
 </div>
 
@@ -49,12 +48,20 @@
   <p class="card-meta"><span>first place at the top</span></p>
 </div>
 
-<h2 class="section-title">Points, week by week</h2>
+<h2 class="section-title">The whole field</h2>
+<p class="page-sub">
+  Everyone at once, with the current top few brought forward and labelled. One
+  colour for all of them on purpose: thirty colours would be unreadable, and
+  colouring by rank would mean people change colour week to week. Hover any
+  line to pick it out.
+</p>
+
+<h3 class="section-title">Points, week by week</h3>
 <div class="chart-card">
   {{ svg.emphasis_lines(points_series, lead_names, weeks, 900, 340)|safe }}
 </div>
 
-<h2 class="section-title">Rank, week by week</h2>
+<h3 class="section-title">Rank, week by week</h3>
 <div class="chart-card">
   {{ svg.emphasis_lines(rank_series, lead_names, weeks, 900, 300, true)|safe }}
   <p class="card-meta"><span>first place at the top</span></p>

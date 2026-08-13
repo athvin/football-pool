@@ -855,23 +855,17 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 .me-picker select:focus-visible, .tz select:focus-visible { outline: 2px solid var(--live); }
 
 /* --- sortable tables --------------------------------------------------- */
-th[data-sort] {
-  cursor: pointer;
-  user-select: none;
-  padding-right: 1.2rem;
-  position: sticky; /* inherited from thead th; restated so the arrow anchors */
-}
+/* The indicator is an inline ::after rather than an absolutely positioned one.
+   Absolute positioning would need the th to be `position`ed, which collides
+   with the phone rule that makes thead th static — and an attribute selector
+   outranks it, so the arrows would silently dictate the header's positioning.
+   Flowing the glyph inline sidesteps that entirely. */
+th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
 th[data-sort]:hover { color: var(--chalk); }
 
-th[data-sort]::after {
-  content: '↕';
-  position: absolute;
-  right: 0.4rem;
-  opacity: 0.3;
-  font-size: 0.7rem;
-}
-th[data-sort][aria-sort='ascending']::after { content: '↑'; opacity: 1; color: var(--live); }
-th[data-sort][aria-sort='descending']::after { content: '↓'; opacity: 1; color: var(--live); }
+th[data-sort]::after { content: ' ↕'; opacity: 0.35; }
+th[data-sort][aria-sort='ascending']::after { content: ' ↑'; opacity: 1; color: var(--live); }
+th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; color: var(--live); }
 
 /* --- skip link --------------------------------------------------------- */
 .skip {
