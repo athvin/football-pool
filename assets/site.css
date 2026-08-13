@@ -834,6 +834,220 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 }
 .heat-cell.is-strong { fill: var(--chalk); font-weight: 600; }
 
+/* --- schedule ----------------------------------------------------------- */
+/* One week is visible at a time, and which one is chosen by CSS rather than by
+   script. `:target` means every week is a real URL, the back button works, and
+   the page is fully usable with scripting off — the JS only ever moves the
+   `is-default` class when the visitor's clock disagrees with the build's. */
+/* Only one week is ever displayed, and every section sits at the same place in
+   the document — so the browser's "scroll the target into view" leaves the week
+   switcher just above the viewport, hidden behind the sticky masthead, and you
+   have to scroll back up to change week again. A scroll margin taller than the
+   page can be pins every jump to the top of the document instead, which lands
+   with the switcher, the week's summary and its first games all on screen. */
+.week { display: none; scroll-margin-top: 100vh; }
+.week:target { display: block; }
+.week.is-default { display: block; }
+
+/* Once any week is targeted the baked default steps aside. Without `:has()` a
+   deep link shows two weeks rather than none: wrong, but still readable. */
+@supports selector(:has(*)) {
+  .weeks:has(.week:target) .week.is-default:not(:target) { display: none; }
+}
+
+.week-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 1.25rem 0 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--rule);
+}
+
+.week-switch a {
+  min-width: 2.1rem;
+  padding: 0.28rem 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  color: var(--chalk-dim);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  transition: color 0.14s ease, border-color 0.14s ease, background-color 0.14s;
+}
+
+.week-switch a:hover, .week-switch a:focus-visible {
+  color: var(--chalk);
+  background: var(--surface-2);
+  border-color: var(--edge);
+  outline: none;
+}
+
+/* The week happening right now, and the one you are looking at. They are
+   usually the same, which is why the current week is the quieter of the two. */
+.week-switch a.is-now { color: var(--live); border-color: color-mix(in srgb, var(--live) 40%, var(--rule)); }
+.week-switch a[aria-current] {
+  color: var(--field);
+  background: var(--live);
+  border-color: var(--live);
+}
+
+.week-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.week-dates { font-family: var(--mono); font-size: 0.78rem; color: var(--chalk-dim); }
+
+.biggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding: 0.55rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--edge);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+.biggest-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+.biggest-teams { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--chalk-dim); }
+.biggest-swing {
+  margin-inline-start: auto;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk-dim);
+}
+
+.games {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 1rem;
+}
+
+.game {
+  position: relative;
+  display: grid;
+  grid-template-columns: 10.5rem minmax(0, 1fr) 1.6rem minmax(0, 1fr) 4.5rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.85rem 0.5rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* Swing as a rail rather than a chart: a custom property and no extra elements,
+   on a page that already carries 272 rows. It runs the full height and encodes
+   the value in colour, because a part-height bar on a 40px row is too small a
+   difference to read. The exact figure is in the callout above, where one
+   precise number lands better than sixteen. */
+.game::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  /* --edge is the colour of everything potential rather than banked, so a hot
+     game warms towards it rather than towards the colour of a real result. */
+  background: color-mix(in srgb, var(--accent) calc(var(--swing, 0) * 100%), var(--rule));
+  opacity: calc(0.45 + 0.55 * var(--swing, 0));
+}
+
+.game { --accent: var(--live-dim); }
+.game.is-derby { --accent: var(--live); }
+/* Nobody in the pool holds either side — a third of the season. Still listed,
+   because it is the schedule, but it should not compete for attention. */
+.game.is-idle { opacity: 0.5; }
+.game.is-idle:hover { opacity: 0.9; }
+
+.game-when {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.1rem 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--chalk-dim);
+  line-height: 1.3;
+}
+.game-status { color: var(--chalk-dim); opacity: 0.75; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.62rem; }
+/* The neutral-site marker is a footnote, not a headline — it must never be the
+   thing that decides how tall a row is. */
+.game-when .badge { font-size: 0.55rem; padding: 0 0.25rem; }
+
+.game-side { display: flex; align-items: center; gap: 0.45rem; min-width: 0; }
+.game-side.home { justify-content: flex-start; }
+.game-at {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--chalk-dim);
+  text-align: center;
+  opacity: 0.6;
+}
+
+.stake {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--chalk);
+}
+.p-win { font-family: var(--mono); font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+.game-score {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.game-side.lost .game-score, .game-side.lost .stake { color: var(--chalk-dim); }
+.game-side.won .game-score { color: var(--live); }
+
+.owners { display: flex; flex-wrap: wrap; gap: 0.25rem; min-width: 0; }
+.owner {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  padding: 0.05rem 0.3rem;
+  color: var(--chalk-dim);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.owner.is-me { color: var(--live); border-color: color-mix(in srgb, var(--live) 45%, var(--rule)); }
+
+.game-mine {
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--live);
+}
+/* Every entrant's stake is in the markup; exactly the one that is yours is
+   revealed, by the same mechanism as the "you" badge. */
+.mine { display: none; }
+.mine.is-me { display: inline-block; }
+
+@supports selector(:has(*)) {
+  .game:has(.mine.is-me) { --accent: var(--live); border-color: color-mix(in srgb, var(--live) 28%, var(--rule)); }
+}
+
 /* --- compare chart ----------------------------------------------------- */
 /* The emphasis chart above answers "what is the shape of the season". This one
    answers "how am I doing against Paul", which is a different question and
@@ -1102,6 +1316,35 @@ html:active-view-transition .row { animation: none; }
   .forecast-odds { grid-area: odds; }
   .forecast-bar { grid-area: bar; }
   .theme-toggle { margin-inline-start: auto; }
+
+  /* A game row is five columns of small type; at 390px that is unreadable long
+     before it overflows. Stack the two sides instead, which also puts the away
+     team above the home team — the way "at" already reads. */
+  .game {
+    grid-template-columns: minmax(0, 1fr) 4.2rem;
+    grid-template-areas:
+      'when mine'
+      'away away'
+      'home home';
+    gap: 0.35rem 0.6rem;
+    padding: 0.6rem 0.7rem 0.65rem 0.85rem;
+  }
+  .game-when { grid-area: when; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
+  .game-mine { grid-area: mine; }
+  .game-side.away { grid-area: away; }
+  .game-side.home { grid-area: home; }
+  /* Stacked, the "at" between them has nowhere to sit — so it moves onto the
+     home side, which is the one it was labelling all along. */
+  .game-at { display: none; }
+  .game-side.home::before {
+    content: 'at';
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--chalk-dim);
+    opacity: 0.6;
+  }
+  .week-switch { gap: 0.25rem; }
+  .biggest-swing { margin-inline-start: 0; }
 
   .row {
     grid-template-columns: 1.9rem minmax(0, 1fr) auto;

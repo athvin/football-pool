@@ -232,7 +232,11 @@ off, and nothing else changes.
 
 - **Standings** — the leaderboard, with the banked/guaranteed/ceiling bar, plus
   the projection table.
-- **Weeks** — points scored in each week and the standings as they stood after it.
+- **Schedule** — the NFL slate week by week, opening on the week being played,
+  with what each side of every game is worth and who in the pool holds it.
+- **Scoreboard** — points scored in each week and the standings as they stood
+  after it. (Served from `/weeks/`; the tab was renamed because "Weeks" and
+  "Schedule" side by side told you nothing about which was which.)
 - **Trends** — points and rank over the season, leverage, who is carrying whom,
   and the gaps between neighbours.
 - **Forecast** — where the model thinks it ends: chance of every finishing
@@ -240,8 +244,34 @@ off, and nothing else changes.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads.
 
+The Schedule page exists because a pool schedule is not an NFL schedule. A win
+pays the *winner's own* leveling factor, so the two sides of one game are almost
+never worth the same, and the team you need is not always the one favoured. Each
+row therefore prices both sides, names who is holding each, and — once you set
+*who are you?* — shows what the game is worth to you specifically.
+
+The rail down the left of each row is **swing**: how much the result actually
+moves the standings. Adding up everything everybody stands to gain over-rates
+chalk, because when a team half the pool owns wins, half the pool rises together
+and the order barely changes. Swing subtracts the field's average, so it measures
+only the part that separates people — and a game the whole pool is on scores
+exactly zero. Games nobody holds are dimmed rather than dropped: they are still
+the schedule, they just should not compete for attention.
+
+Which week opens is decided twice. The build bakes in the week that owns its
+fetch instant, and the page re-runs the identical rule against your own clock on
+load, so an overnight rollover between deploys still opens on the right week.
+Week windows come from kickoff times alone and never from results — the obvious
+alternative, "the first week with an unplayed game", sticks forever on one
+cancelled game. Everything is in the document at build time and revealed with
+`:target`, so every week is a real URL, the back button works, and the page is
+fully usable with scripting off.
+
 The Forecast page is three views of one simulation, and none of it costs an
-extra run — the numbers were already being computed and thrown away.
+extra run — the numbers were already being computed and thrown away. The
+per-game win probabilities on the Schedule page come out of the same run, for
+the same reason: they are counted from the simulations themselves rather than
+estimated separately, so the two pages can never disagree.
 
 **Where everyone finishes** is a stacked bar per entry across every place,
 strongest colour for first. Every bar is the same length because the chances

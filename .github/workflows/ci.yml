@@ -101,5 +101,6 @@ jobs:
           grep -qE 'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"' public-project/index.html
           grep -qE 'src="/football-pool/assets/site\.js\?v=[0-9a-f]{8}"' public-project/index.html
           test -f public-project/rules/index.html
+          test -f public-project/schedule/index.html
           test -f public-project/data/standings.json
           echo 'both base paths render correctly, assets fingerprinted'

@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Schedule · {{ season.year }} Family Pool{% endblock %}
+{% block description %}The {{ season.year }} NFL schedule week by week, with what every game is worth to the pool and who is holding each side.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Schedule</h1>
+  <p class="page-sub">
+    Every game, priced. A win pays the winner's own leveling factor — so the two
+    sides of one game are almost never worth the same, and the team you want to
+    win is not always the one favoured to. Opens on the week being played.
+  </p>
+</div>
+
+{% if not schedule.weeks %}
+  <p class="empty">No schedule has loaded for {{ season.year }} yet.</p>
+{% else %}
+
+{# Plain anchors, so the switcher works with scripting off and every week is a
+   real URL you can send someone. #}
+<nav class="week-switch" aria-label="Jump to a week">
+  {% for w in schedule.weeks %}
+  <a href="#week-{{ w.week }}" data-week-link="{{ w.week }}"
+     {% if w.week == schedule.default_week %}class="is-now"{% endif %}>
+    {% if w.label.startswith('Week') %}{{ w.week }}{% else %}{{ w.label|replace('Super Bowl', 'SB')|replace('Wild Card', 'WC')|replace('Divisional', 'DIV')|replace('Conference', 'CON') }}{% endif %}
+  </a>
+  {% endfor %}
+</nav>
+
+<div class="weeks">
+  {% for w in schedule.weeks %}
+  <section class="week{% if w.week == schedule.default_week %} is-default{% endif %}"
+           id="week-{{ w.week }}" data-week="{{ w.week }}"
+           data-opens="{{ w.opens }}" data-closes="{{ w.closes }}"
+           aria-labelledby="week-{{ w.week }}-title">
+
+    <div class="week-head">
+      <h2 class="section-title" id="week-{{ w.week }}-title">{{ w.label }}</h2>
+      <p class="week-dates">
+        Starts <time datetime="{{ w.opens }}" data-ts="kickoff">{{ w.opens_text }}</time>
+      </p>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat">
+        <p class="stat-label">Games</p>
+        <p class="stat-value">{{ w.count }}</p>
+        <p class="stat-note">{% if w.played %}{{ w.played }} played{% else %}none played yet{% endif %}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Pool has a side</p>
+        <p class="stat-value">{{ w.pool_games }}</p>
+        <p class="stat-note">of {{ w.count }}</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">On the table</p>
+        <p class="stat-value live">{{ w.on_the_table|points }}</p>
+        <p class="stat-note">field maximum</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Locked in</p>
+        <p class="stat-value">{{ w.locked_in|points }}</p>
+        <p class="stat-note">unavoidable</p>
+      </div>
+    </div>
+
+    {% if w.biggest and w.biggest.swing > 0 %}
+    <p class="biggest">
+      <span class="biggest-label">Biggest game</span>
+      <span class="biggest-teams">
+        <span class="team-chip scored" style="{{ w.biggest.away.team|chip_style }}">{{ w.biggest.away.team }}</span>
+        at
+        <span class="team-chip scored" style="{{ w.biggest.home.team|chip_style }}">{{ w.biggest.home.team }}</span>
+      </span>
+      <span class="biggest-swing">swing {{ w.biggest.swing|points }}</span>
+    </p>
+    {% endif %}
+
+    <ul class="games">
+      {% for g in w.games %}
+      <li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
+          data-game="{{ g.game_id }}" style="--swing:{{ '%.3f'|format(g.swing / (w.biggest.swing or 1)) }}">
+        <div class="game-when">
+          <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
+          {% if g.played %}<span class="game-status">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
+          {% if g.neutral %}<span class="badge">neutral</span>{% endif %}
+        </div>
+
+        {% for side in [g.away, g.home] %}
+        <div class="game-side {{ 'home' if loop.last else 'away' }}{% if side.outcome %} {{ side.outcome }}{% endif %}">
+          <span class="team-chip {{ side.chip }}" style="{{ side.team|chip_style }}">{{ side.team }}</span>
+          {% if g.played %}
+            <span class="game-score">{{ side.score }}</span>
+          {% else %}
+            <span class="stake">{{ side.stake|points }}</span>
+            {% if side.p_win is not none %}
+            <span class="p-win model">{{ '%.0f%%'|format(side.p_win * 100) }}</span>
+            {% endif %}
+          {% endif %}
+          <span class="owners">{% for o in side.owners %}<span class="owner" data-slug="{{ o.slug }}">{{ o.name }}</span>{% endfor %}</span>
+        </div>
+        {% if not loop.last %}<span class="game-at" aria-hidden="true">at</span>{% endif %}
+        {% endfor %}
+
+        {# At most one of these is ever visible — `initMe` reveals the one whose
+           slug matches you. Holding both sides means you score either way, so it
+           reads as a range rather than a single number. #}
+        <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}">{% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% endfor %}</div>
+      </li>
+      {% endfor %}
+    </ul>
+
+    <h3 class="section-title">What's on the table for each of you</h3>
+    <div class="forecast-rows">
+      {% for o in w.outlooks %}
+      <a class="forecast-row" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">
+        <span class="forecast-name">{{ o.name }}<span class="badge you" data-me-only>you</span></span>
+        <span class="forecast-bar">{{ o.bar|safe }}</span>
+        <span class="forecast-odds">{{ o.max|points }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    <p class="legend">
+      <span class="key-guaranteed"></span><span>Hatched is guaranteed — two of your teams playing each other</span>
+      <span class="key-upside"></span><span>Outline is everything reachable</span>
+      <span>·</span>
+      <a href="{{ '/weeks/'|url }}">What the pool actually banked</a>
+    </p>
+  </section>
+  {% endfor %}
+</div>
+
+<p class="page-sub">
+  Games nobody in the pool holds are dimmed. The accent rail on the left of each
+  row is <strong>swing</strong> — how much the game actually moves the
+  standings. A win by a team half the pool owns lifts half the pool together, so
+  it barely changes the order; swing measures only the part that separates
+  people, which is why a game everyone is on scores zero.
+  {% if projecting %}
+  The cyan percentage on each side is its chance of winning, from the same
+  {{ '{:,}'.format(sim_count) }} simulated seasons as the
+  <a href="{{ '/forecast/'|url }}">forecast</a> — modelled, not banked, which is
+  why it is never the same colour as a score.
+  {% endif %}
+</p>
+
+{% endif %}
+
+{% endblock %}

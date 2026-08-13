@@ -39,24 +39,54 @@ export function nextTheme(current) {
   return current === 'light' ? DEFAULT_THEME : 'light';
 }
 
+/** How a footer stamp reads: "Feb 9, 2:30 PM EST". */
+export const STAMP_FORMAT = {
+  month: 'short',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZoneName: 'short',
+};
+
+/**
+ * How a kickoff reads: "Sun, Sep 13, 1:00 PM EDT".
+ *
+ * Football is scheduled by weekday — Thursday night, Sunday one o'clock, Monday
+ * night — and a bare "Sep 13" makes you count on your fingers. The weekday has
+ * to come from the same Intl call as the rest, never a server-rendered span: a
+ * Sunday 8:20pm Eastern kickoff is *Monday* in UTC, so a baked weekday would be
+ * wrong for anyone who moves the picker.
+ */
+export const KICKOFF_FORMAT = { weekday: 'short', ...STAMP_FORMAT };
+
+// One formatter per (locale, zone, format). The schedule page carries close to
+// 300 stamps and repaints all of them on every zone change; constructing an
+// Intl.DateTimeFormat each time is the most expensive thing on the page.
+const formatters = new Map();
+
+function formatterFor(locale, timeZone, format) {
+  const key = `${locale}|${timeZone}|${format.weekday ?? ''}`;
+  let found = formatters.get(key);
+  if (!found) {
+    // Only successful constructions are cached, so an invalid zone keeps
+    // falling through to the raw ISO string instead of being remembered.
+    found = new Intl.DateTimeFormat(locale, { timeZone, ...format });
+    formatters.set(key, found);
+  }
+  return found;
+}
+
 /**
  * Render a UTC timestamp in the viewer's chosen zone.
  *
  * Falls back to the original string rather than throwing, because a bad stored
  * time zone should never blank out the "data through" stamp.
  */
-export function formatTimestamp(iso, timeZone, locale = 'en-US') {
+export function formatTimestamp(iso, timeZone, locale = 'en-US', format = STAMP_FORMAT) {
   const when = new Date(iso);
   if (Number.isNaN(when.getTime())) return iso;
   try {
-    return new Intl.DateTimeFormat(locale, {
-      timeZone,
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZoneName: 'short',
-    }).format(when);
+    return formatterFor(locale, timeZone, format).format(when);
   } catch {
     return iso;
   }
@@ -316,7 +346,10 @@ function initTimeZone(doc, storage) {
   const paint = () => {
     for (const el of stamps) {
       const iso = el.getAttribute('datetime');
-      if (iso) el.textContent = formatTimestamp(iso, zone);
+      // `data-ts` carries no value on a footer stamp and "kickoff" on a game,
+      // and `time[data-ts]` matches both — so this is a pure addition.
+      const format = el.dataset.ts === 'kickoff' ? KICKOFF_FORMAT : STAMP_FORMAT;
+      if (iso) el.textContent = formatTimestamp(iso, zone, 'en-US', format);
     }
   };
 
@@ -332,6 +365,64 @@ function initTimeZone(doc, storage) {
     });
   }
   paint();
+}
+
+/**
+ * Which week owns `nowMs` — the first one that has not finished yet.
+ *
+ * The same rule the build ran, against the visitor's clock instead of the
+ * build's. Both read the identical baked instants, so the two can only ever
+ * disagree about *when* it is, never about what that means.
+ *
+ * Note this compares absolute instants, so it is independent of the time-zone
+ * picker: the games kick off at one moment, and Honolulu and Maine are looking
+ * at the same week.
+ */
+export function weekForInstant(windows, nowMs) {
+  const usable = windows.filter((w) => Number.isFinite(w.closesMs));
+  if (!usable.length) return null;
+  for (const w of usable) {
+    if (w.closesMs > nowMs) return w.week;
+  }
+  // Past the last game of the season, the last week is the thing to show.
+  return usable[usable.length - 1].week;
+}
+
+function initSchedule(doc, nowMs) {
+  const sections = Array.from(doc.querySelectorAll('[data-week][data-closes]'));
+  if (!sections.length) return;
+
+  const windows = sections.map((el) => ({
+    week: el.dataset.week,
+    closesMs: Date.parse(el.dataset.closes),
+  }));
+  const current = weekForInstant(windows, nowMs);
+
+  // The build's guess is usually right — it is at most a few hours old, and
+  // weeks turn over just before midnight on a Monday. This corrects the
+  // overnight window between the rollover and the next deploy.
+  if (current !== null) {
+    for (const el of sections) {
+      el.classList.toggle('is-default', el.dataset.week === current);
+    }
+  }
+
+  const links = Array.from(doc.querySelectorAll('[data-week-link]'));
+  for (const link of links) {
+    link.classList.toggle('is-now', link.dataset.weekLink === current);
+  }
+
+  // Which week you are *looking at*, which is the hash if you followed one and
+  // the current week otherwise. Kept in step with the back button.
+  const markVisible = () => {
+    const shown = doc.location?.hash?.replace('#week-', '') || current;
+    for (const link of links) {
+      if (link.dataset.weekLink === shown) link.setAttribute('aria-current', 'true');
+      else link.removeAttribute('aria-current');
+    }
+  };
+  markVisible();
+  doc.defaultView?.addEventListener('hashchange', markVisible);
 }
 
 function initOdometer(doc, win) {
@@ -375,6 +466,10 @@ export function init(doc = document, win = window) {
   // they are, so it has to know before it paints.
   initMe(doc, storage);
   initTimeZone(doc, storage);
+  // The clock comes in through `win` so a test can stand anywhere in the season
+  // without touching global time — the same discipline the Python side follows
+  // by passing the fetch instant around rather than calling now().
+  initSchedule(doc, (win.Date ?? Date).now());
   initCompare(doc, storage);
   initSort(doc);
   initOdometer(doc, win);

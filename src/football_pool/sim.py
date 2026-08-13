@@ -302,11 +302,19 @@ def simulate(
     qual_mean: np.ndarray,
     qual_sd: np.ndarray,
     n: int | None = None,
-) -> tuple[np.ndarray, pd.DataFrame]:
+) -> tuple[np.ndarray, pd.DataFrame, np.ndarray]:
     """Play the rest of the season ``n`` times.
 
-    Returns ``(points, stats)`` — an ``(n, 32)`` array of pool points per team
-    per simulated season, and a per-team summary.
+    Returns ``(points, stats, home_win_rate)`` — an ``(n, 32)`` array of pool
+    points per team per simulated season, a per-team summary, and the fraction
+    of simulations each scheduled game went to the home side, aligned to
+    ``schedule`` order.
+
+    That last array is the model's own marginal, not a separate estimate: it
+    counts what actually happened across the same simulations everything else
+    is derived from, so the win probability on the schedule page can never
+    disagree with the finish probabilities on the forecast page. Decided games
+    read exactly 0.0 or 1.0, which is self-documenting.
 
     Decided games are frozen to their real result, so only what is genuinely
     unknown is sampled. A real tie is split deterministically across
@@ -396,4 +404,4 @@ def simulate(
         }
     ).set_index("team")
 
-    return points, stats
+    return points, stats, home_wins.mean(axis=0)

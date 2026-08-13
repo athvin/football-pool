@@ -10,7 +10,12 @@ def mkgames(rows: list[dict]) -> pd.DataFrame:
 
     Each row takes ``home``, ``away``, and either ``hs``/``as_`` scores for a
     completed game, or neither for one still to be played. Optional ``type``
-    (default ``REG``) and ``week`` (default 1).
+    (default ``REG``), ``week`` (default 1), ``gameday``, ``gametime``,
+    ``location`` and ``overtime``.
+
+    The last four are rarely interesting to a scoring test, but they are part of
+    the real frame — the schedule page reads all of them — so they are always
+    present rather than only when a caller thinks to ask.
     """
     out = []
     for i, r in enumerate(rows):
@@ -24,11 +29,14 @@ def mkgames(rows: list[dict]) -> pd.DataFrame:
                 "game_type": r.get("type", "REG"),
                 "week": r.get("week", 1),
                 "gameday": r.get("gameday", "2026-09-13"),
+                "gametime": r.get("gametime", "13:00"),
                 "home_team": r["home"],
                 "away_team": r["away"],
                 "home_score": hs,
                 "away_score": as_,
                 "result": result,
+                "overtime": r.get("overtime", 0),
+                "location": r.get("location", "Home"),
                 "played": played,
                 "is_tie": played and result == 0,
                 "home_won": played and result > 0,
