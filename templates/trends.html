@@ -19,6 +19,36 @@
   <p class="empty">Nothing has been played yet. The season's shape starts filling in from week 1.</p>
 {% else %}
 
+<h2 class="section-title">Compare</h2>
+<p class="page-sub">
+  Pick anyone to bring their line forward — as many as six at once, each in its
+  own colour. Set "who are you?" at the bottom of the page and you will open
+  here on your own line every time. Your picks are remembered on this device.
+</p>
+
+<div class="compare-picks" role="group" aria-label="Entrants to compare">
+  {% for r in compare_points %}
+  <button class="pick" type="button" data-pick="{{ r[1] }}" aria-pressed="false">
+    {{ r[0] }}
+  </button>
+  {% endfor %}
+</div>
+
+<p class="compare-empty" data-compare-empty>
+  Nobody picked yet — every line is drawn faintly below. Choose a name to light it up.
+</p>
+
+<h3 class="section-title">Points</h3>
+<div class="chart-card compare-card" data-compare>
+  {{ svg.compare_lines(compare_points, weeks, 900, 340)|safe }}
+</div>
+
+<h3 class="section-title">Rank</h3>
+<div class="chart-card compare-card" data-compare>
+  {{ svg.compare_lines(compare_ranks, weeks, 900, 300, true)|safe }}
+  <p class="card-meta"><span>first place at the top</span></p>
+</div>
+
 <h2 class="section-title">Points, week by week</h2>
 <div class="chart-card">
   {{ svg.emphasis_lines(points_series, lead_names, weeks, 900, 340)|safe }}
@@ -55,14 +85,14 @@
         <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         <td>
           <span class="row-teams">
-            {% for t in r.unique_teams %}<span class="team-chip scored">{{ t }}</span>{% endfor %}
+            {% for t in r.unique_teams %}<span class="team-chip scored" style="{{ t|chip_style }}">{{ t }}</span>{% endfor %}
             {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
           </span>
         </td>
         <td class="num">{{ '%.2f'|format(r.leverage) }}</td>
         <td>
           <span class="row-teams">
-            {% for t in r.shared_teams %}<span class="team-chip">{{ t }}</span>{% endfor %}
+            {% for t in r.shared_teams %}<span class="team-chip dim" style="{{ t|chip_style }}">{{ t }}</span>{% endfor %}
           </span>
         </td>
       </tr>
@@ -89,9 +119,9 @@
       {% for r in picks %}
       <tr>
         <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td><span class="team-chip scored">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
+        <td><span class="team-chip scored" style="{{ r.best_team|chip_style }}">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
         <td class="num">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
-        <td><span class="team-chip">{{ r.worst_team }}</span></td>
+        <td><span class="team-chip dim" style="{{ r.worst_team|chip_style }}">{{ r.worst_team }}</span></td>
         <td class="num">{{ r.worst_points|points }}</td>
       </tr>
       {% endfor %}

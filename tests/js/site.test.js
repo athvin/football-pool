@@ -8,9 +8,15 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import {
+  COMPARE_KEY,
+  DEFAULT_THEME,
   DEFAULT_TZ,
+  ME_KEY,
+  PICK_COLORS,
   THEME_KEY,
   TZ_KEY,
+  cellValue,
+  compareValues,
   countUpValue,
   easeOutCubic,
   formatTimestamp,
@@ -18,21 +24,26 @@ import {
   isValidTimeZone,
   nextTheme,
   safeStorage,
+  sortTable,
+  spreadLabels,
 } from '../../assets/site.js';
 
 const ISO = '2026-02-09T14:30:00+00:00';
 
 describe('nextTheme', () => {
   test('flips an explicit theme', () => {
-    expect(nextTheme('dark', false)).toBe('light');
-    expect(nextTheme('light', false)).toBe('dark');
+    expect(nextTheme('dark')).toBe('light');
+    expect(nextTheme('light')).toBe('dark');
   });
 
-  test('resolves "no preference" against the operating system', () => {
-    // No stored choice: the first click should move away from what they see.
-    expect(nextTheme(undefined, true)).toBe('light');
-    expect(nextTheme(undefined, false)).toBe('dark');
-    expect(nextTheme('', true)).toBe('light');
+  test('dark is the default, so anything unset flips to light', () => {
+    // The site does not follow the operating system: dark is the default
+    // unconditionally, so the first click always lands on light no matter
+    // what the viewer's OS is set to.
+    expect(DEFAULT_THEME).toBe('dark');
+    expect(nextTheme(undefined)).toBe('light');
+    expect(nextTheme('')).toBe('light');
+    expect(nextTheme('nonsense')).toBe('light');
   });
 });
 
@@ -83,6 +94,101 @@ describe('count-up maths', () => {
     expect(countUpValue(42.5, 1)).toBeCloseTo(42.5, 10);
     expect(countUpValue(42.5, 0.5)).toBeGreaterThan(0);
     expect(countUpValue(42.5, 0.5)).toBeLessThan(42.5);
+  });
+});
+
+describe('spreadLabels', () => {
+  test('leaves labels that already clear each other alone', () => {
+    const out = spreadLabels([{ slug: 'a', y: 10 }, { slug: 'b', y: 90 }], 14);
+    expect(out).toEqual([{ slug: 'a', y: 10 }, { slug: 'b', y: 90 }]);
+  });
+
+  test('pushes a collision apart by exactly the gap', () => {
+    const out = spreadLabels([{ slug: 'a', y: 50 }, { slug: 'b', y: 50 }], 14);
+    expect(out).toEqual([{ slug: 'a', y: 50 }, { slug: 'b', y: 64 }]);
+  });
+
+  test('a whole stack on one value fans out in order', () => {
+    const out = spreadLabels(
+      [{ slug: 'a', y: 20 }, { slug: 'b', y: 22 }, { slug: 'c', y: 24 }],
+      14,
+    );
+    expect(out.map((o) => o.y)).toEqual([20, 34, 48]);
+  });
+
+  test('output is sorted top to bottom regardless of input order', () => {
+    const out = spreadLabels([{ slug: 'z', y: 80 }, { slug: 'a', y: 10 }], 14);
+    expect(out.map((o) => o.slug)).toEqual(['a', 'z']);
+  });
+
+  test('does not mutate the input', () => {
+    const input = [{ slug: 'a', y: 50 }, { slug: 'b', y: 50 }];
+    spreadLabels(input, 14);
+    expect(input.map((i) => i.y)).toEqual([50, 50]);
+  });
+
+  test('an empty set is fine', () => {
+    expect(spreadLabels([], 14)).toEqual([]);
+  });
+});
+
+describe('table sorting', () => {
+  test('numbers sort numerically, not as text', () => {
+    // The bug this guards: "10" < "9" lexically, so a points column sorted as
+    // text puts double digits in the wrong place the moment week 5 arrives.
+    expect(compareValues('9', '10')).toBeLessThan(0);
+    expect(compareValues('2.60', '1.45')).toBeGreaterThan(0);
+    expect(compareValues('5', '5')).toBe(0);
+  });
+
+  test('non-numeric values fall back to text rather than being read as zero', () => {
+    // "0-0" must not parse as 0 and silently tie with a real zero.
+    expect(compareValues('3-1', '10-2')).toBeLessThan(0);
+    expect(compareValues('Brian', 'Paul')).toBeLessThan(0);
+  });
+
+  test('an empty cell is not treated as zero', () => {
+    expect(compareValues('', '5')).toBeLessThan(0);
+    expect(compareValues('5', '')).toBeGreaterThan(0);
+  });
+
+  test('cellValue prefers an explicit sort key over the displayed text', () => {
+    document.body.innerHTML =
+      '<table><tbody><tr><td data-value="7">seven</td><td>plain</td></tr></tbody></table>';
+    const row = document.querySelector('tr');
+    expect(cellValue(row, 0)).toBe('7');
+    expect(cellValue(row, 1)).toBe('plain');
+    expect(cellValue(row, 9)).toBe('');
+  });
+
+  test('sortTable reorders the body in place', () => {
+    document.body.innerHTML = `
+      <table><tbody>
+        <tr><td>b</td><td data-value="2">2</td></tr>
+        <tr><td>a</td><td data-value="30">30</td></tr>
+        <tr><td>c</td><td data-value="9">9</td></tr>
+      </tbody></table>`;
+    const table = document.querySelector('table');
+
+    sortTable(table, 1, 1);
+    expect([...table.tBodies[0].rows].map((r) => r.cells[1].textContent)).toEqual(
+      ['2', '9', '30'],
+    );
+
+    sortTable(table, 1, -1);
+    expect([...table.tBodies[0].rows].map((r) => r.cells[1].textContent)).toEqual(
+      ['30', '9', '2'],
+    );
+
+    sortTable(table, 0, 1);
+    expect([...table.tBodies[0].rows].map((r) => r.cells[0].textContent)).toEqual(
+      ['a', 'b', 'c'],
+    );
+  });
+
+  test('a table with no body is a no-op rather than a crash', () => {
+    document.body.innerHTML = '<table><thead><tr><th>x</th></tr></thead></table>';
+    expect(sortTable(document.querySelector('table'), 0, 1)).toEqual([]);
   });
 });
 
@@ -246,5 +352,284 @@ describe('init', () => {
     init(document, win);
     expect(document.querySelector('.row-points').textContent).toBe('—');
     expect(win._frames).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// "This is me"
+// ---------------------------------------------------------------------------
+function boardMarkup() {
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-me');
+  document.body.innerHTML = `
+    <a class="row" data-slug="brian-moore"><span class="badge you" data-me-only>you</span></a>
+    <a class="row" data-slug="paul-moore"><span class="badge you" data-me-only>you</span></a>
+    <select data-me-select>
+      <option value="">Nobody in particular</option>
+      <option value="brian-moore">Brian Moore</option>
+      <option value="paul-moore">Paul Moore</option>
+    </select>`;
+}
+
+describe('this is me', () => {
+  beforeEach(boardMarkup);
+
+  test('choosing a name marks that row and remembers it', () => {
+    const win = fakeWindow();
+    init(document, win);
+
+    const select = document.querySelector('[data-me-select]');
+    select.value = 'paul-moore';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(document.querySelector('[data-slug="paul-moore"]').classList.contains('is-me')).toBe(true);
+    expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(false);
+    expect(win._store.get(ME_KEY)).toBe('paul-moore');
+    expect(document.documentElement.dataset.me).toBe('paul-moore');
+  });
+
+  test('a stored identity is restored on the next visit', () => {
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
+    expect(document.querySelector('[data-me-select]').value).toBe('brian-moore');
+    expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(true);
+  });
+
+  test('choosing nobody clears the highlight', () => {
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) });
+    init(document, win);
+
+    const select = document.querySelector('[data-me-select]');
+    select.value = '';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(document.querySelectorAll('.is-me')).toHaveLength(0);
+    expect(win._store.get(ME_KEY)).toBe('');
+  });
+
+  test('an identity that has left the pool is discarded, not left dangling', () => {
+    // Next season's picks file will not contain last season's entrants, and a
+    // stale value must not leave the picker showing a blank selection.
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'someone-who-left']]) });
+    init(document, win);
+
+    expect(document.querySelector('[data-me-select]').value).toBe('');
+    expect(document.querySelectorAll('.is-me')).toHaveLength(0);
+    expect(win._store.get(ME_KEY)).toBe('');
+  });
+
+  test('pages with no picker still apply a stored identity', () => {
+    document.body.innerHTML = '<a class="row" data-slug="brian-moore"></a>';
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
+    expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Comparison chart
+// ---------------------------------------------------------------------------
+function compareMarkup(slugs = ['brian-moore', 'paul-moore', 'brenda-moore']) {
+  document.documentElement.removeAttribute('data-me');
+  const picks = slugs
+    .map((s) => `<button class="pick" data-pick="${s}" aria-pressed="false">${s}</button>`)
+    .join('');
+  const lines = slugs
+    .map(
+      (s, i) =>
+        `<polyline class="cmp-line" data-entrant="${s}"></polyline>` +
+        `<circle class="cmp-dot" data-entrant="${s}"></circle>` +
+        `<text class="cmp-label" data-entrant="${s}" data-y="${40 + i * 2}"></text>`,
+    )
+    .join('');
+  document.body.innerHTML = `
+    <div class="compare-picks">${picks}</div>
+    <p data-compare-empty>nothing picked</p>
+    <div data-compare><svg>${lines}</svg></div>`;
+}
+
+const pickedSlugs = () =>
+  [...document.querySelectorAll('.cmp-line.is-picked')].map((el) => el.dataset.entrant);
+
+describe('comparison chart', () => {
+  beforeEach(() => compareMarkup());
+
+  test('nothing is picked by default and the prompt is visible', () => {
+    init(document, fakeWindow());
+    expect(pickedSlugs()).toEqual([]);
+    expect(document.querySelector('[data-compare-empty]').hidden).toBe(false);
+  });
+
+  test('picking someone lights their line, dot and label together', () => {
+    const win = fakeWindow();
+    init(document, win);
+    document.querySelector('[data-pick="paul-moore"]').click();
+
+    expect(pickedSlugs()).toEqual(['paul-moore']);
+    for (const cls of ['.cmp-line', '.cmp-dot', '.cmp-label']) {
+      const el = document.querySelector(`${cls}[data-entrant="paul-moore"]`);
+      expect(el.classList.contains('is-picked')).toBe(true);
+      expect(el.style.getPropertyValue('--pick-color')).toBe(PICK_COLORS[0]);
+    }
+    expect(document.querySelector('[data-pick="paul-moore"]').getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-compare-empty]').hidden).toBe(true);
+    expect(win._store.get(COMPARE_KEY)).toBe('paul-moore');
+  });
+
+  test('colours follow pick order, so the first pick is always the first colour', () => {
+    init(document, fakeWindow());
+    document.querySelector('[data-pick="brenda-moore"]').click();
+    document.querySelector('[data-pick="brian-moore"]').click();
+
+    const color = (slug) =>
+      document.querySelector(`.cmp-line[data-entrant="${slug}"]`).style.getPropertyValue('--pick-color');
+    expect(color('brenda-moore')).toBe(PICK_COLORS[0]);
+    expect(color('brian-moore')).toBe(PICK_COLORS[1]);
+  });
+
+  test('clicking again unpicks and clears the colour', () => {
+    init(document, fakeWindow());
+    const button = document.querySelector('[data-pick="brian-moore"]');
+    button.click();
+    button.click();
+
+    expect(pickedSlugs()).toEqual([]);
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    const line = document.querySelector('.cmp-line[data-entrant="brian-moore"]');
+    expect(line.style.getPropertyValue('--pick-color')).toBe('');
+  });
+
+  test('past the palette the oldest pick drops rather than reusing a colour', () => {
+    const many = Array.from({ length: PICK_COLORS.length + 1 }, (_, i) => `p${i}`);
+    compareMarkup(many);
+    init(document, fakeWindow());
+    for (const slug of many) document.querySelector(`[data-pick="${slug}"]`).click();
+
+    const picked = pickedSlugs();
+    expect(picked).toHaveLength(PICK_COLORS.length);
+    expect(picked).not.toContain('p0'); // the first one picked made way
+    expect(new Set(picked.map((s) =>
+      document.querySelector(`.cmp-line[data-entrant="${s}"]`).style.getPropertyValue('--pick-color'),
+    )).size).toBe(PICK_COLORS.length);
+  });
+
+  test('it opens on your own line once you have said who you are', () => {
+    // The whole chain: the stored identity is applied by initMe, and initCompare
+    // reads it from the document. Order matters here — initMe writes the
+    // attribute that initCompare then reads — so this covers the wiring too.
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brenda-moore']]) }));
+    expect(pickedSlugs()).toEqual(['brenda-moore']);
+  });
+
+  test('a stored selection beats the identity default', () => {
+    const store = new Map([
+      [ME_KEY, 'brenda-moore'],
+      [COMPARE_KEY, 'brian-moore paul-moore'],
+    ]);
+    init(document, fakeWindow({ store }));
+    expect(pickedSlugs().sort()).toEqual(['brian-moore', 'paul-moore']);
+  });
+
+  test('stored names that are no longer in the pool are dropped', () => {
+    init(document, fakeWindow({ store: new Map([[COMPARE_KEY, 'ghost brian-moore']]) }));
+    expect(pickedSlugs()).toEqual(['brian-moore']);
+  });
+
+  test('colliding endpoint labels are pushed apart, dots stay put', () => {
+    document.body.innerHTML = `
+      <div class="compare-picks">
+        <button class="pick" data-pick="a" aria-pressed="false">a</button>
+        <button class="pick" data-pick="b" aria-pressed="false">b</button>
+      </div>
+      <div data-compare><svg>
+        <polyline class="cmp-line" data-entrant="a"></polyline>
+        <text class="cmp-label" data-entrant="a" data-y="50"></text>
+        <polyline class="cmp-line" data-entrant="b"></polyline>
+        <text class="cmp-label" data-entrant="b" data-y="50"></text>
+      </svg></div>`;
+    init(document, fakeWindow());
+    document.querySelector('[data-pick="a"]').click();
+    document.querySelector('[data-pick="b"]').click();
+
+    const ys = [...document.querySelectorAll('.cmp-label')].map((el) => Number(el.getAttribute('y')));
+    expect(new Set(ys).size).toBe(2);
+    expect(Math.abs(ys[0] - ys[1])).toBeGreaterThanOrEqual(14);
+  });
+
+  test('a page with no chart does not throw', () => {
+    document.body.innerHTML = '<p>no chart here</p>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sortable tables
+// ---------------------------------------------------------------------------
+describe('sortable table headers', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <table>
+        <thead><tr><th data-sort>Team</th><th data-sort>Points</th></tr></thead>
+        <tbody>
+          <tr><th data-value="ARI">ARI</th><td data-value="4">4.00</td></tr>
+          <tr><th data-value="KC">KC</th><td data-value="30">30.00</td></tr>
+          <tr><th data-value="DAL">DAL</th><td data-value="12">12.00</td></tr>
+        </tbody>
+      </table>`;
+  });
+
+  const column = (i) => [...document.querySelectorAll('tbody tr')].map((r) => r.children[i].textContent);
+
+  test('clicking a heading sorts by it and marks the direction', () => {
+    init(document, fakeWindow());
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    th.click();
+
+    expect(column(1)).toEqual(['4.00', '12.00', '30.00']);
+    expect(th.getAttribute('aria-sort')).toBe('ascending');
+  });
+
+  test('clicking the same heading again reverses it', () => {
+    init(document, fakeWindow());
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    th.click();
+    th.click();
+
+    expect(column(1)).toEqual(['30.00', '12.00', '4.00']);
+    expect(th.getAttribute('aria-sort')).toBe('descending');
+  });
+
+  test('sorting a different column clears the previous marker', () => {
+    init(document, fakeWindow());
+    const [first, second] = document.querySelectorAll('th[data-sort]');
+    second.click();
+    first.click();
+
+    expect(column(0)).toEqual(['ARI', 'DAL', 'KC']);
+    expect(second.hasAttribute('aria-sort')).toBe(false);
+    expect(first.getAttribute('aria-sort')).toBe('ascending');
+  });
+
+  test('headings are reachable and operable from the keyboard', () => {
+    init(document, fakeWindow());
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    expect(th.tabIndex).toBe(0);
+
+    th.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    expect(column(1)).toEqual(['4.00', '12.00', '30.00']);
+
+    th.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
+    expect(column(1)).toEqual(['30.00', '12.00', '4.00']);
+  });
+
+  test('other keys are ignored', () => {
+    init(document, fakeWindow());
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    th.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+    expect(column(1)).toEqual(['4.00', '30.00', '12.00']);
+  });
+
+  test('a table with no sortable headings is left alone', () => {
+    document.body.innerHTML = '<table><thead><tr><th>x</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+    expect(document.querySelector('th').tabIndex).toBe(-1);
   });
 });

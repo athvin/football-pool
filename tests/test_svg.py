@@ -236,3 +236,121 @@ def test_labels_are_escaped():
     markup = svg.contribution_bar([("A<B>", 10.0)])
     assert "<B>" not in markup.replace("&lt;B&gt;", "")
     assert parse(markup) is not None
+
+
+# -- comparison chart -------------------------------------------------------
+SERIES = [
+    ("Brian Moore", "brian-moore", [0.0, 4.0, 9.0]),
+    ("Paul Moore", "paul-moore", [0.0, 2.0, 3.0]),
+    ("Brenda Moore", "brenda-moore", [0.0, 6.0, 6.5]),
+]
+
+
+def test_compare_chart_draws_every_entrant_once():
+    el = parse(svg.compare_lines(SERIES))
+    lines = el.findall(".//polyline[@class='cmp-line']")
+    assert len(lines) == len(SERIES)
+    assert [p.get("data-entrant") for p in lines] == [s for _, s, _ in SERIES]
+
+
+def test_every_entrant_gets_a_line_a_dot_and_a_label():
+    """All three carry the same slug: the picker toggles them as one unit."""
+    el = parse(svg.compare_lines(SERIES))
+    for _, slug, _ in SERIES:
+        for tag, cls in (("polyline", "cmp-line"), ("circle", "cmp-dot"), ("text", "cmp-label")):
+            found = el.findall(f".//{tag}[@data-entrant='{slug}']")
+            assert len(found) == 1, f"{slug} has {len(found)} {tag}"
+            assert found[0].get("class") == cls
+
+
+def test_nothing_is_preselected_in_the_markup():
+    """Picking is the viewer's choice, so the server must not decide it.
+
+    With scripting off this is what you get: the whole field, evenly drawn.
+    """
+    markup = svg.compare_lines(SERIES)
+    assert "is-picked" not in markup
+
+
+def test_labels_carry_their_true_y_for_the_de_collider():
+    """The browser nudges colliding labels apart and needs the original value."""
+    el = parse(svg.compare_lines(SERIES))
+    for text in el.findall(".//text[@class='cmp-label']"):
+        assert float(text.get("data-y")) == pytest.approx(float(text.get("y")) - 4, abs=0.05)
+
+
+def test_the_dot_sits_on_the_final_value():
+    """A leader and a trailer must not share an endpoint height."""
+    el = parse(svg.compare_lines(SERIES))
+    ys = {
+        c.get("data-entrant"): float(c.get("cy"))
+        for c in el.findall(".//circle[@class='cmp-dot']")
+    }
+    # Brian finishes highest, so his dot is nearest the top (smallest y).
+    assert ys["brian-moore"] < ys["brenda-moore"] < ys["paul-moore"]
+
+
+def test_compare_chart_shares_the_scale_across_entrants():
+    """One shared y-scale, or the lines would be uncomparable — the whole point."""
+    el = parse(svg.compare_lines(SERIES))
+    all_ys = [
+        float(pt.split(",")[1])
+        for line in el.findall(".//polyline[@class='cmp-line']")
+        for pt in line.get("points").split()
+    ]
+    # Every series starts at 0.0, so every first point lands on the same y.
+    firsts = {
+        line.get("points").split()[0].split(",")[1]
+        for line in el.findall(".//polyline[@class='cmp-line']")
+    }
+    assert len(firsts) == 1
+    assert max(all_ys) > min(all_ys)
+
+
+def test_compare_chart_inverts_for_rank():
+    """Rank 1 belongs at the top, which is the opposite of points."""
+    ranks = [("A", "a", [3.0, 1.0]), ("B", "b", [1.0, 3.0])]
+    el = parse(svg.compare_lines(ranks, invert=True))
+    ys = {
+        c.get("data-entrant"): float(c.get("cy"))
+        for c in el.findall(".//circle[@class='cmp-dot']")
+    }
+    # A ends first, B ends third, so A must be higher on the page.
+    assert ys["a"] < ys["b"]
+
+
+def test_compare_chart_survives_no_data():
+    markup = svg.compare_lines([])
+    assert parse(markup) is not None
+    assert "cmp-line" not in markup
+
+
+def test_compare_chart_skips_entrants_with_no_history():
+    """Someone added mid-season has no series yet and must not draw an empty line."""
+    el = parse(svg.compare_lines([("A", "a", [1.0, 2.0]), ("B", "b", [])]))
+    assert len(el.findall(".//polyline[@class='cmp-line']")) == 1
+
+
+def test_compare_chart_handles_a_single_week():
+    """Week one: one point per entrant, and no division by a zero step."""
+    el = parse(svg.compare_lines([("A", "a", [3.0]), ("B", "b", [5.0])]))
+    assert len(el.findall(".//circle[@class='cmp-dot']")) == 2
+
+
+def test_compare_chart_handles_a_dead_heat():
+    """Everyone level: a zero span must not divide by zero."""
+    el = parse(svg.compare_lines([("A", "a", [4.0, 4.0]), ("B", "b", [4.0, 4.0])]))
+    assert len(el.findall(".//polyline[@class='cmp-line']")) == 2
+
+
+def test_compare_chart_renders_week_ticks():
+    el = parse(svg.compare_lines(SERIES, x_ticks=[1, 2, 3]))
+    ticks = [t.text for t in el.findall(".//text[@class='trend-tick']")]
+    assert ticks == ["1", "2", "3"]
+
+
+def test_compare_chart_escapes_names_and_slugs():
+    """A name is entrant-supplied data and goes into both text and an attribute."""
+    markup = svg.compare_lines([('A<script>', 'a"b', [1.0, 2.0])])
+    assert "<script>" not in markup
+    assert parse(markup) is not None

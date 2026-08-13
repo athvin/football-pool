@@ -1,5 +1,8 @@
 <!doctype html>
-<html lang="en" data-page="{{ page }}">
+{# data-theme is set here rather than left to the stylesheet so the page is
+   already dark in the markup itself: with scripting off, with CSS still in
+   flight, and for anything that reads the document without rendering it. #}
+<html lang="en" data-page="{{ page }}" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -16,13 +19,19 @@
 <link rel="stylesheet" href="{{ '/assets/site.css'|url }}">
 </head>
 <body>
-{# Set the stored theme before first paint so the page never flashes the wrong one. #}
+{# Apply the stored theme and identity before first paint, so someone who has
+   chosen light mode never sees a dark flash and never sees their own row
+   highlight arrive a beat late. Both are inert if nothing is stored. #}
 <script>
   try {
     var t = localStorage.getItem('pool-theme');
-    if (t) document.documentElement.dataset.theme = t;
+    if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    var me = localStorage.getItem('pool-me');
+    if (me) document.documentElement.dataset.me = me;
   } catch (e) {}
 </script>
+
+<a class="skip" href="#main">Skip to content</a>
 
 <div class="grain" aria-hidden="true"></div>
 
@@ -72,19 +81,36 @@
       </p>
     </div>
 
-    <label class="tz">
-      <span class="tz-label">Time zone</span>
-      <select data-tz-select>
-        <option value="America/New_York">Eastern</option>
-        <option value="America/Chicago">Central</option>
-        <option value="America/Denver">Mountain</option>
-        <option value="America/Phoenix">Arizona</option>
-        <option value="America/Los_Angeles">Pacific</option>
-        <option value="America/Anchorage">Alaska</option>
-        <option value="Pacific/Honolulu">Hawaii</option>
-        <option value="UTC">UTC</option>
-      </select>
-    </label>
+    <div class="footer-controls">
+      {% if rows %}
+      {# Choosing your name highlights your row on every page and preselects
+         you on the comparison chart. Stored locally and never sent anywhere —
+         there is no server here to send it to. #}
+      <label class="me-picker">
+        <span class="me-label">Who are you?</span>
+        <select data-me-select>
+          <option value="">Nobody in particular</option>
+          {% for r in rows %}
+          <option value="{{ r.slug }}">{{ r.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      {% endif %}
+
+      <label class="tz">
+        <span class="tz-label">Time zone</span>
+        <select data-tz-select>
+          <option value="America/New_York">Eastern</option>
+          <option value="America/Chicago">Central</option>
+          <option value="America/Denver">Mountain</option>
+          <option value="America/Phoenix">Arizona</option>
+          <option value="America/Los_Angeles">Pacific</option>
+          <option value="America/Anchorage">Alaska</option>
+          <option value="Pacific/Honolulu">Hawaii</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </label>
+    </div>
   </div>
 </footer>
 

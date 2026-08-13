@@ -8,39 +8,47 @@
 <div class="page-head">
   <h1 class="page-title">Teams</h1>
   <p class="page-sub">
-    Sorted by points generated. "Owned by" shows who in the pool is holding
-    them — a team nobody else has is where you gain ground on the field.
+    Sorted by points generated — click any column heading to sort by it instead.
+    "Owned by" shows who in the pool is holding them; a team nobody else has is
+    where you gain ground on the field.
   </p>
 </div>
 
-<div class="table-scroll">
+{# Thirty-two rows is long enough that a header which scrolls away costs you
+   the column meanings half way down, so this one keeps its own scrollport. #}
+<div class="table-scroll is-tall">
   <table>
     <caption>All 32 teams for {{ season.year }}.</caption>
     <thead>
       <tr>
-        <th scope="col">Team</th>
-        <th scope="col" class="num">LF</th>
-        <th scope="col">Record</th>
-        <th scope="col" class="num">Points</th>
-        <th scope="col">Seed</th>
-        <th scope="col">Owned by</th>
+        <th scope="col" data-sort>Team</th>
+        <th scope="col" class="num" data-sort>LF</th>
+        <th scope="col" data-sort>Record</th>
+        <th scope="col" class="num" data-sort>Points</th>
+        <th scope="col" data-sort>Seed</th>
+        <th scope="col" data-sort>Owned by</th>
       </tr>
     </thead>
     <tbody>
       {% for t in teams %}
       <tr>
-        <th scope="row">
-          <span class="team-chip {% if t.points > 0 %}scored{% endif %}">{{ t.team }}</span>
+        {# data-value carries the sort key wherever the displayed text would
+           sort wrongly: "3-1" is not a number, an unseeded team must fall to
+           the bottom rather than sorting as the empty string, and owner count
+           is more useful than the alphabetical order of the first name. #}
+        <th scope="row" data-value="{{ t.team }}">
+          <span class="team-chip {% if t.points > 0 %}scored{% else %}dim{% endif %}"
+                style="{{ t.team|chip_style }}">{{ t.team }}</span>
         </th>
-        <td class="num">{{ '%.2f'|format(t.lf) }}</td>
-        <td>{{ t.record }}</td>
-        <td class="num">{{ t.points|points }}</td>
-        <td>
+        <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
+        <td data-value="{{ t.w }}">{{ t.record }}</td>
+        <td class="num" data-value="{{ t.points }}">{{ t.points|points }}</td>
+        <td data-value="{{ t.seed if t.seed else 99 }}">
           {% if t.seed %}
             <span class="badge money">{{ t.seed }}</span>
           {% else %}—{% endif %}
         </td>
-        <td>
+        <td data-value="{{ t.owners|length }}">
           {% if t.owners %}
             <span class="row-teams">
             {% for owner in t.owners %}

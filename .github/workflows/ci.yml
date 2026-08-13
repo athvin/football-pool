@@ -1,0 +1,98 @@
+name: CI
+
+# Everything that must be true before code reaches main.
+#
+# `daily.yml` also runs the tests, but it runs them *after* the merge — by
+# which point a regression is already the live scoreboard until the next
+# scheduled run. This workflow is the gate that runs first, and the branch
+# ruleset on main requires all three jobs below to pass before a pull request
+# can be merged.
+on:
+  pull_request:
+    branches: [main]
+  # Feature branches get the same checks on push, so a problem shows up while
+  # you are still working rather than at the moment you open the pull request.
+  push:
+    branches-ignore: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to a branch makes the previous run's answer irrelevant. Unlike the
+# Pages deploy, cancelling one of these mid-flight costs nothing.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: python
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # pyproject sets --cov-fail-under=95, so this fails on a coverage drop as
+      # well as on a broken test.
+      - name: Tests and coverage
+        run: uv run pytest
+
+  javascript:
+    name: javascript
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Tests and coverage
+        run: npx vitest run --coverage
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      # --offline builds from the committed results file, so this check is
+      # deterministic and does not fail because nflverse happened to be slow.
+      # The real fetch is daily.yml's job.
+      #
+      # Both base paths are built because they fail in opposite situations: a
+      # root-absolute asset URL works perfectly at / and 404s only once it is
+      # deployed under /football-pool/, which is exactly the bug a local
+      # preview cannot show you.
+      - name: Build at the site root
+        run: uv run pool build --out ./public-root --base "" --offline
+
+      - name: Build at the project path
+        run: uv run pool build --out ./public-project --base "/football-pool" --offline
+
+      - name: Check the base path actually reached the markup
+        run: |
+          set -euo pipefail
+          grep -q 'href="/assets/site.css"' public-root/index.html
+          grep -q 'href="/football-pool/assets/site.css"' public-project/index.html
+          test -f public-project/rules/index.html
+          test -f public-project/data/standings.json
+          echo 'both base paths render correctly'
