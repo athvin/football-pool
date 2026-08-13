@@ -22,6 +22,8 @@ from football_pool.season import ConfigError, load_season
 from football_pool.standings import GameLog, final_seeds
 from football_pool import history as history_mod
 
+from helpers import mkgames
+
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
@@ -219,7 +221,6 @@ def test_schedule_rows_render_in_kickoff_order(make_season):
     """Within one Sunday the frame is matchup-alphabetical; the page must be
     chronological — the 8:25 night game was rendering above the 5:00 slate
     (57 inversions across the 2026 file)."""
-    from tests.helpers import mkgames
     from football_pool.render import _schedule
 
     season = make_season(forecast=False)
@@ -237,7 +238,6 @@ def test_schedule_rows_render_in_kickoff_order(make_season):
 def test_on_the_table_counts_only_sides_the_pool_holds(make_season):
     """'Field maximum' must be winnable by the field: unowned sides and fully
     idle games were adding 233 phantom points across the 2026 slate."""
-    from tests.helpers import mkgames
     from football_pool.render import _schedule
 
     season = make_season(forecast=False)  # Solo holds KC, SEA, DAL, NE
@@ -257,7 +257,6 @@ def test_holding_both_sides_with_ties_paying_nothing_banks_nothing(
     """tie_multiplier is commissioner-configurable to 0.0, where a tie pays
     nothing — the floor (and the elimination badge it feeds) must not count
     the smaller win stake as unavoidable."""
-    from tests.helpers import mkgames
     from football_pool.potential import guaranteed_extra
     from football_pool.schedule import entrant_stake
 
