@@ -175,9 +175,33 @@ def _break_tie(gl: GameLog, group: Sequence[str], kind: str) -> list[str]:
 
 
 def regular_season_complete(games: pd.DataFrame) -> bool:
-    """True once every regular-season game has a final score."""
+    """True once the regular season is decided.
+
+    Two independent signals, either one sufficient:
+
+    * every regular-season game has a final score, or
+    * a playoff game has a final score. A completed postseason game is
+      ironclad proof the berths were decided.
+
+    The second matters because a game *cancelled* outright (Buffalo–Cincinnati,
+    January 2023) keeps a null result forever. Requiring every REG game to be
+    played would then hold the +3.0/+1.5 berth bonuses hostage for the whole
+    season — the standings would run all of January with playoff points
+    accruing and no berth money ever banked.
+
+    A *played* playoff game, deliberately, not merely the presence of playoff
+    rows: replayed past seasons and the week-by-week history rebuild both
+    carry unplayed bracket rows next to a half-finished regular season, and
+    "rows exist" would mark every one of those mid-season frames complete —
+    awarding berth bonuses from week one of the history chart.
+    """
     reg = games[games["game_type"] == "REG"]
-    return len(reg) > 0 and bool(reg["played"].all())
+    if len(reg) == 0:
+        return False
+    if bool(reg["played"].all()):
+        return True
+    playoff = games["game_type"].isin(("WC", "DIV", "CON", "SB"))
+    return bool((playoff & games["played"]).any())
 
 
 def playoff_seeds(season: Season, games: pd.DataFrame) -> dict[str, int]:
