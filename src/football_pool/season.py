@@ -8,6 +8,7 @@ different year is a different argument, not a different program.
 
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -21,7 +22,33 @@ import yaml
 # downstream speaks pool codes.
 TEAM_ALIASES: dict[str, str] = {"LA": "LAR", "WSH": "WAS", "JAC": "JAX"}
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+
+def _find_repo_root() -> Path:
+    """Locate the directory holding config.yaml, seasons/, and templates/.
+
+    ``Path(__file__).parents[2]`` is only the repo root when running from a
+    source checkout. Installed as a wheel it resolves to site-packages'
+    grandparent (e.g. ``/usr/local/lib/python3.12``), where none of the data
+    files exist — which made the packaged ``pool`` console script dead on
+    arrival. Resolution order:
+
+    1. ``POOL_ROOT`` environment variable, set explicitly.
+    2. Walking up from this file — finds the checkout root when running from
+       source, exactly as before.
+    3. The current working directory — so an installed ``pool`` works when run
+       from inside a checkout.
+    """
+    env = os.environ.get("POOL_ROOT")
+    if env:
+        return Path(env).resolve()
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        if (parent / "config.yaml").is_file() and (parent / "seasons").is_dir():
+            return parent
+    return Path.cwd()
+
+
+REPO_ROOT = _find_repo_root()
 
 
 class ConfigError(Exception):
