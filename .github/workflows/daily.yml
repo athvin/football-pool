@@ -18,6 +18,15 @@ on:
       timezone: America/New_York
   push:
     branches: [main]
+    # The nightly data commit below must not buy a second full deploy: with
+    # DATA_PUSH_TOKEN configured it is a PAT push, which (unlike the default
+    # token) does fire this trigger, and the run that made the commit has
+    # already deployed. A path filter rather than a `[skip ci]` marker in the
+    # commit message, because Actions scans the *whole* head commit message and
+    # skipped a real deploy over the string appearing in a paragraph explaining
+    # it — every fix in #8 sat on main unpublished as a result. A filter cannot
+    # be tripped by prose.
+    paths-ignore: ['data/**']
   workflow_dispatch:
 
 permissions:
@@ -112,11 +121,11 @@ jobs:
             echo 'no data change today'
             exit 0
           fi
-          # [skip ci] matters once DATA_PUSH_TOKEN exists: a PAT push (unlike the
-          # default token) fires the push trigger above, so every data commit was
-          # buying a second full build-test-deploy cycle a few minutes after the
-          # first. Actions honours [skip ci] in the head commit message.
-          git commit -m "data: refresh $(date -u +%Y-%m-%d) [skip ci]"
+          # The push trigger above ignores data-only pushes, which is what stops
+          # this commit buying a second full build-test-deploy cycle once
+          # DATA_PUSH_TOKEN exists. Deliberately not a skip-ci marker in the
+          # message — see the trigger for why.
+          git commit -m "data: refresh $(date -u +%Y-%m-%d)"
           if git push; then
             echo 'data snapshot committed'
           else
