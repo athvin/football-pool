@@ -470,3 +470,42 @@ def _slug_of(out_dir: Path, name: str) -> str:
     """Find the slug the site actually generated for an entrant."""
     data = json.loads((out_dir / "data" / "standings.json").read_text())
     return next(e["slug"] for e in data["entrants"] if e["name"] == name)
+
+
+# -- preseason honesty --------------------------------------------------------
+def test_no_playoff_seeds_are_shown_before_any_game(season, tmp_path, games_2025):
+    """The Teams page must not claim a playoff field in the preseason.
+
+    Every club is 0-0, so the tiebreaker ladder exhausted and fell through to
+    its alphabetical coin-toss fallback — and the page printed the result as
+    fourteen seeded teams, with the one seeds going to whoever came first in
+    the alphabet. This is the page-level guard for that.
+    """
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+
+    render_site(season, preseason, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+
+    seeded = re.findall(r'<span class="badge money">(\d)</span>', html)
+    assert seeded == [], f"{len(seeded)} teams shown as seeded before kickoff"
+    # All 32 rows sort to the bottom of the seed column instead.
+    assert html.count('<td data-value="99">') == 32
+
+
+def test_entrant_cards_omit_the_seed_before_any_game(season, tmp_path, games_2025):
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+
+    written = render_site(season, preseason, tmp_path)
+    for page in (p for p in written if p.parent.parent.name == "entrant"):
+        assert "seed " not in page.read_text()
+
+
+def test_seeds_return_once_the_season_is_under_way(season, mid_season, tmp_path):
+    """The projection is a feature — this must not have thrown it away."""
+    render_site(season, mid_season, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+    assert len(re.findall(r'<span class="badge money">(\d)</span>', html)) == 14

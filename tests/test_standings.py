@@ -87,13 +87,45 @@ def test_seeds_are_still_projectable_mid_season(season, games_2025):
     assert len(seeds) == 14
 
 
-def test_no_games_played_still_produces_a_well_formed_field(season, games_2025):
-    """Preseason: everyone is 0-0, so the ladder falls through to the coin toss."""
+def test_no_games_played_projects_no_field_at_all(season, games_2025):
+    """Preseason must project nothing rather than project alphabetical order.
+
+    With every club 0-0 the ladder has nothing to separate anyone on, runs out
+    of steps, and hits the coin-toss fallback — which sorts by name so builds
+    stay reproducible. That used to hand back a complete fourteen-team field
+    with Arizona and Baltimore holding the one seeds on the strength of their
+    initials, and the Teams page displayed it as fact.
+    """
     empty = games_2025.copy()
     empty["played"] = False
-    seeds = playoff_seeds(season, empty)
-    assert len(seeds) == 14
+
+    assert playoff_seeds(season, empty) == {}
     assert final_seeds(season, empty) is None
+
+
+def test_one_played_game_is_enough_to_start_projecting(season, games_2025):
+    """The cutoff is "nothing has happened yet", not "not much has happened".
+
+    Once any result exists the projection is informed by it, however thinly, so
+    it is a real if volatile answer rather than a stand-in for the alphabet.
+    """
+    one = games_2025.copy()
+    one["played"] = False
+    first = one.index[(one["game_type"] == "REG").to_numpy()][0]
+    one.loc[first, "played"] = True
+
+    assert len(playoff_seeds(season, one)) == 14
+
+
+def test_seeds_appear_the_moment_the_season_starts(season, games_2025):
+    """Guards the boundary itself: empty, then not empty, same fixture."""
+    empty = games_2025.copy()
+    empty["played"] = False
+    week_one = empty.copy()
+    week_one.loc[week_one["week"] == 1, "played"] = True
+
+    assert playoff_seeds(season, empty) == {}
+    assert len(playoff_seeds(season, week_one)) == 14
 
 
 # -- tiebreaker components --------------------------------------------------

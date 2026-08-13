@@ -7,13 +7,16 @@ name: CI
 # scheduled run. This workflow is the gate that runs first, and the branch
 # ruleset on main requires all three jobs below to pass before a pull request
 # can be merged.
+#
+# Only `pull_request`, deliberately. Adding `push: branches-ignore: [main]` as
+# well looks like it gives you earlier feedback, but once a branch has a pull
+# request open both events fire and every check runs twice — two entries per
+# job in the checks list, and both have to go green before the merge button
+# unlocks. `pull_request` alone is the gate that matters; use `gh workflow run
+# ci.yml --ref <branch>` if you want a run before opening one.
 on:
   pull_request:
     branches: [main]
-  # Feature branches get the same checks on push, so a problem shows up while
-  # you are still working rather than at the moment you open the pull request.
-  push:
-    branches-ignore: [main]
   workflow_dispatch:
 
 permissions:

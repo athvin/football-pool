@@ -145,6 +145,14 @@ publishes neither. The tiebreaker implementation reproduces all 70 playoff seeds
 for 2021–2025 exactly against ESPN's published seeding, and the test suite
 checks that on every run.
 
+Mid-season the seed shown is the *projected* field if the standings froze that
+day. Before the first kickoff there is no field and the site says so with a
+dash: with every club 0-0 the tiebreaker ladder has nothing to work with, runs
+out of steps and reaches its coin-toss fallback, which sorts alphabetically to
+keep builds reproducible — so a "projection" then would only be reporting the
+alphabet. Berth bonuses are a separate and stricter matter: they are not banked
+until the regular season is mathematically over.
+
 ## Projections
 
 The site also forecasts. On every build it fits team ratings to the market's
