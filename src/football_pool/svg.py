@@ -73,6 +73,7 @@ def outlook_bar(
     scale_max: float,
     width: int = 220,
     height: int = 14,
+    label: str | None = None,
 ) -> str:
     """The signature component: banked, guaranteed, and remaining upside.
 
@@ -85,6 +86,10 @@ def outlook_bar(
 
     ``scale_max`` is the largest ceiling in the field, so the longest bar fills
     the rail exactly.
+
+    ``label`` overrides the description read aloud. The schedule page draws the
+    same rail for a single week, where the banked segment is always empty and
+    the default wording would open with a meaningless "banked 0".
     """
     scale_max = max(scale_max, 1e-9)
     r = height / 2
@@ -96,7 +101,7 @@ def outlook_bar(
     w_floor = w(banked + guaranteed)
     w_ceiling = w(ceiling)
 
-    label = (
+    label = label or (
         f"banked {_fmt(banked)}, guaranteed {_fmt(banked + guaranteed)}, "
         f"ceiling {_fmt(ceiling)}"
     )

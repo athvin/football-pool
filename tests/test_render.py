@@ -192,6 +192,7 @@ def test_builds_every_expected_page(pool, game_data, tmp_path):
         "index.html",
         "rules/index.html",
         "forecast/index.html",
+        "schedule/index.html",
         "teams/index.html",
         "weeks/index.html",
         "404.html",
@@ -685,6 +686,9 @@ def test_the_ci_contract_holds(season, game_data, tmp_path):
         r'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"',
         (project / "index.html").read_text(),
     )
+    assert (project / "rules" / "index.html").exists()
+    assert (project / "schedule" / "index.html").exists()
+    assert (project / "data" / "standings.json").exists()
 
 
 # -- viewer preferences sit at the top ----------------------------------------
@@ -827,3 +831,175 @@ def test_the_data_feed_carries_data_not_markup(pool, mid_season, tmp_path):
     projection = data["entrants"][0]["projection"]
     # The numbers behind the charts are still there.
     assert {"p_first", "p_cash", "mean_points", "rivals"} <= set(projection)
+
+
+# -- the schedule -------------------------------------------------------------
+def test_the_schedule_has_a_section_for_every_week(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    # A complete season: 18 regular weeks plus the four playoff rounds.
+    ids = re.findall(r'<section class="week[^"]*"\s+id="week-(\d+)"', html)
+    assert [int(i) for i in ids] == list(range(1, 23))
+
+
+def test_the_schedule_lists_every_game_exactly_once(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    listed = re.findall(r'data-game="([^"]+)"', html)
+    assert sorted(listed) == sorted(game_data.games["game_id"])
+
+
+def test_exactly_one_week_opens_by_default(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert html.count("is-default") == 1
+
+
+def test_the_default_week_follows_the_data_clock(pool, games_2025, tmp_path):
+    """The core of the feature: which week opens depends on when you look.
+
+    Two builds of identical games, differing only in when the data was fetched,
+    must open on different weeks. Derived from ``fetched_at`` rather than
+    ``now()`` so a rebuild of unchanged data stays byte-identical.
+    """
+
+    def default_week_at(when, out):
+        render_site(pool, GameData(games_2025, 2025, when, None, "cache"), out)
+        html = (out / "schedule" / "index.html").read_text()
+        return re.search(r'<section class="week is-default"\s+id="week-(\d+)"', html).group(1)
+
+    september = datetime(2025, 9, 18, 12, 0, tzinfo=timezone.utc)
+    november = datetime(2025, 11, 20, 12, 0, tzinfo=timezone.utc)
+
+    early = default_week_at(september, tmp_path / "a")
+    late = default_week_at(november, tmp_path / "b")
+    assert int(early) < int(late)
+
+
+def test_the_preseason_schedule_opens_on_week_one(pool, games_2025, tmp_path):
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    before = datetime(2025, 8, 1, 12, 0, tzinfo=timezone.utc)
+    render_site(pool, GameData(g, 2025, before, None, "cache"), tmp_path)
+
+    html = (tmp_path / "schedule" / "index.html").read_text()
+    assert re.search(r'class="week is-default"\s+id="week-1"', html)
+
+
+def test_every_kickoff_carries_a_machine_readable_instant(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    stamps = re.findall(r'<time datetime="([^"]+)" data-ts="kickoff">', html)
+    # One per game, plus one per week header.
+    assert len(stamps) == len(game_data.games) + 22
+    for iso in stamps:
+        assert datetime.fromisoformat(iso).tzinfo is not None
+
+
+def test_a_kickoff_reads_as_a_time_before_any_javascript_runs(pool, game_data, tmp_path):
+    """No-JS visitors get Eastern words, not an ISO string."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    texts = re.findall(r'data-ts="kickoff">([^<]+)</time>', html)
+    assert texts, "no kickoff stamps rendered"
+    assert all(re.match(r"^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+, \d+:\d\d [AP]M E[SD]T$", t) for t in texts)
+
+
+def test_changing_week_needs_no_javascript(pool, game_data, tmp_path):
+    """Every week is a plain anchor to a real id, and none of them is `hidden`.
+
+    Which week shows is decided by `:target` in CSS. The script only ever moves
+    the default when the visitor's clock disagrees with the build's, so the page
+    is fully usable with scripting off.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    ids = set(re.findall(r'<section class="week[^"]*"\s+id="(week-\d+)"', html))
+    links = set(re.findall(r'<a href="(#week-\d+)"', html))
+    assert links == {f"#{i}" for i in ids}
+    assert "<section class=\"week\" hidden" not in html
+    assert not re.search(r'<section class="week[^"]*"[^>]*\bhidden\b', html)
+
+
+def test_the_schedule_prices_both_sides_of_a_game(pool, games_2025, tmp_path):
+    """The point of the page: a win pays the *winner's* leveling factor.
+
+    Two teams with different factors meeting must therefore show two different
+    numbers, which no generic schedule would.
+    """
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    render_site(pool, GameData(g, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache"), tmp_path)
+
+    html = (tmp_path / "schedule" / "index.html").read_text()
+    stakes = re.findall(r'<span class="stake">([\d.]+)</span>', html)
+    assert len(stakes) == 2 * len(g)
+    assert len(set(stakes)) > 1
+
+
+def test_the_schedule_dims_games_nobody_in_the_pool_owns(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    # Twelve teams out of thirty-two are held, so a good share of the slate has
+    # no pool interest at all — and it should recede rather than compete.
+    idle = html.count("is-idle")
+    assert 0 < idle < len(game_data.games)
+
+
+def test_a_played_game_shows_its_score_and_who_won(pool, game_data, tmp_path):
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert html.count('class="game-score"') == 2 * len(game_data.games)
+    assert "game-side away won" in html or "game-side home won" in html
+    assert "game-side away lost" in html or "game-side home lost" in html
+    # Every game is final, so nothing should still be advertising a price.
+    assert 'class="stake"' not in html
+
+
+def test_the_schedule_offers_every_entrant_their_own_stake(pool, game_data, tmp_path):
+    """`initMe` reveals one of these per row; the rest stay in the markup."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    for slug in ("aunt-carol", "cousin-mike", "brandon"):
+        assert f'<span class="mine" data-slug="{slug}">' in html
+
+
+def test_the_schedule_tab_is_in_the_nav_on_every_page(pool, game_data, tmp_path):
+    written = render_site(pool, game_data, tmp_path)
+    for path in (p for p in written if p.suffix == ".html"):
+        assert 'href="/schedule/"' in path.read_text(), path
+
+
+def test_the_weeks_tab_says_what_it_actually_shows(pool, game_data, tmp_path):
+    """It sat next to "Schedule" as two tabs that both sounded like week stuff."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    assert ">Scoreboard</a>" in html
+    assert 'href="/weeks/"' in html  # the URL is in people's history; only the label moved
+
+
+def test_the_schedule_shows_no_model_numbers_when_the_model_is_off(
+    make_season, games_2025, tmp_path
+):
+    pool = make_season(
+        [{"name": "Solo", "teams": ["KC", "SEA", "DAL", "NE"]}], year=2025, forecast=False
+    )
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    render_site(pool, GameData(g, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache"), tmp_path)
+
+    html = (tmp_path / "schedule" / "index.html").read_text()
+    assert 'class="p-win model"' not in html
+    # The factual half of the page is unaffected — that is the whole point of
+    # keeping the two tiers separate.
+    assert 'class="stake"' in html

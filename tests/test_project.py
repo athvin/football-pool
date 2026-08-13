@@ -282,3 +282,37 @@ def test_a_pool_smaller_than_the_payout_table_still_projects(make_season, games_
     assert np.allclose(p.finish_probs.sum(axis=1).to_numpy(), 1.0)
     # Cash probability cannot exceed certainty just because a tier is unreachable.
     assert (p.entrants["p_cash"] <= 1.0 + 1e-9).all()
+
+
+# -- per-game win probability ----------------------------------------------
+def test_the_home_win_rate_is_keyed_by_game(field, preseason):
+    p = project(field, preseason, simulations=SIMS)
+    reg = preseason[preseason["game_type"] == "REG"]
+
+    assert list(p.home_win_rate.index) == list(reg["game_id"])
+    assert p.home_win_rate.between(0.0, 1.0).all()
+
+
+def test_the_home_win_rate_lines_up_with_the_games_it_names(field, games_2025):
+    """The one thing that could silently go wrong is the join.
+
+    ``project`` re-derives the game ids by repeating ``build_schedule``'s
+    filter, so a mismatch would mislabel every game rather than fail loudly.
+    Half a played season gives every row a known answer to check against.
+    """
+    games = games_2025.copy()
+    late = games["week"] > 9
+    games.loc[late, ["played", "home_won", "away_won", "is_tie"]] = False
+    games.loc[late, ["home_score", "away_score", "result"]] = None
+
+    p = project(field, games, simulations=SIMS)
+    played = games[games["played"] & (games["game_type"] == "REG")]
+
+    for row in played.itertuples():
+        expected = 0.5 if row.is_tie else float(row.home_won)
+        assert p.home_win_rate[row.game_id] == expected, row.game_id
+
+
+def test_the_projection_declines_rather_than_guessing_at_a_finished_season(field, games_2025):
+    # No regular-season games left means no per-game probabilities to report.
+    assert project(field, games_2025, simulations=SIMS) is None

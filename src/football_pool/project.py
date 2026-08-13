@@ -51,6 +51,7 @@ class Projections:
     finish_probs: pd.DataFrame  # index=name, columns 1..n places
     head_to_head: pd.DataFrame  # index/columns=name, P(row finishes above column)
     distribution: Distribution
+    home_win_rate: pd.Series  # index=game_id, P(the home side wins)
 
 
 def _forecast_arrays(season: Season) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
@@ -90,9 +91,15 @@ def project(
     win_totals, qual_mean, qual_sd = _forecast_arrays(season)
 
     elo, _ = fit_elo(season, schedule, cfg, win_totals, qual_sd)
-    points, team_stats = simulate(
+    points, team_stats, home_win_rate = simulate(
         season, schedule, elo, cfg, qual_mean, qual_sd, n=simulations
     )
+
+    # `build_schedule` filters on exactly this predicate and preserves frame
+    # order, so position i of the simulation's arrays is this game. That
+    # positional join is the only thing keeping the two in step — if either
+    # filter ever changes, change both.
+    game_ids = games.loc[games["game_type"] == "REG", "game_id"]
 
     entrants, finish, h2h, dist = _score_field(season, points)
     return Projections(
@@ -103,6 +110,7 @@ def project(
         finish_probs=finish,
         head_to_head=h2h,
         distribution=dist,
+        home_win_rate=pd.Series(home_win_rate, index=game_ids.to_numpy(), name="home_win_rate"),
     )
 
 

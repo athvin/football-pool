@@ -37,6 +37,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from . import history as history_mod
 from . import metrics
+from . import schedule as schedule_mod
 from . import svg
 from . import teamcolors
 from .nflverse import GameData
@@ -439,6 +440,159 @@ def _week_rows(ctx: SiteContext, rows: list[dict[str, Any]]) -> list[dict[str, A
     return out
 
 
+def _eastern(instant: datetime) -> str:
+    """A kickoff written the way a broadcast lists it: ``Sun, Sep 13, 1:00 PM EDT``.
+
+    Matches the format the client re-renders it in, so switching time zones
+    changes the words in the string but not its shape.
+    """
+    local = instant.astimezone(schedule_mod.SCHEDULE_TZ)
+    return (
+        f"{local:%a, %b} {local.day}, "
+        f"{local.hour % 12 or 12}:{local:%M %p} {local:%Z}"
+    )
+
+
+def _game_row(
+    ctx: SiteContext,
+    row: Any,
+    owners: dict[str, tuple[str, ...]],
+    slugs: dict[str, str],
+    short: dict[str, str],
+) -> dict[str, Any]:
+    """One game, priced and attributed.
+
+    All the frame indexing happens here rather than in the template, per
+    ``_team_card`` — and it matters more on this page than anywhere else,
+    because scores are nullable ``Int64`` and a bare ``{% if game.home_score %}``
+    would raise on an unplayed game *and* hide a shutout.
+    """
+    season = ctx.season
+    home, away, kind = row.home_team, row.away_team, row.game_type
+    p = ctx.projections
+    rate = None
+    if p is not None and row.game_id in p.home_win_rate.index and not row.played:
+        rate = float(p.home_win_rate[row.game_id])
+
+    def side(team: str, score: object, is_home: bool) -> dict[str, Any]:
+        held = owners.get(team, ())
+        if not row.played:
+            outcome = None
+        elif row.is_tie:
+            outcome = "tied"
+        else:
+            outcome = "won" if row.home_won == is_home else "lost"
+        return {
+            "team": team,
+            "stake": schedule_mod.side_points(season, kind, team, is_home=is_home),
+            "score": None if pd.isna(score) else int(score),
+            "owners": [{"name": short[n], "slug": slugs[n]} for n in held],
+            "p_win": None if rate is None else (rate if is_home else 1.0 - rate),
+            "outcome": outcome,
+            # Losers desaturate so a finished week reads at a glance. Everything
+            # unplayed is drawn as live, because it still could be.
+            "chip": "dim" if outcome == "lost" else "scored",
+        }
+
+    home_side = side(home, row.home_score, True)
+    away_side = side(away, row.away_score, False)
+
+    # What each entrant stands to gain or lose here, keyed by slug so `initMe`
+    # can reveal exactly one of them with no extra JavaScript.
+    stakes = []
+    for e in season.entrants:
+        best, worst = schedule_mod.entrant_stake(season, kind, home, away, set(e.teams))
+        if best:
+            stakes.append({"slug": e.slug, "max": best, "min": worst})
+
+    kick = schedule_mod.kickoff(row.gameday, row.gametime)
+    return {
+        "game_id": row.game_id,
+        "kickoff": kick.isoformat(timespec="seconds"),
+        # Readable without scripting. The client rewrites it into whichever zone
+        # the visitor picked; until then it says Eastern, which is the zone the
+        # league schedules in and the site's own default.
+        "kickoff_text": _eastern(kick),
+        "home": home_side,
+        "away": away_side,
+        "played": bool(row.played),
+        "tie": bool(row.is_tie),
+        "home_won": bool(row.home_won),
+        "overtime": bool(row.overtime == 1),
+        "neutral": row.location == "Neutral",
+        "swing": schedule_mod.game_swing(season, kind, home, away),
+        "stakes": stakes,
+        # Nobody in the pool holds either side. A third of the 2026 slate, and
+        # dimming it is what turns a 16-game week into the handful that matter.
+        "idle": not home_side["owners"] and not away_side["owners"],
+        # Pool money on both sides — the games people actually argue about.
+        "derby": bool(home_side["owners"] and away_side["owners"]),
+    }
+
+
+def _schedule(ctx: SiteContext) -> dict[str, Any]:
+    """Every week of the slate, and which one to open on.
+
+    The default week is resolved from ``fetched_at`` rather than the wall
+    clock: it keeps a rebuild of unchanged data byte-identical, and the client
+    re-runs the identical rule against the visitor's own clock anyway, which is
+    the reading that actually matters.
+    """
+    games = ctx.games
+    owners = {t: o.owners for t, o in metrics.ownership(ctx.season).items()}
+    slugs = {e.name: e.slug for e in ctx.season.entrants}
+    short = _short_names([e.name for e in ctx.season.entrants])
+    windows = schedule_mod.week_windows(games)
+
+    weeks = []
+    for window in windows:
+        slate = games[games["week"] == window.week]
+        rows = [_game_row(ctx, r, owners, slugs, short) for r in slate.itertuples()]
+        on_the_table = round(sum(max(g["home"]["stake"], g["away"]["stake"]) for g in rows), 2)
+
+        outlooks = []
+        for e in ctx.season.entrants:
+            best, worst = schedule_mod.week_window(ctx.season, slate, set(e.teams))
+            outlooks.append(
+                {"name": short[e.name], "slug": e.slug, "max": best, "min": worst}
+            )
+        ceiling = max((o["max"] for o in outlooks), default=0.0) or 1.0
+
+        weeks.append(
+            {
+                "week": window.week,
+                "label": window.label,
+                "opens": window.opens.isoformat(timespec="seconds"),
+                "opens_text": _eastern(window.opens),
+                "closes": window.closes.isoformat(timespec="seconds"),
+                "games": rows,
+                "count": len(rows),
+                "pool_games": sum(1 for g in rows if not g["idle"]),
+                "on_the_table": on_the_table,
+                # Points the field cannot avoid banking: when one entrant holds
+                # both sides of a game, somebody they own has to win it.
+                "locked_in": round(sum(o["min"] for o in outlooks), 2),
+                "played": sum(1 for g in rows if g["played"]),
+                "biggest": max(rows, key=lambda g: g["swing"], default=None),
+                "outlooks": [
+                    {
+                        **o,
+                        "bar": svg.outlook_bar(
+                            0.0, o["min"], o["max"], ceiling,
+                            label=f"{o['name']}: guaranteed {o['min']:.2f}, up to {o['max']:.2f}",
+                        ),
+                    }
+                    for o in outlooks
+                ],
+            }
+        )
+
+    return {
+        "weeks": weeks,
+        "default_week": schedule_mod.default_week(windows, ctx.data.fetched_at),
+    }
+
+
 def _freshness(ctx: SiteContext) -> dict[str, Any]:
     """Two timestamps, because a fresh build of stale data is still stale."""
     return {
@@ -498,6 +652,7 @@ def render_site(
         written.append(target)
 
     write("index.html", "index.html", page="standings")
+    write("schedule/index.html", "schedule.html", page="schedule", schedule=_schedule(ctx))
     write("forecast/index.html", "forecast.html", page="forecast")
     write("rules/index.html", "rules.html", page="rules")
     write("teams/index.html", "teams.html", page="teams")

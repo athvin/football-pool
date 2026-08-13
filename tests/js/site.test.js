@@ -26,6 +26,7 @@ import {
   safeStorage,
   sortTable,
   spreadLabels,
+  weekForInstant,
 } from '../../assets/site.js';
 
 const ISO = '2026-02-09T14:30:00+00:00';
@@ -232,7 +233,16 @@ function markup() {
     </select>`;
 }
 
-function fakeWindow({ reduceMotion = false, prefersDark = true, store = new Map() } = {}) {
+// Mid-season by default, so the schedule wiring has a sensible clock without
+// every existing test having to care that it now reads one.
+const NOW = Date.parse('2026-10-14T15:00:00Z');
+
+function fakeWindow({
+  reduceMotion = false,
+  prefersDark = true,
+  store = new Map(),
+  now = NOW,
+} = {}) {
   const frames = [];
   return {
     localStorage: {
@@ -243,8 +253,10 @@ function fakeWindow({ reduceMotion = false, prefersDark = true, store = new Map(
       matches: query.includes('reduced-motion') ? reduceMotion : prefersDark,
     }),
     performance: { now: () => 0 },
+    Date: { now: () => now },
     requestAnimationFrame: (fn) => frames.push(fn),
     setTimeout: (fn) => fn(),
+    addEventListener: () => {},
     _frames: frames,
     _store: store,
   };
@@ -631,5 +643,140 @@ describe('sortable table headers', () => {
     document.body.innerHTML = '<table><thead><tr><th>x</th></tr></thead><tbody><tr><td>1</td></tr></tbody></table>';
     expect(() => init(document, fakeWindow())).not.toThrow();
     expect(document.querySelector('th').tabIndex).toBe(-1);
+  });
+});
+
+describe('weekForInstant', () => {
+  // Three weeks, each closing just before the next opens.
+  const WINDOWS = [
+    { week: '1', closesMs: Date.parse('2026-09-15T03:45:00Z') },
+    { week: '2', closesMs: Date.parse('2026-09-22T03:45:00Z') },
+    { week: '3', closesMs: Date.parse('2026-09-29T03:45:00Z') },
+  ];
+
+  test('picks the week that has not finished yet', () => {
+    expect(weekForInstant(WINDOWS, Date.parse('2026-09-20T18:00:00Z'))).toBe('2');
+  });
+
+  test('rolls over the moment a week closes', () => {
+    expect(weekForInstant(WINDOWS, Date.parse('2026-09-15T03:44:00Z'))).toBe('1');
+    expect(weekForInstant(WINDOWS, Date.parse('2026-09-15T03:46:00Z'))).toBe('2');
+  });
+
+  test('before the season, the first week is upcoming', () => {
+    expect(weekForInstant(WINDOWS, Date.parse('2026-08-13T12:00:00Z'))).toBe('1');
+  });
+
+  test('after the season, the last week stays put', () => {
+    // Not null and not week 1 — the last thing that happened is what you want.
+    expect(weekForInstant(WINDOWS, Date.parse('2027-03-01T12:00:00Z'))).toBe('3');
+  });
+
+  test('an empty schedule has no answer', () => {
+    expect(weekForInstant([], Date.now())).toBeNull();
+  });
+
+  test('a section with an unreadable date is skipped, not fatal', () => {
+    const broken = [{ week: '1', closesMs: Number.NaN }, ...WINDOWS.slice(1)];
+    expect(weekForInstant(broken, Date.parse('2026-09-01T12:00:00Z'))).toBe('2');
+    expect(weekForInstant([{ week: '1', closesMs: Number.NaN }], Date.now())).toBeNull();
+  });
+});
+
+function scheduleMarkup() {
+  document.documentElement.removeAttribute('data-me');
+  document.body.innerHTML = `
+    <nav>
+      <a href="#week-1" data-week-link="1">1</a>
+      <a href="#week-2" data-week-link="2">2</a>
+      <a href="#week-3" data-week-link="3">3</a>
+    </nav>
+    <div class="weeks">
+      <section class="week" data-week="1" data-closes="2026-09-15T03:45:00+00:00">
+        <time datetime="2026-09-14T00:20:00+00:00" data-ts="kickoff">raw</time>
+      </section>
+      <section class="week is-default" data-week="2" data-closes="2026-09-22T03:45:00+00:00"></section>
+      <section class="week" data-week="3" data-closes="2026-09-29T03:45:00+00:00"></section>
+    </div>`;
+}
+
+const openWeek = () =>
+  document.querySelector('.week.is-default')?.dataset.week ?? null;
+
+describe('the schedule week switcher', () => {
+  beforeEach(() => {
+    scheduleMarkup();
+    window.location.hash = '';
+  });
+
+  test("the build's choice stands when the clock agrees with it", () => {
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    expect(openWeek()).toBe('2');
+    expect(document.querySelectorAll('.week.is-default')).toHaveLength(1);
+  });
+
+  test('a stale default is corrected to the visitor\'s own week', () => {
+    // The overnight case: the week rolled over at 23:45 Monday and the site
+    // has not rebuilt yet. The page still opens on the right week.
+    init(document, fakeWindow({ now: Date.parse('2026-09-27T18:00:00Z') }));
+
+    expect(openWeek()).toBe('3');
+    expect(document.querySelectorAll('.week.is-default')).toHaveLength(1);
+  });
+
+  test('the current week is marked in the switcher', () => {
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    const now = Array.from(document.querySelectorAll('.is-now'));
+    expect(now.map((a) => a.dataset.weekLink)).toEqual(['2']);
+  });
+
+  test('following a deep link marks that week as the one being read', () => {
+    window.location.hash = '#week-3';
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    const current = document.querySelector('[data-week-link][aria-current]');
+    expect(current.dataset.weekLink).toBe('3');
+    // ...without moving which week is "now". They are different questions.
+    expect(document.querySelector('.is-now').dataset.weekLink).toBe('2');
+  });
+
+  test('with no hash, the current week is the one being read', () => {
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    expect(document.querySelector('[data-week-link][aria-current]').dataset.weekLink).toBe('2');
+  });
+
+  test('a page with no schedule on it does not throw', () => {
+    document.body.innerHTML = '<p>nothing here</p>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+describe('kickoff stamps', () => {
+  beforeEach(scheduleMarkup);
+
+  test('a kickoff carries its weekday, because football is scheduled by day', () => {
+    init(document, fakeWindow());
+
+    const text = document.querySelector('time[data-ts="kickoff"]').textContent;
+    // 8:20pm Eastern on Sunday the 13th — the UTC instant is Monday, so a
+    // server-rendered weekday would have been wrong here.
+    expect(text).toMatch(/^Sun,/);
+    expect(text).toContain('8:20');
+    expect(text).toContain('EDT');
+  });
+
+  test('a footer stamp does not, because a weekday there says nothing', () => {
+    expect(formatTimestamp(ISO, 'America/New_York')).not.toMatch(/^[A-Z][a-z]{2},/);
+  });
+
+  test('an unusable zone still falls back after the formatter cache warms up', () => {
+    // Caching a failure would turn one bad lookup into a permanently broken
+    // stamp, so only successful formatters are remembered.
+    expect(formatTimestamp(ISO, 'Mars/Olympus')).toBe(ISO);
+    expect(formatTimestamp(ISO, 'Mars/Olympus')).toBe(ISO);
+    expect(formatTimestamp(ISO, 'UTC')).toContain('UTC');
   });
 });

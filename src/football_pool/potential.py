@@ -26,6 +26,7 @@ from itertools import product
 
 import pandas as pd
 
+from .schedule import entrant_stake, week_window
 from .season import Season
 
 @dataclass(frozen=True)
@@ -65,12 +66,12 @@ def guaranteed_extra(season: Season, games: pd.DataFrame, teams: set[str]) -> fl
     """Points the entrant will earn no matter how the games go.
 
     When two of your teams meet, one of them must win, so the smaller of the two
-    leveling factors is already banked. (A tie pays half of each, which is never
-    worse than the smaller LF alone, so the minimum is the correct floor.)
+    stakes is already banked. (A tie pays half of each, which is never worse
+    than the smaller stake alone, so the minimum is the correct floor.)
     """
     total = 0.0
     for row in head_to_head_games(games, teams).itertuples():
-        total += min(season.lf_of(row.home_team), season.lf_of(row.away_team))
+        total += entrant_stake(season, row.game_type, row.home_team, row.away_team, teams)[1]
     return round(total, 2)
 
 
@@ -78,44 +79,17 @@ def next_week_window(season: Season, games: pd.DataFrame, teams: set[str]) -> tu
     """``(max, min)`` regular-season points available to ``teams`` next week.
 
     Byes score nothing. If two of the entrant's teams meet, the best case is the
-    larger leveling factor and the worst case is the smaller — not their sum.
+    larger stake and the worst case is the smaller — not their sum.
     """
     rem = _remaining_regular_games(games)
     if rem.empty:
         return 0.0, 0.0
-
-    week = int(rem["week"].min())
-    slate = rem[rem["week"] == week]
-
-    best = worst = 0.0
-    for row in slate.itertuples():
-        home_in = row.home_team in teams
-        away_in = row.away_team in teams
-        if home_in and away_in:
-            a, b = season.lf_of(row.home_team), season.lf_of(row.away_team)
-            best += max(a, b)
-            worst += min(a, b)
-        elif home_in:
-            best += season.lf_of(row.home_team)
-        elif away_in:
-            best += season.lf_of(row.away_team)
-    return round(best, 2), round(worst, 2)
+    return week_window(season, rem[rem["week"] == int(rem["week"].min())], teams)
 
 
 def remaining_win_points(season: Season, games: pd.DataFrame, teams: set[str]) -> float:
     """Most regular-season points still winnable, respecting head-to-head games."""
-    rem = _remaining_regular_games(games)
-    total = 0.0
-    for row in rem.itertuples():
-        home_in = row.home_team in teams
-        away_in = row.away_team in teams
-        if home_in and away_in:
-            total += max(season.lf_of(row.home_team), season.lf_of(row.away_team))
-        elif home_in:
-            total += season.lf_of(row.home_team)
-        elif away_in:
-            total += season.lf_of(row.away_team)
-    return round(total, 2)
+    return week_window(season, _remaining_regular_games(games), teams)[0]
 
 
 # How far a team got. Higher is deeper; the values are cumulative milestones.
