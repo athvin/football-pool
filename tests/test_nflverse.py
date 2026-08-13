@@ -399,3 +399,35 @@ def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
 
     assert cache.exists()
     assert not list(cache.parent.glob("*.partial")), "temp file left behind"
+
+
+def test_provenance_defaults_to_the_guarded_state(monkeypatch, tmp_path, csv_bytes):
+    """A path that forgets to set the source must not waive the staleness check.
+
+    "cache" is the value that exempts a build, so it is the wrong default: a
+    future branch returning GameData without assigning provenance would publish
+    unguarded while claiming to be a deliberate offline build. The initial value
+    is the guarded one, so forgetting fails closed.
+    """
+    import inspect
+
+    from football_pool import nflverse
+
+    source = inspect.getsource(nflverse.fetch_games)
+    first = source.index("source = ")
+    assert 'source = "fallback"' == source[first : first + len('source = "fallback"')]
+
+    # And the three real paths still report themselves correctly.
+    cache = tmp_path / "games.csv"
+    cache.write_bytes(csv_bytes)
+    assert fetch_games(2025, cache_path=cache, offline=True).source == "cache"
+
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(csv_bytes))
+    assert fetch_games(2025, cache_path=tmp_path / "b.csv").source == "network"
+
+    def boom(*a, **k):
+        raise RuntimeError("down")
+
+    monkeypatch.setattr("httpx.get", boom)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    assert fetch_games(2025, cache_path=cache).source == "fallback"

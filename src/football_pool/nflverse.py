@@ -49,11 +49,17 @@ COLUMNS = [
 PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 
 # How long after kickoff a game may still be missing a result before it counts
-# as evidence the data is behind. Monday Night Football finishes late on Monday
-# and the morning job runs at 07:37 Tuesday, so one day is already enough; two
-# leaves room for a genuinely late upload without ever spanning a second slate.
-# It also absorbs the fact that a game's date is local to its stadium while
-# fetched_at is UTC, which the 19:37 Eastern run would otherwise trip over.
+# as evidence the data is behind.
+#
+# One day is enough for every case that can be measured: the worst run is the
+# 19:37 Eastern one on a December Sunday, which is 00:37 UTC Monday with the
+# night game still in progress, and a single day of grace already reads zero
+# there. Two is chosen anyway, to cover what cannot be measured from a fixture —
+# a game's date is local to its stadium while fetched_at is UTC, London and
+# Munich kickoffs sit a long way from both, and a postponement that upstream has
+# not yet re-dated looks exactly like a missing result. The cost is one extra
+# day before a stall is noticed; the cost of being wrong the other way is
+# refusing to publish a site that was fine.
 STALE_GRACE_DAYS = 2
 
 # How many regular-season games may be outstanding before the data is behind by
@@ -201,7 +207,12 @@ def fetch_games(
     """
     raw: bytes | None = None
     upstream_modified: datetime | None = None
-    source = "cache"
+    # Initialised to the guarded state, not the exempt one. Every path below
+    # reassigns this, so the value is dead today — but "cache" is what waives
+    # the staleness check, and a default that waives it means any future path
+    # that forgets to set it publishes unguarded while claiming to be a
+    # deliberate offline build. Failing closed costs nothing here.
+    source = "fallback"
 
     if not offline:
         last_err: Exception | None = None
