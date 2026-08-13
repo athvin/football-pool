@@ -151,13 +151,30 @@ looks exactly like a right one.
 
 So the build refuses to publish a fallback that is materially behind, and the
 deploy job depends on the build, so the previous good site simply stays up until
-the next run. Staleness is measured as **regular-season games whose date has
-passed with no result recorded**, which calibrates itself: zero before week one
-however old the file is, zero when the data is current, and about a full slate
-for every week it is behind. Replaying a real season a day at a time, the count
-holds at 0 for four days, sits at 1 for three more — the lone Thursday game —
-then jumps straight to 13 once a Sunday has been missed. The limit sits in that
-empty band.
+the next run.
+
+Staleness takes three questions, because no single count answers all of them.
+
+**Regular-season games past their date with no result.** This calibrates itself
+where a clock cannot: zero before week one however old the file is, zero when
+the data is current, about a full slate for every week behind. Replaying a real
+season a day at a time, the count holds at 0 for four days, sits at 1 for three
+more — the lone Thursday game — then jumps straight to 13 once a Sunday has been
+missed. The limit sits in that empty band, so a slow upload still publishes and
+a missed Sunday does not.
+
+**Playoff games past their date with no result**, where a single one is already
+enough. There are only thirteen and they are never postponed, so waiting for a
+slate's worth would mean waiting out the bracket.
+
+**A missing bracket.** This is the one that is easy to get wrong, and counting
+alone cannot catch it: nflverse does not publish postseason rows until the field
+is set, so a file frozen at the end of week 18 has every game it knows about
+played and looks perfectly current — for the whole of January, while the entire
+postseason passes. That is the worst possible window to be blind in, because the
+playoff bonuses carry all of the bonus scoring and routinely swap first and
+second place. So once the regular season is complete and the file still holds no
+playoff rows at all, the clock starts.
 
 An explicit `--offline` build is never blocked. Asking for the committed copy is
 a choice, and CI relies on it to build deterministically; falling back to it

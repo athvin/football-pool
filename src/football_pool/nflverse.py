@@ -52,7 +52,21 @@ PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 # as evidence the data is behind. Monday Night Football finishes late on Monday
 # and the morning job runs at 07:37 Tuesday, so one day is already enough; two
 # leaves room for a genuinely late upload without ever spanning a second slate.
+# It also absorbs the fact that a game's date is local to its stadium while
+# fetched_at is UTC, which the 19:37 Eastern run would otherwise trip over.
 STALE_GRACE_DAYS = 2
+
+# How many regular-season games may be outstanding before the data is behind by
+# a slate rather than by a single late upload. Measured, not guessed: replaying
+# a real season a day at a time, the count holds at 0 for four days, sits at 1
+# for the next three — the lone Thursday game of the following week — and then
+# jumps to 13 once a Sunday has been missed. This sits in that empty band.
+STALE_REGULAR_GAMES = 8
+
+# How long after the regular season ends the bracket may still be unpublished.
+# nflverse adds the postseason rows once the field is set, which is the night
+# week 18 finishes; four days is generous.
+BRACKET_GRACE_DAYS = 4
 
 
 class DataError(Exception):
@@ -103,15 +117,8 @@ class GameData:
         reg = self.unplayed[self.unplayed["game_type"] == "REG"]
         return None if reg.empty else int(reg["week"].min())
 
-    @property
-    def overdue(self) -> int:
-        """Regular-season games whose date has passed with no result recorded.
-
-        The staleness measure, and it calibrates itself: zero before week one no
-        matter how old the file is, zero whenever the data is current, and
-        roughly a full slate for every week the data is behind. That beats
-        anything clock-based, which cannot tell a months-old file in June from a
-        months-old file in November.
+    def overdue(self, kinds: tuple[str, ...] = ("REG",) + PLAYOFF_ROUNDS) -> int:
+        """Scheduled games of these kinds whose date has passed with no result.
 
         Measured against ``fetched_at`` rather than a call to now(), so the
         answer is a property of this object and a test can construct any
@@ -120,11 +127,61 @@ class GameData:
         A rescheduled game is not counted: nflverse moves ``gameday`` forward
         when a game is postponed, so it stops being in the past.
         """
-        reg = self.games[(self.games["game_type"] == "REG") & ~self.games["played"]]
-        if reg.empty:
+        pending = self.games[
+            ~self.games["played"] & self.games["game_type"].isin(kinds)
+        ]
+        if pending.empty:
             return 0
         cutoff = pd.Timestamp(self.fetched_at.date()) - pd.Timedelta(days=STALE_GRACE_DAYS)
-        return int((pd.to_datetime(reg["gameday"]) < cutoff).sum())
+        return int((pd.to_datetime(pending["gameday"]) < cutoff).sum())
+
+    def staleness_reason(self) -> str | None:
+        """Why this data is too far behind to publish, or ``None`` if it is fine.
+
+        Three questions, because no single count answers all of them.
+
+        Counting overdue games calibrates itself beautifully during the regular
+        season — zero before week one however old the file is, zero while the
+        data is current, a full slate for every week behind — but it can only
+        see games it knows about, and **playoff rows do not exist upstream until
+        the bracket is set**. A file frozen at the end of week 18 therefore has
+        every game it knows of played, and looks perfectly current for the whole
+        of January while the entire postseason passes it by. That window is the
+        worst possible one to be blind in: the playoff bonuses carry all of the
+        bonus scoring, and first and second place routinely swap over them.
+
+        So the postseason gets two extra questions — whether the bracket the
+        file does hold has gone stale, and whether it is missing a bracket it
+        ought to have by now.
+        """
+        reg = self.games[self.games["game_type"] == "REG"]
+
+        # 1. The regular season, where a slate is the natural unit. A single
+        #    late upload is tolerated; a missed Sunday is not.
+        behind = self.overdue(("REG",))
+        if behind >= STALE_REGULAR_GAMES:
+            return f"{behind} regular-season games have been played but hold no result"
+
+        # 2. The bracket, if we have one. Playoff games are few and are never
+        #    postponed, so even one of them sitting past its date without a
+        #    result means a whole round has been missed.
+        stale_bracket = self.overdue(PLAYOFF_ROUNDS)
+        if stale_bracket:
+            return f"{stale_bracket} playoff games have been played but hold no result"
+
+        # 3. The bracket we ought to have. Absent rows cannot be counted as
+        #    overdue, so this is the only thing that catches a file frozen
+        #    between the end of week 18 and the bracket being published.
+        if not reg.empty and bool(reg["played"].all()):
+            if not self.games["game_type"].isin(PLAYOFF_ROUNDS).any():
+                last = pd.to_datetime(reg["gameday"]).max()
+                days = (pd.Timestamp(self.fetched_at.date()) - last).days
+                if days > BRACKET_GRACE_DAYS:
+                    return (
+                        f"the regular season ended {days} days ago and the file "
+                        f"still holds no playoff games at all"
+                    )
+        return None
 
 
 def fetch_games(
@@ -189,8 +246,17 @@ def fetch_games(
         # back to 1999 (~2 MB), and the daily job commits its cache — storing
         # the whole thing would add megabytes of near-identical history to the
         # repository every day for the sake of ~20 KB that changes.
+        # Written to a sibling and renamed, because rename is atomic on POSIX
+        # and a direct write is not. A run cancelled or killed mid-write would
+        # otherwise leave a truncated file that pandas reads back perfectly
+        # happily — the columns are all present and the season filter still
+        # matches, so nothing raises. Because rows are sorted by week, the part
+        # it loses is the most recent one, which is exactly the part that would
+        # make the staleness check say everything is fine.
         cache_path.parent.mkdir(parents=True, exist_ok=True)
-        games[COLUMNS].to_csv(cache_path, index=False)
+        partial = cache_path.with_suffix(cache_path.suffix + ".partial")
+        games[COLUMNS].to_csv(partial, index=False)
+        partial.replace(cache_path)
 
     return GameData(
         games=games,

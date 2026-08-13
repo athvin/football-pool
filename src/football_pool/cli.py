@@ -117,15 +117,6 @@ def cmd_check_lf(args) -> int:
     return 0
 
 
-# How many overdue games mean the data is behind by a slate rather than by a
-# single late upload. Measured, not guessed: replaying a real season a day at a
-# time, the count is 0 for the first four days, 1 for the next three — the lone
-# Thursday game of the following week — and then jumps straight to 13 once a
-# Sunday has been missed. Anything in that empty band works; this sits in the
-# middle of it, so an unusual week's scheduling cannot drift across the line.
-STALE_GAME_LIMIT = 8
-
-
 def cmd_build(args) -> int:
     from .render import render_site
 
@@ -138,11 +129,11 @@ def cmd_build(args) -> int:
     #
     # Only a *fallback* is blocked. An explicit --offline build is a deliberate
     # request for the committed copy and is how CI builds deterministically.
-    if gd.source == "fallback" and gd.overdue >= STALE_GAME_LIMIT:
+    stale = gd.staleness_reason() if gd.source == "fallback" else None
+    if stale:
         print(
-            f"\nrefusing to publish: could not reach the results feed, and the "
-            f"committed copy in data/{season.year}/ is behind by "
-            f"{gd.overdue} games.\n"
+            f"\nrefusing to publish: could not reach the results feed, and "
+            f"{stale} in the committed copy under data/{season.year}/.\n"
             f"  Publishing it would replace a correct leaderboard with a stale "
             f"one, which is indistinguishable from a correct one to anyone "
             f"reading it.\n"

@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 
 from football_pool.nflverse import (
+    PLAYOFF_ROUNDS,
     DataError,
     GameData,
     fetch_games,
@@ -265,85 +266,136 @@ def _at(games, when, season=2025, source="fallback"):
     return GameData(games, season, when, None, source)
 
 
-def test_nothing_is_overdue_before_the_season_starts(games_2025):
-    """A schedule with no results is not stale in August — it is just August.
+def _days_after(games, anchor, days):
+    return (pd.Timestamp(anchor) + pd.Timedelta(days=days)).to_pydatetime().replace(
+        tzinfo=timezone.utc
+    )
 
-    This is the case that rules out anything clock-based: the committed file
-    can be months old and still perfectly correct, right up until week one.
+
+def test_a_schedule_with_no_results_is_not_stale_before_the_season(games_2025):
+    """August is not staleness. This rules out anything clock-based.
+
+    The committed copy can be months old and still perfectly correct right up
+    until week one, which is why the measure counts overdue games instead.
     """
     preseason = games_2025.copy()
     preseason["played"] = False
-    first = pd.Timestamp(preseason["gameday"].min())
-    before = (first - pd.Timedelta(days=30)).to_pydatetime().replace(tzinfo=timezone.utc)
+    before = _days_after(preseason, preseason["gameday"].min(), -30)
 
-    assert _at(preseason, before).overdue == 0
-
-
-def test_nothing_is_overdue_once_the_season_has_finished(games_2025):
-    """Every game has a result, so there is nothing outstanding to be behind on."""
-    after = datetime(2026, 6, 1, tzinfo=timezone.utc)
-    assert _at(games_2025, after).overdue == 0
+    assert _at(preseason, before).staleness_reason() is None
 
 
-def test_fresh_data_is_not_overdue(games_2025):
-    """The day after a slate, with those results in, counts nothing against us."""
+def test_a_finished_season_is_never_stale(games_2025):
+    """Every game has a result; there is nothing outstanding to be behind on."""
+    sb = games_2025[games_2025["game_type"] == "SB"]["gameday"].max()
+    for days in (1, 30, 200):
+        assert _at(games_2025, _days_after(games_2025, sb, days)).staleness_reason() is None
+
+
+def test_fresh_data_is_never_stale(games_2025):
     played = games_2025.copy()
     played.loc[played["week"] > 11, "played"] = False
     played.loc[played["game_type"] != "REG", "played"] = False
-    latest = pd.Timestamp(played.loc[played["played"], "gameday"].max())
-    next_day = (latest + pd.Timedelta(days=1)).to_pydatetime().replace(tzinfo=timezone.utc)
+    latest = played.loc[played["played"], "gameday"].max()
 
-    assert _at(played, next_day).overdue == 0
+    for days in (1, 3, 6):
+        assert _at(played, _days_after(played, latest, days)).staleness_reason() is None
 
 
-def test_a_late_result_is_tolerated_but_a_missed_slate_is_not(games_2025):
-    """The signal has to distinguish a slow upload from a week gone missing.
+def test_a_late_result_publishes_but_a_missed_slate_does_not(games_2025):
+    """A slow upload is the graceful degradation this was always meant to allow.
 
-    Replayed a day at a time, the count holds at 0 through the grace window,
-    sits at 1 for the lone Thursday game of the next week, then jumps to a full
-    slate. STALE_GAME_LIMIT sits in that empty band.
+    A missed Sunday is not: replayed a day at a time the overdue count holds at
+    0, sits at 1 for the lone Thursday game of the next week, then jumps to a
+    full slate. The limit sits in that empty band.
     """
-    from football_pool.cli import STALE_GAME_LIMIT
-
     played = games_2025.copy()
     played.loc[played["week"] > 11, "played"] = False
     played.loc[played["game_type"] != "REG", "played"] = False
-    latest = pd.Timestamp(played.loc[played["played"], "gameday"].max())
-    day_after = (latest + pd.Timedelta(days=1)).to_pydatetime().replace(tzinfo=timezone.utc)
+    latest = played.loc[played["played"], "gameday"].max()
 
-    def overdue_after(days):
-        return _at(played, day_after + pd.Timedelta(days=days)).overdue
-
-    # A few days late: still under the limit, so the site publishes.
-    assert overdue_after(3) < STALE_GAME_LIMIT
-    assert overdue_after(6) < STALE_GAME_LIMIT
-    # A whole slate missed: over the limit, so the site refuses.
-    assert overdue_after(10) >= STALE_GAME_LIMIT
-    assert overdue_after(14) >= STALE_GAME_LIMIT
+    assert _at(played, _days_after(played, latest, 4)).staleness_reason() is None
+    assert _at(played, _days_after(played, latest, 7)).staleness_reason() is None
+    for days in (10, 14, 21):
+        reason = _at(played, _days_after(played, latest, days)).staleness_reason()
+        assert reason and "regular-season games" in reason
 
 
-def test_the_frozen_preseason_file_is_caught_loudly(games_2025):
-    """The actual failure this exists for.
-
-    Branch protection stopped the daily job refreshing the committed copy, so
-    it sits at preseason. Consulted in November it would publish an all-zeros
-    leaderboard over a correct one.
-    """
-    from football_pool.cli import STALE_GAME_LIMIT
-
+def test_the_frozen_preseason_file_is_caught(games_2025):
+    """The failure this exists for: a file stuck in August, read in November."""
     frozen = games_2025.copy()
     frozen["played"] = False
     november = datetime(2025, 11, 20, tzinfo=timezone.utc)
 
-    assert _at(frozen, november).overdue > 100
-    assert _at(frozen, november).overdue >= STALE_GAME_LIMIT
+    reason = _at(frozen, november).staleness_reason()
+    assert reason and "regular-season games" in reason
 
 
-def test_playoff_games_do_not_count_toward_staleness(games_2025):
-    """Bracket rows only exist once seeded, so they cannot measure lateness."""
-    reg_only = games_2025.copy()
-    reg_only["played"] = False
-    late = datetime(2026, 3, 1, tzinfo=timezone.utc)
+# -- the postseason, where counting overdue games is not enough ---------------
+def test_a_file_frozen_before_the_bracket_is_published_is_caught(games_2025):
+    """The hole a regular-season-only count leaves wide open.
 
-    total = _at(reg_only, late).overdue
-    assert total == int((reg_only["game_type"] == "REG").sum())
+    Playoff rows do not exist upstream until the field is set, so a file frozen
+    at the end of week 18 has every game it knows about played and looks
+    perfectly current. Counting overdue games can only see games it knows
+    about — it stayed silent for the whole of January while the entire
+    postseason went by, and the playoff bonuses are what decide the pool.
+    """
+    no_bracket = games_2025[games_2025["game_type"] == "REG"].copy()
+    week18 = no_bracket["gameday"].max()
+
+    # A few days is legitimate: the bracket takes a moment to be published.
+    assert _at(no_bracket, _days_after(no_bracket, week18, 2)).staleness_reason() is None
+    assert _at(no_bracket, _days_after(no_bracket, week18, 4)).staleness_reason() is None
+
+    # Beyond that, a missing bracket means the file has stopped moving.
+    for days in (6, 10, 20, 30):
+        reason = _at(no_bracket, _days_after(no_bracket, week18, days)).staleness_reason()
+        assert reason and "no playoff games at all" in reason, f"day {days}"
+
+
+def test_an_unplayed_playoff_game_past_its_date_is_caught(games_2025):
+    """Playoff games are few and never postponed, so one is already evidence.
+
+    Waiting for a slate's worth would mean waiting out the whole bracket.
+    """
+    bracket = games_2025.copy()
+    bracket.loc[bracket["game_type"].isin(PLAYOFF_ROUNDS), "played"] = False
+    week18 = bracket[bracket["game_type"] == "REG"]["gameday"].max()
+
+    # Wild-card weekend has only just happened; still inside the grace window.
+    assert _at(bracket, _days_after(bracket, week18, 7)).staleness_reason() is None
+
+    reason = _at(bracket, _days_after(bracket, week18, 11)).staleness_reason()
+    assert reason and "playoff games" in reason
+
+
+def test_the_gap_before_the_super_bowl_is_not_staleness(games_2025):
+    """Two weeks pass between the conference finals and the Super Bowl.
+
+    The longest legitimate gap in the calendar, and it must not read as a
+    stalled feed.
+    """
+    waiting = games_2025.copy()
+    waiting.loc[waiting["game_type"] == "SB", "played"] = False
+    con = waiting[waiting["game_type"] == "CON"]["gameday"].max()
+
+    for days in (1, 5, 10, 13):
+        assert _at(waiting, _days_after(waiting, con, days)).staleness_reason() is None, days
+
+
+def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
+    """A killed run must not leave a truncated file behind.
+
+    pandas reads a short CSV back without complaint — every column is present
+    and the season filter still matches — and because rows are sorted by week
+    the part lost is the most recent, which is exactly the part the staleness
+    check relies on.
+    """
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(csv_bytes))
+    cache = tmp_path / "nested" / "games.csv"
+
+    fetch_games(2025, cache_path=cache)
+
+    assert cache.exists()
+    assert not list(cache.parent.glob("*.partial")), "temp file left behind"
