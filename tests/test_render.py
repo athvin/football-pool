@@ -676,3 +676,45 @@ def test_the_ci_contract_holds(season, game_data, tmp_path):
         r'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"',
         (project / "index.html").read_text(),
     )
+
+
+# -- viewer preferences sit at the top ----------------------------------------
+def test_the_viewer_controls_come_before_the_content(season, game_data, tmp_path):
+    """Both settings change what you are looking at, so they precede it.
+
+    They used to live in the footer, where nobody scrolled to find them. This
+    pins the position rather than merely their existence — the previous test
+    passed perfectly well while they were invisible at the bottom of the page.
+    """
+    written = render_site(season, game_data, tmp_path)
+
+    for page in (p for p in written if p.suffix == ".html"):
+        html = page.read_text()
+        main_at = html.index("<main")
+        assert html.index("data-me-select") < main_at, page
+        assert html.index("data-tz-select") < main_at, page
+        assert html.index('class="viewer-bar"') < main_at, page
+
+
+def test_the_controls_appear_exactly_once(season, game_data, tmp_path):
+    """A duplicate would silently break the wiring.
+
+    initMe and initTimeZone both use querySelector, so a second copy left
+    behind in the footer would never be wired up and would sit there showing
+    a stale value.
+    """
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    assert html.count("data-me-select") == 1
+    assert html.count("data-tz-select") == 1
+
+
+def test_the_footer_keeps_the_freshness_stamps(season, game_data, tmp_path):
+    """Moving the controls out must not take the timestamps with them."""
+    render_site(season, game_data, tmp_path)
+    footer = (tmp_path / "index.html").read_text().split("<footer")[1]
+
+    assert "Data through" in footer
+    assert "Site built" in footer
+    assert len(re.findall(r"<time datetime=", footer)) == 2

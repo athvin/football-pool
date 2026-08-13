@@ -193,8 +193,8 @@ questions.
 
 **Compare** is the one you will use. Pick up to six people and their lines come
 forward, each in its own colour, assigned in the order you pick them so nobody
-changes hue as the season moves. Set *who are you?* in the footer and the chart
-opens on your own line every time — that choice also highlights your row on
+changes hue as the season moves. Set *who are you?* in the bar at the top of the
+page and the chart opens on your own line every time — that choice also highlights your row on
 every other page. It is stored in your browser and goes nowhere else.
 
 **The whole field** draws everyone in a single colour with only the top few
