@@ -1,0 +1,16 @@
+# Build output — never commit generated HTML
+public/
+
+# Node is a test-time dependency only
+node_modules/
+coverage/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+

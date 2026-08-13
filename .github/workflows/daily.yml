@@ -1,0 +1,113 @@
+name: Daily rebuild
+
+# The upstream NFL results feed commits every 15-90 minutes year round and
+# lands within minutes of a game going final, so a daily rebuild always has the
+# previous night's scores. Two runs a day rather than one because GitHub
+# sometimes drops scheduled events entirely, and a dropped run would otherwise
+# mean a day-stale scoreboard.
+on:
+  schedule:
+    # `timezone:` avoids the classic UTC-cron bug: the NFL season straddles the
+    # daylight-saving change, so a hardcoded UTC time would silently shift by an
+    # hour mid-season. 07:37 Eastern is comfortably after Monday Night Football
+    # has gone final and been published. The odd minute dodges the top-of-hour
+    # window where GitHub delays scheduled jobs.
+    - cron: '37 7 * * *'
+      timezone: America/New_York
+    - cron: '37 19 * * *'
+      timezone: America/New_York
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never let two runs deploy Pages at once; never cancel one mid-deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to commit the day's data snapshot
+      pages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+          npm ci
+
+      # The deploy is gated on this. If nflverse renames a column or a scoring
+      # rule regresses, the build stops here and yesterday's good site stays
+      # live — strictly better than publishing a wrong leaderboard, and the next
+      # scheduled run self-heals once the fix lands.
+      - name: Python tests
+        run: uv run pytest
+
+      - name: JavaScript tests
+        run: npx vitest run --coverage
+
+      # Must run before the build: it reports the path the site will be served
+      # from. A project page lives at /<repo>/, and every asset URL has to carry
+      # that prefix or it 404s in production while working fine locally.
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Fetch results and build the site
+        run: |
+          uv run pool build --out ./public --base "${{ steps.pages.outputs.base_path }}"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+      # The raw results file is committed as an audit trail and an offline
+      # fallback, and — just as usefully — it is repository activity. GitHub
+      # disables scheduled workflows after 60 days of inactivity and the
+      # offseason is roughly 200 days, so without something touching the repo
+      # the cron would be dead by the following September.
+      #
+      # Pushes made with the default GITHUB_TOKEN are widely reported not to
+      # count as activity for that timer. If the cron ever goes quiet over an
+      # offseason, add a fine-grained PAT as the DATA_PUSH_TOKEN secret and give
+      # checkout `token: ${{ secrets.DATA_PUSH_TOKEN }}` above; GitHub also
+      # emails a warning before disabling, and re-enabling is one click.
+      - name: Commit the day's data
+        run: |
+          git config user.name 'pool-bot'
+          git config user.email 'pool-bot@users.noreply.github.com'
+          git add -A data/
+          if git diff --staged --quiet; then
+            echo 'no data change today'
+          else
+            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

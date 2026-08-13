@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Teams · {{ season.year }} Family Pool{% endblock %}
+{% block description %}Every team's leveling factor, record, points generated, and who in the pool owns them.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Teams</h1>
+  <p class="page-sub">
+    Sorted by points generated. "Owned by" shows who in the pool is holding
+    them — a team nobody else has is where you gain ground on the field.
+  </p>
+</div>
+
+<div class="table-scroll">
+  <table>
+    <caption>All 32 teams for {{ season.year }}.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Team</th>
+        <th scope="col" class="num">LF</th>
+        <th scope="col">Record</th>
+        <th scope="col" class="num">Points</th>
+        <th scope="col">Seed</th>
+        <th scope="col">Owned by</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in teams %}
+      <tr>
+        <th scope="row">
+          <span class="team-chip {% if t.points > 0 %}scored{% endif %}">{{ t.team }}</span>
+        </th>
+        <td class="num">{{ '%.2f'|format(t.lf) }}</td>
+        <td>{{ t.record }}</td>
+        <td class="num">{{ t.points|points }}</td>
+        <td>
+          {% if t.seed %}
+            <span class="badge money">{{ t.seed }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td>
+          {% if t.owners %}
+            <span class="row-teams">
+            {% for owner in t.owners %}
+              {% set match = rows | selectattr('name', 'equalto', owner) | first %}
+              <a class="team-chip scored" href="{{ ('/entrant/' ~ match.slug ~ '/')|url }}">{{ owner }}</a>
+            {% endfor %}
+            </span>
+            {% if t.owners|length == 1 %}<span class="badge money">unique</span>{% endif %}
+          {% else %}
+            <span style="color:var(--chalk-dim)">nobody</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

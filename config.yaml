@@ -1,0 +1,12 @@
+# Which season the site builds by default.
+#
+# To roll over to a new year:
+#   1. cp -r seasons/2026 seasons/2027
+#   2. edit seasons/2027/{rules,picks,market}.yaml
+#   3. bump active_season below
+#
+# Past seasons stay buildable forever: `pool build --season 2026`.
+active_season: 2026
+
+# Seasons to publish as archives alongside the active one.
+archive_seasons: []

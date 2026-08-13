@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+
+{% block title %}Rules · {{ season.year }} Family Pool{% endblock %}
+{% block description %}How the family pool scores: leveling factors, bonuses, and playoff points.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Rules</h1>
+  <p class="page-sub">
+    Everything on this page is rendered from the same file the scoring engine
+    reads, so what is posted here and what the leaderboard computes can never
+    drift apart.
+  </p>
+</div>
+
+<div class="prose">
+  <h2>The basics</h2>
+  <p>
+    Everyone pays <strong>${{ '%.0f'|format(season.entry_fee) }}</strong> and picks
+    <strong>{{ season.picks_per_entrant }} teams</strong> for the whole season. With
+    {{ state.entrants }} {{ 'entry' if state.entrants == 1 else 'entries' }} in, the pot is
+    <strong>${{ '%.0f'|format(season.pot) }}</strong>, paid out
+    {% for share in season.payout_split %}{{ (share * 100)|int }}%{% if not loop.last %} / {% endif %}{% endfor %}
+    to the top {{ season.payout_split|length }}. Highest total after the Super Bowl wins.
+  </p>
+  <p>
+    Every team carries a <strong>leveling factor</strong> — a handicap set from last
+    season's record. Each win pays that team's leveling factor, so a win by a bad
+    team is worth more than a win by a good one. The whole game is finding teams
+    the handicap underrates.
+  </p>
+</div>
+
+<h2 class="section-title" id="scoring">Scoring</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Every way a team scores points for you.</caption>
+    <thead>
+      <tr><th scope="col">Event</th><th scope="col">Points</th><th scope="col">Notes</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Regular-season win</th>
+        <td class="num">{% if season.win_multiplier != 1 %}{{ season.win_multiplier }} ×{% endif %} LF</td>
+        <td>the team's leveling factor</td>
+      </tr>
+      <tr>
+        <th scope="row">Regular-season tie</th>
+        <td class="num">{{ season.tie_multiplier }} × LF</td>
+        <td>an NFL game can end level; it pays half a win</td>
+      </tr>
+      <tr>
+        <th scope="row">Division winner</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.division_winner) }}</td>
+        <td>seeds 1–4</td>
+      </tr>
+      <tr>
+        <th scope="row">Wild-card berth</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.wild_card_berth) }}</td>
+        <td>seeds 5–7 — a team gets this <em>or</em> the division bonus, never both</td>
+      </tr>
+      <tr>
+        <th scope="row">Wild-card round win</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.wild_card_upset_flat) }} flat</td>
+        <td>
+          only when a wild card beats a division winner, and no leveling factor is
+          added. Seeds 2–4 host that round and are always division winners, so a
+          division winner that wins its own wild-card game scores nothing for it.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Divisional round win</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.divisional_flat) }} + LF</td>
+        <td></td>
+      </tr>
+      <tr>
+        <th scope="row">Conference championship win</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.conference_flat) }} + LF</td>
+        <td></td>
+      </tr>
+      <tr>
+        <th scope="row">Super Bowl win</th>
+        <td class="num">+{{ '%.1f'|format(season.bonuses.super_bowl_flat) }} + LF</td>
+        <td>neutral site</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<h2 class="section-title">Leveling factors</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Points per win, by team. Higher means the handicap rates them worse.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Division</th>
+        <th scope="col">Teams</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for division, teams_in in season.divisions.items() %}
+      <tr>
+        <th scope="row">{{ division }}</th>
+        <td>
+          <span class="row-teams">
+          {% for t in teams_in %}
+            <span class="team-chip">{{ t }} · {{ '%.2f'|format(season.lf_of(t)) }}</span>
+          {% endfor %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="prose">
+  <h2>Two things worth knowing</h2>
+  <h3>Your own teams will play each other</h3>
+  <p>
+    Almost every four-team entry has games where two of its own teams meet. One
+    of them has to win, so those points are already yours before kickoff — that
+    is the hatched part of the bar on the standings page, and it is why nobody's
+    floor is simply what they have banked.
+  </p>
+  <h3>A team's maximum</h3>
+  <p>
+    The most any single team can be worth is <strong>20 × LF + 7.5</strong>: seventeen
+    regular-season wins, a division title, and three playoff wins. Winning the
+    division rather than a wild-card spot is worth exactly 0.5 more over a full
+    playoff run.
+  </p>
+</div>
+
+{% endblock %}
