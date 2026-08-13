@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}Forecast · {{ season.year }} Family Pool{% endblock %}
+{% block description %}How the {{ season.year }} pool is likely to end — chance of each finishing place, the range of final scores, and every head-to-head.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Forecast <span class="model-tag">modelled</span></h1>
+  <p class="page-sub">
+    {% if projecting %}
+      Every chart here comes from the same {{ '{:,}'.format(sim_count) }} simulated
+      seasons, with every completed game held fixed. These are forecasts, not
+      results — which is why the whole page is cyan.
+    {% else %}
+      Nothing to forecast right now.
+    {% endif %}
+  </p>
+</div>
+
+{% if not forecast %}
+  <p class="empty">
+    {% if state.games_remaining %}
+      No forecast is configured for {{ season.year }}. Add win totals to
+      <code>seasons/{{ season.year }}/forecast.yaml</code>, or set
+      <code>enabled: false</code> to leave this page out on purpose.
+    {% else %}
+      The season is over — there is nothing left to simulate. The
+      <a href="{{ '/'|url }}">standings</a> are the final word now.
+    {% endif %}
+  </p>
+{% else %}
+
+<h2 class="section-title">Where everyone finishes</h2>
+<p class="page-sub">
+  Each bar is one entry's chances across every finishing place, strongest colour
+  for first. The bars are all the same length because the chances add to one —
+  so you are comparing the width of the segments, not the length of the bar.
+</p>
+
+<div class="forecast-rows">
+  {% for r in forecast.finish_rows %}
+  <a class="forecast-row" href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}" data-slug="{{ r.slug }}">
+    <span class="forecast-name">
+      {{ r.name }}<span class="badge you" data-me-only>you</span>
+    </span>
+    <span class="forecast-bar">{{ r.bar|safe }}</span>
+    <span class="forecast-odds model">{{ '%.0f%%'|format(r.probs[0] * 100) }}</span>
+  </a>
+  {% endfor %}
+</div>
+<p class="legend">
+  <span>Percentage shown is the chance of finishing first. Hover any segment for the rest.</span>
+</p>
+
+<h2 class="section-title">The range of outcomes</h2>
+<p class="page-sub">
+  One curve per entry, all on the same scale, showing where their final score
+  landed across every simulation. A tall narrow curve is a confident forecast; a
+  low wide one could go anywhere. Where two curves sit on top of each other, the
+  pool is genuinely close — the overlap is the point.
+</p>
+<div class="chart-card">
+  {{ forecast.ridge|safe }}
+</div>
+
+<h2 class="section-title">Head to head</h2>
+<p class="page-sub">
+  How often the entry on the left finishes above the entry along the top,
+  ignoring everybody else. Reading across a row tells you who you are favoured
+  against; every pair of opposite cells adds to 100%.
+</p>
+<div class="table-scroll">
+  {{ forecast.heatmap|safe }}
+</div>
+
+<h2 class="section-title">The money</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Chance of finishing first, chance of cashing, and the likely final range.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        <th scope="col" class="num">P(1st)</th>
+        <th scope="col" class="num">P(cash)</th>
+        <th scope="col" class="num">Expected $</th>
+        <th scope="col">Projected final score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows|sort(attribute='projection.expected_payout', reverse=true) %}
+      {% set p = r.projection %}
+      <tr data-slug="{{ r.slug }}">
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num model">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
+        <td class="num model">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
+        <td class="num model">
+          {{ '$%.0f'|format(p.expected_payout) }}
+          <span class="net {{ 'up' if p.expected_net > 0 else 'down' }}">{{ '%+.0f'|format(p.expected_net) }}</span>
+        </td>
+        <td class="band-cell">
+          {{ p.band|safe }}
+          <span class="row-sub">{{ '%.0f'|format(p.p10) }}–{{ '%.0f'|format(p.p90) }}, mid {{ '%.0f'|format(p.mean_points) }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<p class="page-sub">
+  The model fits team ratings to the market's win totals and plays the rest of
+  the season out {{ '{:,}'.format(sim_count) }} times. It knows nothing about
+  the leveling factors beyond the fact that they are what turns a team's wins
+  into your points — the odds have no bearing on how anyone is actually scored.
+</p>
+
+{% endif %}
+
+{% endblock %}

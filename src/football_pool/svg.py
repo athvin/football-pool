@@ -418,3 +418,201 @@ def meter(fraction: float, width: int = 60, height: int = 6, fill: str = MODEL) 
         f'<rect x="0" y="0" width="{width * f:.1f}" height="{height}" rx="{height / 2}" '
         f'fill="{fill}"/></svg>'
     )
+
+
+# -- forecast charts --------------------------------------------------------
+def _ordinal(n: int) -> str:
+    if 10 <= n % 100 <= 20:
+        return f"{n}th"
+    return f"{n}{ {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th') }"
+
+
+def _place_fill(place: int, places: int) -> str:
+    """A sequential ramp from the model colour down to the edge colour.
+
+    Finishing position is ordinal, so it gets a sequential scale rather than
+    categorical hues: first place should read as the strong end of one ramp,
+    not as an arbitrarily different colour from second.
+    """
+    if places <= 1 or place <= 1:
+        return MODEL
+    weight = 100 - int(88 * (place - 1) / (places - 1))
+    return f"color-mix(in srgb, {MODEL} {weight}%, {UPSIDE})"
+
+
+def finish_bar(
+    probs: Sequence[float], width: int = 320, height: int = 22, label_min: float = 34.0
+) -> str:
+    """One entrant's chance of finishing in each place, as a single stacked bar.
+
+    Reads left to right as first place through last. The whole bar is always
+    the full width because the probabilities sum to one, so the eye compares
+    segment widths between rows without any scaling to think about.
+    """
+    total = float(sum(probs))
+    if not probs or total <= 0:
+        return (
+            f'<svg class="finish" width="{width}" height="{height}" aria-hidden="true">'
+            f'<rect width="{width}" height="{height}" rx="4" fill="var(--surface-2)"/>'
+            f"</svg>"
+        )
+
+    places = len(probs)
+    label = ", ".join(
+        f"{_ordinal(i + 1)} {p * 100:.0f}%" for i, p in enumerate(probs) if p >= 0.005
+    )
+    out = [
+        f'<svg class="finish" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" aria-label="{escape(label)}">'
+    ]
+
+    x = 0.0
+    for i, p in enumerate(probs):
+        seg = width * max(float(p), 0.0) / total
+        out.append(
+            f'<rect x="{x:.1f}" y="0" width="{max(seg - 1, 0):.1f}" height="{height}" '
+            f'rx="3" fill="{_place_fill(i + 1, places)}">'
+            f"<title>{_ordinal(i + 1)}: {p * 100:.1f}%</title></rect>"
+        )
+        if seg >= label_min:
+            out.append(
+                f'<text x="{x + seg / 2:.1f}" y="{height / 2 + 3.5:.1f}" '
+                f'text-anchor="middle" class="finish-label">{_ordinal(i + 1)}</text>'
+            )
+        x += seg
+    out.append("</svg>")
+    return "".join(out)
+
+
+def ridgeline(
+    centers: Sequence[float],
+    rows: Sequence[tuple[str, Sequence[float]]],
+    width: int = 860,
+    row_height: int = 46,
+    curve_height: int = 64,
+    label_width: int = 150,
+) -> str:
+    """Every entrant's score distribution on one shared axis.
+
+    Rows deliberately overlap and the fills are translucent, because the
+    overlap *is* the message: two curves sitting on top of each other means the
+    pool is close, and two that barely touch means it is over. A shared x-scale
+    is what makes that readable, so every row is drawn against the same
+    ``centers``.
+    """
+    rows = [(n, list(v)) for n, v in rows if len(v) > 0]
+    if not rows or len(centers) < 2:
+        return (
+            f'<svg class="ridge" width="{width}" height="{row_height}" '
+            f'aria-hidden="true"></svg>'
+        )
+
+    pad_r, pad_t, pad_b = 12, curve_height - row_height + 8, 26
+    plot_w = width - label_width - pad_r
+    height = pad_t + row_height * len(rows) + pad_b
+    step = plot_w / (len(centers) - 1)
+
+    def x_at(i: int) -> float:
+        return label_width + i * step
+
+    out = [
+        f'<svg class="ridge" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="Simulated final score distribution for '
+        f'{escape(str(len(rows)))} entrants" preserveAspectRatio="xMidYMid meet">'
+    ]
+
+    # Later rows are drawn over earlier ones, so iterate top-down to keep the
+    # stacking order matching the reading order.
+    for i, (name, density) in enumerate(rows):
+        base = pad_t + row_height * (i + 1)
+        points = " ".join(
+            f"{x_at(j):.1f},{base - curve_height * min(max(float(v), 0.0), 1.0):.1f}"
+            for j, v in enumerate(density)
+        )
+        area = f"{label_width:.1f},{base:.1f} {points} {x_at(len(density) - 1):.1f},{base:.1f}"
+        out.append(
+            f'<polygon class="ridge-fill" points="{area}"/>'
+            f'<polyline class="ridge-line" points="{points}" fill="none"/>'
+            f'<text x="{label_width - 10}" y="{base - 3:.1f}" text-anchor="end" '
+            f'class="ridge-label">{escape(name[:20])}</text>'
+        )
+
+    # A handful of score ticks along the bottom, not one per bin.
+    for i in range(0, len(centers), max(len(centers) // 6, 1)):
+        out.append(
+            f'<text x="{x_at(i):.1f}" y="{height - 8}" text-anchor="middle" '
+            f'class="trend-tick">{centers[i]:.0f}</text>'
+        )
+
+    out.append("</svg>")
+    return "".join(out)
+
+
+def heatmap(
+    matrix: Sequence[Sequence[float | None]],
+    labels: Sequence[str],
+    cell: int = 62,
+    label_width: int = 132,
+    header_height: int = 26,
+) -> str:
+    """Pairwise probabilities, with the number printed in every cell.
+
+    Colour is reinforcement here, never the only channel — the value is written
+    into each cell, so the chart is readable in greyscale, at any level of
+    colour vision, and by anyone who simply wants the number.
+
+    ``None`` renders as an empty cell, which is what the diagonal is: nobody
+    races themselves.
+    """
+    n = len(labels)
+    if n == 0:
+        return '<svg class="heat" width="1" height="1" aria-hidden="true"></svg>'
+
+    width = label_width + cell * n
+    height = header_height + cell * n
+    out = [
+        f'<svg class="heat" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="Chance each entrant finishes above each other entrant" '
+        f'preserveAspectRatio="xMidYMid meet">'
+    ]
+
+    for j, col in enumerate(labels):
+        out.append(
+            f'<text x="{label_width + cell * j + cell / 2:.1f}" y="{header_height - 9}" '
+            f'text-anchor="middle" class="heat-head">{escape(col[:8])}</text>'
+        )
+
+    for i, row in enumerate(labels):
+        y = header_height + cell * i
+        out.append(
+            f'<text x="{label_width - 10}" y="{y + cell / 2 + 4:.1f}" text-anchor="end" '
+            f'class="heat-head">{escape(row[:18])}</text>'
+        )
+        row_values = matrix[i] if i < len(matrix) else ()
+        for j in range(n):
+            x = label_width + cell * j
+            # A matrix that does not match the labels draws blanks rather than
+            # raising: the grid is generated data, and a shape mismatch should
+            # show up as a visibly empty cell, not as a failed build.
+            value = row_values[j] if j < len(row_values) else None
+            if value is None:
+                out.append(
+                    f'<rect x="{x + 1}" y="{y + 1}" width="{cell - 2}" height="{cell - 2}" '
+                    f'rx="4" fill="var(--surface-2)" opacity="0.4"/>'
+                )
+                continue
+            v = float(value)
+            out.append(
+                f'<rect x="{x + 1}" y="{y + 1}" width="{cell - 2}" height="{cell - 2}" '
+                f'rx="4" fill="{MODEL}" opacity="{0.08 + 0.72 * v:.3f}">'
+                f"<title>{escape(row)} finishes above {escape(labels[j])} "
+                f"{v * 100:.0f}% of the time</title></rect>"
+                f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" '
+                f'text-anchor="middle" class="heat-cell'
+                f'{" is-strong" if v >= 0.5 else ""}">{v * 100:.0f}%</text>'
+            )
+
+    out.append("</svg>")
+    return "".join(out)

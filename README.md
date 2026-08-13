@@ -123,6 +123,7 @@ src/football_pool/
   standings.py        NFL tiebreakers → division winners and playoff seeds
   potential.py        next week, ceilings, floors, elimination
   history.py          week-by-week points and ranks
+  project.py          Monte Carlo → per-entrant odds and distributions
   svg.py              inline charts, generated at build time
   render.py           Jinja2 → public/
 templates/, assets/   the site itself
@@ -185,8 +186,28 @@ off, and nothing else changes.
 - **Weeks** — points scored in each week and the standings as they stood after it.
 - **Trends** — points and rank over the season, leverage, who is carrying whom,
   and the gaps between neighbours.
+- **Forecast** — where the model thinks it ends: chance of every finishing
+  place, the range of final scores, and every head-to-head.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads.
+
+The Forecast page is three views of one simulation, and none of it costs an
+extra run — the numbers were already being computed and thrown away.
+
+**Where everyone finishes** is a stacked bar per entry across every place,
+strongest colour for first. Every bar is the same length because the chances
+sum to one, so you compare segment widths rather than bar lengths.
+
+**The range of outcomes** draws each entry's final-score distribution on one
+shared scale. A tall narrow curve is a confident forecast and a low wide one
+could go anywhere — and where two curves sit on top of each other, the pool is
+genuinely close. The shared scale is what makes that overlap mean something, so
+the bins are never per-entrant.
+
+**Head to head** gives P(row finishes above column) for every pair, with ties
+splitting evenly so opposite cells always add to 100%. The number is printed in
+every cell and colour is only reinforcement, so it reads in greyscale and with
+any colour vision.
 
 The Trends page carries two kinds of chart, because they answer two different
 questions.

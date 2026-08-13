@@ -191,6 +191,7 @@ def test_builds_every_expected_page(pool, game_data, tmp_path):
     for rel in (
         "index.html",
         "rules/index.html",
+        "forecast/index.html",
         "teams/index.html",
         "weeks/index.html",
         "404.html",
@@ -398,11 +399,19 @@ def test_a_broken_model_does_not_take_the_site_down(pool, mid_season, tmp_path, 
 
 
 def test_projections_appear_when_available(pool, mid_season, tmp_path):
+    """A summary on the standings page, the full table on /forecast/.
+
+    The standings page is a scoreboard — what has happened — so it carries the
+    headline only, and the distributional detail lives on its own page.
+    """
     render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "index.html").read_text()
-    assert "Projected finish" in html
-    assert "modelled" in html
-    assert "P(1st)" in html
+    index = (tmp_path / "index.html").read_text()
+    assert "Projected finish" in index
+    assert "modelled" in index
+
+    forecast = (tmp_path / "forecast" / "index.html").read_text()
+    assert "P(1st)" in forecast
+    assert "P(cash)" in forecast
 
 
 def test_projections_are_absent_once_the_season_ends(pool, game_data, tmp_path):
@@ -718,3 +727,103 @@ def test_the_footer_keeps_the_freshness_stamps(season, game_data, tmp_path):
     assert "Data through" in footer
     assert "Site built" in footer
     assert len(re.findall(r"<time datetime=", footer)) == 2
+
+
+# -- the forecast page --------------------------------------------------------
+def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    assert 'class="finish"' in html  # finishing-place bars
+    assert 'class="ridge"' in html  # score distributions
+    assert 'class="heat"' in html  # head to head
+    assert "modelled" in html
+
+
+def test_the_forecast_page_has_a_row_per_entrant(pool, mid_season, tmp_path):
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    slugs = re.findall(r'class="forecast-row"[^>]*data-slug="([\w-]+)"', html)
+    assert len(slugs) == len(pool.entrants)
+    assert len(set(slugs)) == len(slugs)
+
+
+def test_the_forecast_is_ordered_by_chance_of_winning(pool, mid_season, tmp_path):
+    """The model's own ranking, not the current standings — they differ."""
+    ctx = build_context(pool, mid_season, simulations=200)
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    shown = re.findall(r'class="forecast-row"[^>]*data-slug="([\w-]+)"', html)
+    expected = (
+        ctx.projections.entrants.sort_values("p_first", ascending=False)["slug"].tolist()
+    )
+    assert shown == expected
+
+
+def test_the_forecast_tab_is_in_the_nav_on_every_page(pool, mid_season, tmp_path):
+    written = render_site(pool, mid_season, tmp_path, simulations=200)
+    for page in (p for p in written if p.suffix == ".html"):
+        assert "/forecast/" in page.read_text(), page
+
+
+def test_the_forecast_page_explains_itself_when_there_is_nothing_to_say(
+    pool, game_data, tmp_path
+):
+    """Once the bracket starts there is nothing left to simulate."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    assert 'class="finish"' not in html
+    assert "The season is over" in html
+
+
+def test_the_standings_page_links_to_the_full_forecast(pool, mid_season, tmp_path):
+    """The scoreboard keeps a headline; the distributions live on their own page."""
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    index = (tmp_path / "index.html").read_text()
+
+    assert 'class="finish"' in index  # the summary bars
+    assert 'class="ridge"' not in index  # but not the full picture
+    assert 'href="/forecast/"' in index
+
+
+def test_an_entrant_page_shows_their_own_odds(pool, mid_season, tmp_path):
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    html = (tmp_path / "entrant" / "brandon" / "index.html").read_text()
+
+    assert 'class="finish"' in html
+    assert "Favoured against" in html
+    # Every rival but themselves.
+    assert html.count("<tbody>") >= 1
+    for other in ("Aunt Carol", "Cousin Mike"):
+        assert other in html
+
+
+def test_short_names_fall_back_when_first_names_collide():
+    """Two Sarahs must not both become "Sarah" on a chart axis."""
+    from football_pool.render import _short_names
+
+    assert _short_names(["Brian Moore", "Paul Moore"]) == {
+        "Brian Moore": "Brian",
+        "Paul Moore": "Paul",
+    }
+    clash = _short_names(["Sarah Jones", "Sarah Smith"])
+    assert clash == {"Sarah Jones": "Sarah Jones", "Sarah Smith": "Sarah Smith"}
+
+
+def test_the_data_feed_carries_data_not_markup(pool, mid_season, tmp_path):
+    """standings.json is a machine-readable interface, so no SVG in it.
+
+    Every chart is a string of markup. One leaking into the feed tripled its
+    size, and anyone parsing it wants the numbers.
+    """
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    raw = (tmp_path / "data" / "standings.json").read_text()
+
+    assert "<svg" not in raw
+    data = json.loads(raw)
+    projection = data["entrants"][0]["projection"]
+    # The numbers behind the charts are still there.
+    assert {"p_first", "p_cash", "mean_points", "rivals"} <= set(projection)

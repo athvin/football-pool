@@ -354,3 +354,117 @@ def test_compare_chart_escapes_names_and_slugs():
     markup = svg.compare_lines([('A<script>', 'a"b', [1.0, 2.0])])
     assert "<script>" not in markup
     assert parse(markup) is not None
+
+
+# -- forecast charts --------------------------------------------------------
+def test_finish_bar_segments_every_place():
+    el = parse(svg.finish_bar([0.5, 0.3, 0.15, 0.05]))
+    assert len(el.findall(".//rect")) == 4
+
+
+def test_finish_bar_always_fills_the_rail():
+    """Probabilities sum to one, so the bar is full width at every entrant.
+
+    That is what lets the eye compare segment widths between rows without
+    mentally rescaling each bar.
+    """
+    width = 320
+    for probs in ([0.9, 0.1], [0.25] * 4, [1.0]):
+        el = parse(svg.finish_bar(probs, width=width))
+        total = sum(float(r.get("width")) for r in el.findall(".//rect"))
+        # Each segment is drawn a pixel short to leave a hairline gap.
+        assert total == pytest.approx(width - len(probs), abs=1.5)
+
+
+def test_finish_bar_labels_only_segments_wide_enough_to_hold_one():
+    el = parse(svg.finish_bar([0.94, 0.02, 0.02, 0.02]))
+    labels = [t.text for t in el.findall(".//text")]
+    assert labels == ["1st"]
+
+
+def test_finish_bar_uses_a_sequential_ramp_not_categorical_colours():
+    """Finishing position is ordinal, so first place is one end of one ramp."""
+    fills = [r.get("fill") for r in parse(svg.finish_bar([0.25] * 4)).findall(".//rect")]
+    assert fills[0] == svg.MODEL
+    assert all("color-mix" in f for f in fills[1:])
+    assert len(set(fills)) == 4
+
+
+def test_finish_bar_describes_itself():
+    label = parse(svg.finish_bar([0.6, 0.4])).get("aria-label")
+    assert "1st 60%" in label and "2nd 40%" in label
+
+
+def test_finish_bar_survives_an_empty_or_zero_field():
+    for probs in ([], [0.0, 0.0]):
+        assert parse(svg.finish_bar(probs)) is not None
+
+
+@pytest.mark.parametrize(
+    "n, expected", [(1, "1st"), (2, "2nd"), (3, "3rd"), (4, "4th"), (11, "11th"), (21, "21st")]
+)
+def test_ordinals(n, expected):
+    assert svg._ordinal(n) == expected
+
+
+def test_ridgeline_draws_a_curve_and_a_label_per_entrant():
+    el = parse(svg.ridgeline([1, 2, 3], [("A", [0, 1, 0]), ("B", [1, 0, 1])]))
+    assert len(el.findall(".//polygon")) == 2
+    assert len(el.findall(".//polyline")) == 2
+    assert {t.text for t in el.findall(".//text[@class='ridge-label']")} == {"A", "B"}
+
+
+def test_ridgeline_puts_every_row_on_the_same_x_scale():
+    """Per-entrant scales would destroy the comparison the chart exists for."""
+    el = parse(svg.ridgeline([10, 20, 30], [("A", [0, 1, 0]), ("B", [1, 0, 1])]))
+    xs = [
+        [p.split(",")[0] for p in line.get("points").split()]
+        for line in el.findall(".//polyline")
+    ]
+    assert xs[0] == xs[1]
+
+
+def test_ridgeline_survives_degenerate_input():
+    assert parse(svg.ridgeline([], [])) is not None
+    assert parse(svg.ridgeline([1], [("A", [1])])) is not None
+    assert parse(svg.ridgeline([1, 2], [])) is not None
+
+
+def test_heatmap_prints_the_number_in_every_cell():
+    """Colour is reinforcement only — the grid must read in greyscale."""
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["A", "B"]))
+    values = [t.text for t in el.findall(".//text[@class='heat-cell']")]
+    values += [t.text for t in el.findall(".//text[@class='heat-cell is-strong']")]
+    assert sorted(values) == ["40%", "60%"]
+
+
+def test_heatmap_leaves_the_diagonal_blank():
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["A", "B"]))
+    # Two filled cells, two blanks, plus nothing else.
+    assert len([r for r in el.findall(".//rect") if r.get("fill") == svg.MODEL]) == 2
+
+
+def test_heatmap_opacity_tracks_the_value():
+    el = parse(svg.heatmap([[None, 1.0], [0.0, None]], ["A", "B"]))
+    rects = [r for r in el.findall(".//rect") if r.get("fill") == svg.MODEL]
+    opacities = sorted(float(r.get("opacity")) for r in rects)
+    assert opacities[0] < opacities[1]
+
+
+def test_heatmap_degrades_when_the_matrix_does_not_match_the_labels():
+    """A shape mismatch draws blanks rather than failing the whole build."""
+    el = parse(svg.heatmap([[None, 0.5]], ["A", "B", "C"]))
+    assert el is not None
+    assert len(el.findall(".//text[@class='heat-head']")) == 6  # 3 rows + 3 cols
+
+
+def test_heatmap_labels_both_axes():
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"]))
+    heads = [t.text for t in el.findall(".//text[@class='heat-head']")]
+    # Each name appears twice: once as a column header, once as a row header.
+    assert heads.count("Alice") == 2 and heads.count("Bob") == 2
+    assert len(heads) == 4
+
+
+def test_heatmap_survives_an_empty_field():
+    assert parse(svg.heatmap([], [])) is not None

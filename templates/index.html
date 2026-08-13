@@ -110,45 +110,31 @@
 </div>
 {% endif %}
 
-{% if projecting %}
+{% if forecast %}
+{# A summary, not the whole forecast. The full distributional picture lives on
+   /forecast/ so the standings page stays a scoreboard — what has happened —
+   rather than becoming half a model. #}
 <h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
 <p class="page-sub">
-  {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every game
-  already played. These are forecasts, not results — everything in this section
-  is shown in cyan for that reason.
+  From {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every
+  game already played. Each bar is that entry's chance of every finishing place,
+  strongest colour first.
 </p>
-<div class="table-scroll">
-  <table>
-    <caption>Chance of finishing first, chance of cashing, and the likely final range.</caption>
-    <thead>
-      <tr>
-        <th scope="col">Entrant</th>
-        <th scope="col" class="num">P(1st)</th>
-        <th scope="col" class="num">P(cash)</th>
-        <th scope="col" class="num">Expected $</th>
-        <th scope="col">Projected final score</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for r in rows|sort(attribute='projection.expected_payout', reverse=true) %}
-      {% set p = r.projection %}
-      <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td class="num model">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
-        <td class="num model">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
-        <td class="num model">
-          {{ '$%.0f'|format(p.expected_payout) }}
-          <span class="net {{ 'up' if p.expected_net > 0 else 'down' }}">{{ '%+.0f'|format(p.expected_net) }}</span>
-        </td>
-        <td class="band-cell">
-          {{ p.band|safe }}
-          <span class="row-sub">{{ '%.0f'|format(p.p10) }}–{{ '%.0f'|format(p.p90) }}, mid {{ '%.0f'|format(p.mean_points) }}</span>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+
+<div class="forecast-rows">
+  {% for r in forecast.finish_rows[:3] %}
+  <a class="forecast-row" href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}" data-slug="{{ r.slug }}">
+    <span class="forecast-name">
+      {{ r.name }}<span class="badge you" data-me-only>you</span>
+    </span>
+    <span class="forecast-bar">{{ r.bar|safe }}</span>
+    <span class="forecast-odds model">{{ '%.0f%%'|format(r.probs[0] * 100) }}</span>
+  </a>
+  {% endfor %}
 </div>
+<p class="page-sub">
+  <a class="back" href="{{ '/forecast/'|url }}">Full forecast — every finish, the score ranges, and head to head →</a>
+</p>
 {% endif %}
 
 {% if state.week_leaders %}

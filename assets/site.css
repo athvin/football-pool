@@ -746,6 +746,94 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   letter-spacing: 0.04em;
 }
 
+/* --- forecast ---------------------------------------------------------- */
+/* Everything on the forecast page is modelled, so it is all cyan. The one rule
+   the whole site rests on is that a projection never wears the colour of a
+   banked result. */
+.forecast-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 0.75rem; }
+
+.forecast-row {
+  --accent: var(--model);
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr) 3.5rem;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.55rem 0.9rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: transform 0.16s ease, border-color 0.16s ease, background-color 0.16s;
+}
+
+.forecast-row:hover, .forecast-row:focus-visible {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--model) 45%, var(--rule));
+  background: var(--surface-2);
+  outline: none;
+}
+
+.forecast-row.is-me { border-color: color-mix(in srgb, var(--model) 55%, var(--rule)); }
+
+.forecast-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
+}
+
+.forecast-bar { min-width: 0; }
+.forecast-bar .finish { width: 100%; height: auto; }
+
+.forecast-odds {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.finish-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  fill: var(--field);
+  letter-spacing: 0.04em;
+}
+
+/* Ridgeline: translucent fills so overlap reads as overlap. */
+.chart-card .ridge { width: 100%; height: auto; min-width: 560px; }
+
+.ridge-fill { fill: var(--model); opacity: 0.16; }
+.ridge-line { stroke: var(--model); stroke-width: 1.6; opacity: 0.85; }
+.ridge-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--chalk-dim);
+}
+
+/* Heatmap: the number is in every cell, so colour is reinforcement only and
+   the grid stays readable in greyscale or with any colour vision. */
+.heat { width: 100%; height: auto; min-width: 520px; }
+.heat-head {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--chalk-dim);
+}
+.heat-cell {
+  font-family: var(--mono);
+  font-size: 12px;
+  fill: var(--chalk-dim);
+  font-variant-numeric: tabular-nums;
+}
+.heat-cell.is-strong { fill: var(--chalk); font-weight: 600; }
+
 /* --- compare chart ----------------------------------------------------- */
 /* The emphasis chart above answers "what is the shape of the season". This one
    answers "how am I doing against Paul", which is a different question and
@@ -985,8 +1073,34 @@ html:active-view-transition .row { animation: none; }
 @media (max-width: 640px) {
   .masthead-inner { min-height: 54px; padding-block: 0.5rem; }
   .brand-name { font-size: 1.2rem; }
-  .tabs { order: 3; width: 100%; margin-inline-start: 0; justify-content: space-between; }
-  .tabs a { padding: 0.35rem 0.5rem; font-size: 0.74rem; }
+  /* One row, scrolled sideways, rather than wrapping to two. The masthead is
+     sticky, so a second row of tabs costs that space on every screen for the
+     whole session — and it only gets worse as pages are added. */
+  .tabs {
+    order: 3;
+    width: 100%;
+    margin-inline-start: 0;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a { padding: 0.35rem 0.5rem; font-size: 0.74rem; white-space: nowrap; }
+
+  /* Full-width bar with the name and the headline odds above it — at 390px the
+     three-column layout squeezes the bar to about 55px, which shows nothing. */
+  .forecast-row {
+    grid-template-columns: minmax(0, 1fr) 3.2rem;
+    grid-template-areas:
+      'name odds'
+      'bar  bar';
+    gap: 0.4rem 0.6rem;
+  }
+  .forecast-name { grid-area: name; font-size: 1rem; }
+  .forecast-odds { grid-area: odds; }
+  .forecast-bar { grid-area: bar; }
   .theme-toggle { margin-inline-start: auto; }
 
   .row {
