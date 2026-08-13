@@ -212,3 +212,62 @@ def test_ordinal_filter_survives_the_twenties(season):
 def test_team_rows_carry_a_win_pct_sort_key(season, games_2025):
     rows = _team_rows(_ctx(season, games_2025))
     assert all(0.0 <= r["win_pct"] <= 1.0 for r in rows)
+
+
+# -- schedule page (shipped upstream after the original audit) --------------
+def test_schedule_rows_render_in_kickoff_order(make_season):
+    """Within one Sunday the frame is matchup-alphabetical; the page must be
+    chronological — the 8:25 night game was rendering above the 5:00 slate
+    (57 inversions across the 2026 file)."""
+    from tests.helpers import mkgames
+    from football_pool.render import _schedule
+
+    season = make_season(forecast=False)
+    games = mkgames(
+        [
+            {"home": "KC", "away": "DAL", "gameday": "2026-09-13", "gametime": "20:20"},
+            {"home": "SEA", "away": "NE", "gameday": "2026-09-13", "gametime": "13:00"},
+        ]
+    )
+    rows = _schedule(build_context(season, _gd(games)))["weeks"][0]["games"]
+    assert [g["kickoff"] for g in rows] == sorted(g["kickoff"] for g in rows)
+    assert rows[0]["home"]["team"] == "SEA"
+
+
+def test_on_the_table_counts_only_sides_the_pool_holds(make_season):
+    """'Field maximum' must be winnable by the field: unowned sides and fully
+    idle games were adding 233 phantom points across the 2026 slate."""
+    from tests.helpers import mkgames
+    from football_pool.render import _schedule
+
+    season = make_season(forecast=False)  # Solo holds KC, SEA, DAL, NE
+    games = mkgames(
+        [
+            {"home": "KC", "away": "BAL"},  # only the KC side is held
+            {"home": "CIN", "away": "CLE"},  # fully idle
+        ]
+    )
+    week = _schedule(build_context(season, _gd(games)))["weeks"][0]
+    assert week["on_the_table"] == pytest.approx(season.lf_of("KC"))
+
+
+def test_holding_both_sides_with_ties_paying_nothing_banks_nothing(
+    season_writer, tmp_path
+):
+    """tie_multiplier is commissioner-configurable to 0.0, where a tie pays
+    nothing — the floor (and the elimination badge it feeds) must not count
+    the smaller win stake as unavoidable."""
+    from tests.helpers import mkgames
+    from football_pool.potential import guaranteed_extra
+    from football_pool.schedule import entrant_stake
+
+    season_writer(
+        tmp_path, 2098,
+        [{"name": "Solo", "teams": ["KC", "LAC", "DAL", "NE"]}],
+        rules_overrides={"scoring": {"tie_multiplier": 0.0}}, forecast=False,
+    )
+    s = load_season(2098, root=tmp_path)
+    best, worst = entrant_stake(s, "REG", "KC", "LAC", {"KC", "LAC"})
+    assert worst == 0.0
+    assert best == pytest.approx(max(s.lf_of("KC"), s.lf_of("LAC")))
+    assert guaranteed_extra(s, mkgames([{"home": "KC", "away": "LAC"}]), {"KC", "LAC"}) == 0.0

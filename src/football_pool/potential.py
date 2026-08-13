@@ -65,9 +65,10 @@ def head_to_head_games(games: pd.DataFrame, teams: set[str]) -> pd.DataFrame:
 def guaranteed_extra(season: Season, games: pd.DataFrame, teams: set[str]) -> float:
     """Points the entrant will earn no matter how the games go.
 
-    When two of your teams meet, one of them must win, so the smaller of the two
-    stakes is already banked. (A tie pays half of each, which is never worse
-    than the smaller stake alone, so the minimum is the correct floor.)
+    When two of your teams meet, the game pays you whatever happens — a win
+    either way, or the tie — so the smallest of those outcomes is already
+    banked. ``entrant_stake`` prices the tie explicitly, which keeps this
+    floor honest even when the commissioner sets ``tie_multiplier: 0``.
     """
     total = 0.0
     for row in head_to_head_games(games, teams).itertuples():

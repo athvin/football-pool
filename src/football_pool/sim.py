@@ -322,7 +322,8 @@ def simulate(
     counts what actually happened across the same simulations everything else
     is derived from, so the win probability on the schedule page can never
     disagree with the finish probabilities on the forecast page. Decided games
-    read exactly 0.0 or 1.0, which is self-documenting.
+    read exactly 0.0 or 1.0 — and a decided *tie* reads exactly 0.5, the
+    half-credit the simulation's alternating split gives each side.
 
     Decided games are frozen to their real result, so only what is genuinely
     unknown is sampled. A real tie is split deterministically across

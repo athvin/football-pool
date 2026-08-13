@@ -206,20 +206,37 @@ def game_swing(season: Season, game_type: str, home: str, away: str) -> float:
 def entrant_stake(season: Season, game_type: str, home: str, away: str, teams: set[str]) -> tuple[float, float]:
     """``(max, min)`` points one entrant can take out of a single game.
 
-    Holding both sides is the case worth getting right: one of them must win,
-    so the minimum is the smaller stake rather than zero, and the maximum is
-    the larger rather than the sum.
+    Holding both sides is the case worth getting right: whatever happens they
+    score, so the minimum is the worst *outcome* rather than zero — and in the
+    regular season the worst outcome can be the tie. ``tie_multiplier`` is
+    commissioner-configurable down to 0.0, where a tie pays nothing and a
+    min-of-the-two-win-stakes floor overstates what is locked in; that number
+    feeds ``guaranteed_extra``, the floor, and the elimination badge, so it
+    has to be exact under every config. Playoff games cannot tie, so there
+    the win stakes are the whole outcome set.
     """
     home_in, away_in = home in teams, away in teams
+    if not home_in and not away_in:
+        return 0.0, 0.0
+
     if home_in and away_in:
-        a = side_points(season, game_type, home, is_home=True)
-        b = side_points(season, game_type, away)
-        return max(a, b), min(a, b)
-    if home_in:
-        return side_points(season, game_type, home, is_home=True), 0.0
-    if away_in:
-        return side_points(season, game_type, away), 0.0
-    return 0.0, 0.0
+        outcomes = [
+            side_points(season, game_type, home, is_home=True),
+            side_points(season, game_type, away),
+        ]
+        if game_type == "REG":
+            outcomes.append(
+                round(season.tie_multiplier * (season.lf_of(home) + season.lf_of(away)), 2)
+            )
+        return max(outcomes), min(outcomes)
+
+    team = home if home_in else away
+    outcomes = [side_points(season, game_type, team, is_home=home_in), 0.0]
+    if game_type == "REG":
+        # Only ever the maximum under an exotic ``tie_multiplier > win_multiplier``
+        # config; the loss keeps the minimum at zero.
+        outcomes.append(round(season.tie_multiplier * season.lf_of(team), 2))
+    return max(outcomes), min(outcomes)
 
 
 def week_window(season: Season, slate: pd.DataFrame, teams: set[str]) -> tuple[float, float]:

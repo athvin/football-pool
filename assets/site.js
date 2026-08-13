@@ -65,7 +65,9 @@ export const KICKOFF_FORMAT = { weekday: 'short', ...STAMP_FORMAT };
 const formatters = new Map();
 
 function formatterFor(locale, timeZone, format) {
-  const key = `${locale}|${timeZone}|${format.weekday ?? ''}`;
+  // Keyed on the whole format object: keying on one field silently collides
+  // the day a third format shows up.
+  const key = `${locale}|${timeZone}|${JSON.stringify(format)}`;
   let found = formatters.get(key);
   if (!found) {
     // Only successful constructions are cached, so an invalid zone keeps
