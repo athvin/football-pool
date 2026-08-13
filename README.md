@@ -153,28 +153,37 @@ So the build refuses to publish a fallback that is materially behind, and the
 deploy job depends on the build, so the previous good site simply stays up until
 the next run.
 
-Staleness takes three questions, because no single count answers all of them.
+Staleness is one number: **how many days of results the file is missing**,
+read on the Eastern clock that `gameday` is written in. Zero when current.
 
-**Regular-season games past their date with no result.** This calibrates itself
-where a clock cannot: zero before week one however old the file is, zero when
-the data is current, about a full slate for every week behind. Replaying a real
-season a day at a time, the count holds at 0 for four days, sits at 1 for three
-more — the lone Thursday game — then jumps straight to 13 once a Sunday has been
-missed. The limit sits in that empty band, so a slow upload still publishes and
-a missed Sunday does not.
+It calibrates itself where a clock cannot — the committed copy can be six months
+old in August and still be perfectly correct, because nothing has been played.
+The limit is two days, measured rather than guessed: replaying a real season at
+both cron times, a current file scores 0 at every build instant, a file up to
+thirty hours old scores at most 1, and thirty-six hours is the first to reach 2.
+So the degradation this was always meant to allow still happens — an outage
+falls back to yesterday's numbers — while anything that has lost a slate is
+refused. Two consecutive failed runs is not an ordinary day.
 
-**Playoff games past their date with no result**, where a single one is already
-enough. There are only thirteen and they are never postponed, so waiting for a
-slate's worth would mean waiting out the bracket.
+Days rather than games, deliberately. A game count cannot span a sixteen-game
+Sunday and a one-game Super Bowl with one threshold, and a threshold set for a
+slate keeps publishing a wrong leaderboard for **ten days** after a Sunday
+freeze. Days catch the same freeze on the fourth.
 
-**A missing bracket.** This is the one that is easy to get wrong, and counting
-alone cannot catch it: nflverse does not publish postseason rows until the field
-is set, so a file frozen at the end of week 18 has every game it knows about
-played and looks perfectly current — for the whole of January, while the entire
-postseason passes. That is the worst possible window to be blind in, because the
-playoff bonuses carry all of the bonus scoring and routinely swap first and
-second place. So once the regular season is complete and the file still holds no
-playoff rows at all, the clock starts.
+Two cases need care, and both are handled by asking what "nothing outstanding"
+means. nflverse does not publish postseason rows until the field is set, so a
+copy frozen at the end of week 18 has every game it knows about played and reads
+as perfectly current — for the whole of January, the window that decides the
+money. A truncated copy looks identical, because the rows it loses are the most
+recent ones. Absence cannot be counted, so nothing outstanding is only trusted
+when the file ran to a played Super Bowl; otherwise the measure becomes how long
+we have been in the dark.
+
+The test is the data, never where it came from. A 200 is not the same as good
+data — a regenerated release asset or a stale CDN object answers perfectly while
+carrying no results — so the same measure also gates the cache write. A
+successful but empty response can neither be published nor overwrite the good
+committed copy.
 
 An explicit `--offline` build is never blocked. Asking for the committed copy is
 a choice, and CI relies on it to build deterministically; falling back to it

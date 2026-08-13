@@ -14,6 +14,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from .nflverse import STALE_DAYS_LIMIT
 from .season import REPO_ROOT, ConfigError, active_season, load_season
 
 
@@ -127,23 +128,28 @@ def cmd_build(args) -> int:
     # looks exactly like a correct one — whereas a skipped deploy leaves
     # yesterday's good site up and fixes itself on the next run.
     #
-    # Only a *fallback* is blocked. An explicit --offline build is a deliberate
-    # request for the committed copy and is how CI builds deterministically.
-    stale = gd.staleness_reason() if gd.source == "fallback" else None
-    if stale:
+    # The test is the data, not where it came from. A 200 is not the same as
+    # good data: a regenerated release asset or a stale CDN object answers
+    # perfectly while carrying no results, so checking only fallbacks would wave
+    # that straight through. Provenance is the *exemption* — an explicit
+    # --offline build is a deliberate request for the committed copy, and is how
+    # CI builds deterministically all season.
+    if gd.source != "cache" and gd.days_behind >= STALE_DAYS_LIMIT:
         print(
-            f"\nrefusing to publish: could not reach the results feed, and "
-            f"{stale} in the committed copy under data/{season.year}/.\n"
+            f"\nrefusing to publish: the results data is {gd.days_behind} days "
+            f"behind [{gd.source}].\n"
             f"  Publishing it would replace a correct leaderboard with a stale "
             f"one, which is indistinguishable from a correct one to anyone "
             f"reading it.\n"
-            f"  The previous build stays live. The next run self-heals once the "
-            f"feed is reachable.\n"
-            f"  If this persists, the committed copy is not being refreshed — "
-            f"see DATA_PUSH_TOKEN in the README.\n",
+            f"  The previous build stays live, and the next run self-heals once "
+            f"the feed catches up.\n"
+            f"  If this persists, the committed copy under data/{season.year}/ "
+            f"is not being refreshed — see DATA_PUSH_TOKEN in the README.\n",
             file=sys.stderr,
         )
-        return 1
+        # Distinct from 1, which is a config error, so a red run says which of
+        # the two happened without anyone opening the log.
+        return 3
 
     out = Path(args.out) if args.out else REPO_ROOT / "public"
 

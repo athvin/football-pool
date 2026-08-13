@@ -237,11 +237,11 @@ def test_build_refuses_to_publish_a_stale_fallback(monkeypatch, season, tmp_path
     )
 
     out = tmp_path / "site"
-    assert cli.main(["build", "--out", str(out)]) == 1
+    assert cli.main(["build", "--out", str(out)]) == 3
 
     err = capsys.readouterr().err
     assert "refusing to publish" in err
-    assert "regular-season games" in err
+    assert "days behind" in err
     assert "DATA_PUSH_TOKEN" in err  # tells the operator how to fix it
     assert not (out / "index.html").exists(), "nothing may be written"
 
@@ -274,7 +274,7 @@ def test_a_fallback_that_is_merely_recent_still_publishes(monkeypatch, season, t
     fresh = GameData(
         games, 2025, datetime(2026, 6, 1, tzinfo=timezone.utc), None, "fallback"
     )
-    assert fresh.staleness_reason() is None
+    assert fresh.days_behind == 0
 
     monkeypatch.setattr(cli, "load_season", lambda year: season)
     monkeypatch.setattr("football_pool.nflverse.fetch_games", lambda *a, **k: fresh)
@@ -298,7 +298,7 @@ def test_a_preseason_fallback_publishes_because_nothing_is_late(
     before_kickoff = GameData(
         preseason, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "fallback"
     )
-    assert before_kickoff.staleness_reason() is None
+    assert before_kickoff.days_behind == 0
 
     monkeypatch.setattr(cli, "load_season", lambda year: season)
     monkeypatch.setattr(

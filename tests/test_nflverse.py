@@ -13,7 +13,8 @@ import pandas as pd
 import pytest
 
 from football_pool.nflverse import (
-    PLAYOFF_ROUNDS,
+    SCHEDULE_TZ,
+    STALE_DAYS_LIMIT,
     DataError,
     GameData,
     fetch_games,
@@ -261,127 +262,145 @@ def test_week_helpers_before_the_season_starts(games_2025):
     assert gd.next_week == 1
 
 
-# -- staleness, the measure that decides whether to publish -------------------
+# -- staleness, the one measure that decides whether to publish --------------
 def _at(games, when, season=2025, source="fallback"):
     return GameData(games, season, when, None, source)
 
 
-def _days_after(games, anchor, days):
+def _on(games, anchor, days):
     return (pd.Timestamp(anchor) + pd.Timedelta(days=days)).to_pydatetime().replace(
         tzinfo=timezone.utc
     )
 
 
-def test_a_schedule_with_no_results_is_not_stale_before_the_season(games_2025):
-    """August is not staleness. This rules out anything clock-based.
+def test_a_schedule_with_no_results_is_current_before_the_season(games_2025):
+    """August is not staleness. This is what rules out anything clock-based.
 
-    The committed copy can be months old and still perfectly correct right up
-    until week one, which is why the measure counts overdue games instead.
+    The committed copy can be six months old and still perfectly correct right
+    up until week one, because nothing has been played.
     """
     preseason = games_2025.copy()
     preseason["played"] = False
-    before = _days_after(preseason, preseason["gameday"].min(), -30)
-
-    assert _at(preseason, before).staleness_reason() is None
+    assert _at(preseason, _on(preseason, preseason["gameday"].min(), -30)).days_behind == 0
 
 
-def test_a_finished_season_is_never_stale(games_2025):
-    """Every game has a result; there is nothing outstanding to be behind on."""
+def test_a_finished_season_is_never_behind(games_2025):
+    """It ran to a played Super Bowl, so there is nothing outstanding."""
     sb = games_2025[games_2025["game_type"] == "SB"]["gameday"].max()
     for days in (1, 30, 200):
-        assert _at(games_2025, _days_after(games_2025, sb, days)).staleness_reason() is None
+        assert _at(games_2025, _on(games_2025, sb, days)).days_behind == 0
 
 
-def test_fresh_data_is_never_stale(games_2025):
+def test_fresh_data_is_never_behind(games_2025):
     played = games_2025.copy()
     played.loc[played["week"] > 11, "played"] = False
     played.loc[played["game_type"] != "REG", "played"] = False
     latest = played.loc[played["played"], "gameday"].max()
+    for days in (0, 1):
+        assert _at(played, _on(played, latest, days)).days_behind < STALE_DAYS_LIMIT
 
-    for days in (1, 3, 6):
-        assert _at(played, _days_after(played, latest, days)).staleness_reason() is None
 
+def test_a_missed_slate_is_caught_within_days_not_weeks(games_2025):
+    """Detection latency is the whole value of the guard.
 
-def test_a_late_result_publishes_but_a_missed_slate_does_not(games_2025):
-    """A slow upload is the graceful degradation this was always meant to allow.
-
-    A missed Sunday is not: replayed a day at a time the overdue count holds at
-    0, sits at 1 for the lone Thursday game of the next week, then jumps to a
-    full slate. The limit sits in that empty band.
+    Counting overdue *games* cannot fire until a whole slate is outstanding,
+    which is ten days after a Sunday freeze — ten days of publishing a wrong
+    leaderboard. Counting days catches the same freeze on the fourth.
     """
-    played = games_2025.copy()
-    played.loc[played["week"] > 11, "played"] = False
-    played.loc[played["game_type"] != "REG", "played"] = False
-    latest = played.loc[played["played"], "gameday"].max()
+    frozen = games_2025.copy()
+    sunday = pd.Timestamp("2025-11-16")
+    frozen.loc[pd.to_datetime(frozen["gameday"]) > sunday, "played"] = False
 
-    assert _at(played, _days_after(played, latest, 4)).staleness_reason() is None
-    assert _at(played, _days_after(played, latest, 7)).staleness_reason() is None
-    for days in (10, 14, 21):
-        reason = _at(played, _days_after(played, latest, days)).staleness_reason()
-        assert reason and "regular-season games" in reason
+    assert _at(frozen, _on(frozen, sunday, 2)).days_behind < STALE_DAYS_LIMIT
+    for days in (4, 7, 14):
+        assert _at(frozen, _on(frozen, sunday, days)).days_behind >= STALE_DAYS_LIMIT
 
 
 def test_the_frozen_preseason_file_is_caught(games_2025):
-    """The failure this exists for: a file stuck in August, read in November."""
+    """The failure this exists for: a copy stuck in August, read in November."""
     frozen = games_2025.copy()
     frozen["played"] = False
-    november = datetime(2025, 11, 20, tzinfo=timezone.utc)
-
-    reason = _at(frozen, november).staleness_reason()
-    assert reason and "regular-season games" in reason
+    behind = _at(frozen, datetime(2025, 11, 20, tzinfo=timezone.utc)).days_behind
+    assert behind > 60
 
 
-# -- the postseason, where counting overdue games is not enough ---------------
 def test_a_file_frozen_before_the_bracket_is_published_is_caught(games_2025):
-    """The hole a regular-season-only count leaves wide open.
+    """Absent rows cannot be counted as overdue, so they are counted as silence.
 
-    Playoff rows do not exist upstream until the field is set, so a file frozen
-    at the end of week 18 has every game it knows about played and looks
-    perfectly current. Counting overdue games can only see games it knows
-    about — it stayed silent for the whole of January while the entire
-    postseason went by, and the playoff bonuses are what decide the pool.
+    nflverse does not publish postseason rows until the field is set, so a copy
+    frozen at the end of week 18 has every game it knows about played and reads
+    as perfectly current — for the whole of January, the window that decides
+    the money. Nothing outstanding is only trustworthy if the file ran to a
+    played Super Bowl.
     """
     no_bracket = games_2025[games_2025["game_type"] == "REG"].copy()
     week18 = no_bracket["gameday"].max()
 
-    # A few days is legitimate: the bracket takes a moment to be published.
-    assert _at(no_bracket, _days_after(no_bracket, week18, 2)).staleness_reason() is None
-    assert _at(no_bracket, _days_after(no_bracket, week18, 4)).staleness_reason() is None
-
-    # Beyond that, a missing bracket means the file has stopped moving.
-    for days in (6, 10, 20, 30):
-        reason = _at(no_bracket, _days_after(no_bracket, week18, days)).staleness_reason()
-        assert reason and "no playoff games at all" in reason, f"day {days}"
+    assert _at(no_bracket, _on(no_bracket, week18, 1)).days_behind < STALE_DAYS_LIMIT
+    for days in (4, 10, 30):
+        assert _at(no_bracket, _on(no_bracket, week18, days)).days_behind >= STALE_DAYS_LIMIT
 
 
-def test_an_unplayed_playoff_game_past_its_date_is_caught(games_2025):
-    """Playoff games are few and never postponed, so one is already evidence.
-
-    Waiting for a slate's worth would mean waiting out the whole bracket.
-    """
-    bracket = games_2025.copy()
-    bracket.loc[bracket["game_type"].isin(PLAYOFF_ROUNDS), "played"] = False
-    week18 = bracket[bracket["game_type"] == "REG"]["gameday"].max()
-
-    # Wild-card weekend has only just happened; still inside the grace window.
-    assert _at(bracket, _days_after(bracket, week18, 7)).staleness_reason() is None
-
-    reason = _at(bracket, _days_after(bracket, week18, 11)).staleness_reason()
-    assert reason and "playoff games" in reason
-
-
-def test_the_gap_before_the_super_bowl_is_not_staleness(games_2025):
-    """Two weeks pass between the conference finals and the Super Bowl.
-
-    The longest legitimate gap in the calendar, and it must not read as a
-    stalled feed.
-    """
+def test_the_fortnight_before_the_super_bowl_is_not_staleness(games_2025):
+    """The longest legitimate silence in the calendar must not read as a stall."""
     waiting = games_2025.copy()
     waiting.loc[waiting["game_type"] == "SB", "played"] = False
     con = waiting[waiting["game_type"] == "CON"]["gameday"].max()
 
     for days in (1, 5, 10, 13):
-        assert _at(waiting, _days_after(waiting, con, days)).staleness_reason() is None, days
+        assert _at(waiting, _on(waiting, con, days)).days_behind < STALE_DAYS_LIMIT, days
+
+
+def test_the_measure_reads_the_eastern_clock(games_2025):
+    """gameday is a US Eastern calendar date, including the London kickoffs.
+
+    Reading it in UTC would put the day boundary mid-slate: after the clocks go
+    back the 19:37 Eastern run is 00:37 UTC, so a UTC date calls that evening's
+    games late before they have kicked off.
+    """
+    played = games_2025.copy()
+    played.loc[played["week"] > 11, "played"] = False
+    played.loc[played["game_type"] != "REG", "played"] = False
+    latest = played.loc[played["played"], "gameday"].max()
+
+    # 19:37 Eastern in December is the following day in UTC.
+    evening_run = (
+        pd.Timestamp(latest).tz_localize(SCHEDULE_TZ) + pd.Timedelta(hours=19, minutes=37)
+    ).to_pydatetime().astimezone(timezone.utc)
+    assert evening_run.date() != pd.Timestamp(latest).date()  # UTC has rolled over
+    assert _at(played, evening_run).days_behind == 0
+
+
+def test_a_good_cache_survives_a_successful_but_empty_response(
+    monkeypatch, tmp_path, csv_bytes
+):
+    """A 200 is not the same as good data.
+
+    A regenerated release asset or a stale CDN object answers perfectly while
+    carrying no results at all. Writing that over the committed copy destroys
+    the very thing the fallback exists to be — so the cache is only refreshed
+    from data that is current.
+    """
+    lines = csv_bytes.decode().splitlines()
+    cols = lines[0].split(",")
+    blanks = [cols.index(c) for c in ("home_score", "away_score", "result")]
+    wiped = [lines[0]]
+    for line in lines[1:]:
+        parts = line.split(",")
+        for i in blanks:
+            parts[i] = ""
+        wiped.append(",".join(parts))
+
+    cache = tmp_path / "games.csv"
+    cache.write_bytes(csv_bytes)
+    good = cache.read_bytes()
+
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse("\n".join(wiped).encode()))
+    gd = fetch_games(2025, cache_path=cache)
+
+    assert gd.source == "network"  # the fetch genuinely succeeded
+    assert gd.days_behind >= STALE_DAYS_LIMIT  # but the data is worthless
+    assert cache.read_bytes() == good, "a good cache must not be overwritten"
 
 
 def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
@@ -389,8 +408,8 @@ def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
 
     pandas reads a short CSV back without complaint — every column is present
     and the season filter still matches — and because rows are sorted by week
-    the part lost is the most recent, which is exactly the part the staleness
-    check relies on.
+    the part lost is the most recent, which is exactly what the staleness
+    measure depends on to notice anything is wrong.
     """
     monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(csv_bytes))
     cache = tmp_path / "nested" / "games.csv"
@@ -402,12 +421,11 @@ def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
 
 
 def test_provenance_defaults_to_the_guarded_state(monkeypatch, tmp_path, csv_bytes):
-    """A path that forgets to set the source must not waive the staleness check.
+    """A path that forgets to set the source must not waive the check.
 
     "cache" is the value that exempts a build, so it is the wrong default: a
     future branch returning GameData without assigning provenance would publish
-    unguarded while claiming to be a deliberate offline build. The initial value
-    is the guarded one, so forgetting fails closed.
+    unguarded while claiming to be a deliberate offline build.
     """
     import inspect
 
@@ -415,7 +433,7 @@ def test_provenance_defaults_to_the_guarded_state(monkeypatch, tmp_path, csv_byt
 
     source = inspect.getsource(nflverse.fetch_games)
     first = source.index("source = ")
-    assert 'source = "fallback"' == source[first : first + len('source = "fallback"')]
+    assert source[first:].startswith('source = "fallback"')
 
     # And the three real paths still report themselves correctly.
     cache = tmp_path / "games.csv"

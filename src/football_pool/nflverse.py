@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 import pandas as pd
@@ -48,31 +49,29 @@ COLUMNS = [
 # actually set — during the regular season the file has only REG rows.
 PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 
-# How long after kickoff a game may still be missing a result before it counts
-# as evidence the data is behind.
+# nflverse dates every game by its US Eastern calendar date — including the
+# 09:30 kickoffs played in London, which carry the Sunday they are watched on
+# rather than a UK date. Reading the clock in any other zone puts the day
+# boundary in the middle of a slate: once the clocks go back, the 19:37 Eastern
+# job runs at 00:37 UTC, so a UTC date would call that evening's games late
+# before they had kicked off.
+SCHEDULE_TZ = ZoneInfo("America/New_York")
+
+# How many days of results may be missing before publishing does more harm than
+# not publishing. Measured, not guessed: replaying a real season at both cron
+# times, a current file scores 0 at every build instant, a file up to thirty
+# hours old scores at most 1, and thirty-six hours is the first to reach 2.
 #
-# One day is enough for every case that can be measured: the worst run is the
-# 19:37 Eastern one on a December Sunday, which is 00:37 UTC Monday with the
-# night game still in progress, and a single day of grace already reads zero
-# there. Two is chosen anyway, to cover what cannot be measured from a fixture —
-# a game's date is local to its stadium while fetched_at is UTC, London and
-# Munich kickoffs sit a long way from both, and a postponement that upstream has
-# not yet re-dated looks exactly like a missing result. The cost is one extra
-# day before a stall is noticed; the cost of being wrong the other way is
-# refusing to publish a site that was fine.
-STALE_GRACE_DAYS = 2
-
-# How many regular-season games may be outstanding before the data is behind by
-# a slate rather than by a single late upload. Measured, not guessed: replaying
-# a real season a day at a time, the count holds at 0 for four days, sits at 1
-# for the next three — the lone Thursday game of the following week — and then
-# jumps to 13 once a Sunday has been missed. This sits in that empty band.
-STALE_REGULAR_GAMES = 8
-
-# How long after the regular season ends the bracket may still be unpublished.
-# nflverse adds the postseason rows once the field is set, which is the night
-# week 18 finishes; four days is generous.
-BRACKET_GRACE_DAYS = 4
+# So 2 keeps the degradation this was always meant to allow — an outage falls
+# back to yesterday's numbers — while refusing anything that has lost a slate.
+# Two consecutive failed runs is not an ordinary day.
+#
+# Days rather than games, deliberately. A count cannot span a sixteen-game
+# Sunday and a one-game Super Bowl with a single threshold, and a threshold set
+# for a slate keeps publishing a wrong leaderboard for a week and a half after a
+# Sunday freeze. Days treat one missed Super Bowl exactly as one missed Sunday,
+# with no second rule and no bracket calendar to keep in step.
+STALE_DAYS_LIMIT = 2
 
 
 class DataError(Exception):
@@ -123,71 +122,48 @@ class GameData:
         reg = self.unplayed[self.unplayed["game_type"] == "REG"]
         return None if reg.empty else int(reg["week"].min())
 
-    def overdue(self, kinds: tuple[str, ...] = ("REG",) + PLAYOFF_ROUNDS) -> int:
-        """Scheduled games of these kinds whose date has passed with no result.
+    @property
+    def days_behind(self) -> int:
+        """How many days of results this file is missing. 0 when it is current.
 
-        Measured against ``fetched_at`` rather than a call to now(), so the
+        The oldest game that ought to have a result and does not, measured
+        against the day the data was fetched. One number, and it calibrates
+        itself the way no clock can: the committed copy can be six months old in
+        August and still be perfectly correct, because nothing has been played.
+
+        Measured from ``fetched_at`` rather than a live call to now(), so the
         answer is a property of this object and a test can construct any
         situation it likes.
 
-        A rescheduled game is not counted: nflverse moves ``gameday`` forward
+        A rescheduled game is not counted — nflverse moves ``gameday`` forward
         when a game is postponed, so it stops being in the past.
         """
-        pending = self.games[
-            ~self.games["played"] & self.games["game_type"].isin(kinds)
-        ]
-        if pending.empty:
-            return 0
-        cutoff = pd.Timestamp(self.fetched_at.date()) - pd.Timedelta(days=STALE_GRACE_DAYS)
-        return int((pd.to_datetime(pending["gameday"]) < cutoff).sum())
+        asof = pd.Timestamp(self.fetched_at.astimezone(SCHEDULE_TZ).date())
+        gameday = pd.to_datetime(self.games["gameday"])
+        outstanding = gameday[~self.games["played"]]
 
-    def staleness_reason(self) -> str | None:
-        """Why this data is too far behind to publish, or ``None`` if it is fine.
+        overdue = outstanding[outstanding < asof]
+        if not overdue.empty:
+            return int((asof - overdue.min()).days)
 
-        Three questions, because no single count answers all of them.
+        if outstanding.empty:
+            # Nothing outstanding is either a finished season or a file missing
+            # rows it cannot know it is missing. Playoff rows do not exist
+            # upstream until the bracket is set, so a copy frozen at the end of
+            # week 18 has every game it knows about played and looks perfectly
+            # current for the whole of January — the window that decides the
+            # money. A truncated copy looks identical, because the rows it loses
+            # are the most recent ones. Absence cannot be counted, so ask
+            # instead how long we have been in the dark. A season that really
+            # ended ran to a played Super Bowl; one that did not is still owed
+            # rows that never arrived.
+            finished = bool(
+                (self.games["game_type"] == "SB").any() and self.games["played"].all()
+            )
+            if not finished:
+                return int((asof - gameday.max()).days)
 
-        Counting overdue games calibrates itself beautifully during the regular
-        season — zero before week one however old the file is, zero while the
-        data is current, a full slate for every week behind — but it can only
-        see games it knows about, and **playoff rows do not exist upstream until
-        the bracket is set**. A file frozen at the end of week 18 therefore has
-        every game it knows of played, and looks perfectly current for the whole
-        of January while the entire postseason passes it by. That window is the
-        worst possible one to be blind in: the playoff bonuses carry all of the
-        bonus scoring, and first and second place routinely swap over them.
-
-        So the postseason gets two extra questions — whether the bracket the
-        file does hold has gone stale, and whether it is missing a bracket it
-        ought to have by now.
-        """
-        reg = self.games[self.games["game_type"] == "REG"]
-
-        # 1. The regular season, where a slate is the natural unit. A single
-        #    late upload is tolerated; a missed Sunday is not.
-        behind = self.overdue(("REG",))
-        if behind >= STALE_REGULAR_GAMES:
-            return f"{behind} regular-season games have been played but hold no result"
-
-        # 2. The bracket, if we have one. Playoff games are few and are never
-        #    postponed, so even one of them sitting past its date without a
-        #    result means a whole round has been missed.
-        stale_bracket = self.overdue(PLAYOFF_ROUNDS)
-        if stale_bracket:
-            return f"{stale_bracket} playoff games have been played but hold no result"
-
-        # 3. The bracket we ought to have. Absent rows cannot be counted as
-        #    overdue, so this is the only thing that catches a file frozen
-        #    between the end of week 18 and the bracket being published.
-        if not reg.empty and bool(reg["played"].all()):
-            if not self.games["game_type"].isin(PLAYOFF_ROUNDS).any():
-                last = pd.to_datetime(reg["gameday"]).max()
-                days = (pd.Timestamp(self.fetched_at.date()) - last).days
-                if days > BRACKET_GRACE_DAYS:
-                    return (
-                        f"the regular season ended {days} days ago and the file "
-                        f"still holds no playoff games at all"
-                    )
-        return None
+        return 0
 
 
 def fetch_games(
@@ -251,8 +227,19 @@ def fetch_games(
         source = "cache" if offline else "fallback"
 
     games = parse_games(raw, season)
+    data = GameData(
+        games=games,
+        season=season,
+        fetched_at=datetime.now(timezone.utc),
+        upstream_modified=upstream_modified,
+        source=source,
+    )
 
-    if source == "network" and cache_path is not None:
+    # A 200 is not the same as good data. A regenerated release asset or a stale
+    # CDN object can answer perfectly while carrying no results at all, and
+    # writing that over the committed copy destroys the very thing the fallback
+    # exists to be. So the cache is only refreshed from data that is current.
+    if source == "network" and cache_path is not None and data.days_behind < STALE_DAYS_LIMIT:
         # Cache only this season's rows. The upstream file carries every season
         # back to 1999 (~2 MB), and the daily job commits its cache — storing
         # the whole thing would add megabytes of near-identical history to the
@@ -269,13 +256,7 @@ def fetch_games(
         games[COLUMNS].to_csv(partial, index=False)
         partial.replace(cache_path)
 
-    return GameData(
-        games=games,
-        season=season,
-        fetched_at=datetime.now(timezone.utc),
-        upstream_modified=upstream_modified,
-        source=source,
-    )
+    return data
 
 
 def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
