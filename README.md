@@ -239,6 +239,14 @@ three are green. The build check renders the site twice, once at `/` and once at
 `/football-pool/`, because a root-absolute asset URL works perfectly on a local
 preview and 404s only in production.
 
+Asset URLs carry a content fingerprint — `/assets/site.css?v=dac5cb39`. GitHub
+Pages pins every response to `max-age=600` and gives no way to change it, so for
+ten minutes after a deploy a returning visitor can hold the previous stylesheet
+against markup fetched a moment ago, which looks exactly like a layout bug. The
+stamp is a hash of the file's *contents*, not the build time, so a rebuild on a
+day when only the scores changed leaves every asset URL — and therefore every
+warm cache — untouched.
+
 The ruleset also blocks force-pushes and deletion of `main`. The repository
 admin can bypass it, which is deliberate: with one maintainer, a ruleset nobody
 can override is a lockout waiting to happen the first time CI itself breaks.

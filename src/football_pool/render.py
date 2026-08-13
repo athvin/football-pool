@@ -11,10 +11,19 @@ from ``/<repo>/``, so a root-absolute ``/assets/site.css`` resolves to the wrong
 host path and 404s *only in production*. Every URL therefore goes through the
 ``url`` filter. A ``<base href>`` tag would be the tempting shortcut, but it
 also rewrites in-page anchors like ``href="#scoring"`` into full navigations.
+
+That filter carries a second production-only job: cache busting. GitHub Pages
+serves every file with ``max-age=600`` and gives no way to change it, so for ten
+minutes after a deploy a returning visitor holds the previous stylesheet against
+markup fetched a moment ago. The skew reads as a layout bug rather than a stale
+file — it has already been reported as one. Asset URLs therefore carry a content
+fingerprint, which makes a changed file a URL no cache has ever seen. Putting it
+in the same filter is the point: a new asset cannot forget to opt in.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import warnings
@@ -39,6 +48,30 @@ from .standings import final_seeds, playoff_seeds, regular_season_complete, stan
 
 TEMPLATE_DIR = REPO_ROOT / "templates"
 ASSET_DIR = REPO_ROOT / "assets"
+
+# Long enough that a collision is not a practical concern, short enough to keep
+# the markup readable in a diff.
+ASSET_HASH_CHARS = 8
+
+
+def _asset_digest(rel: str) -> str:
+    """Short content hash of an asset, or ``""`` when there is no such file.
+
+    Hashed from the file's *contents*, deliberately, and never from the build
+    time or the commit: a rebuild on a day with no new results has to produce
+    the same bytes it produced yesterday, and a timestamp in the URL would put a
+    diff on every page. Content hashing also means the offseason months where
+    only scores move do not force anyone to re-download the stylesheet.
+
+    A missing file, or a path naming a directory, yields no hash and the URL
+    goes out unversioned. That is no worse than it was before fingerprinting
+    existed, and a scoreboard should not fail to build because someone deleted a
+    favicon.
+    """
+    target = ASSET_DIR / rel
+    if not target.is_file():
+        return ""
+    return hashlib.sha256(target.read_bytes()).hexdigest()[:ASSET_HASH_CHARS]
 
 
 @dataclass(frozen=True)
@@ -112,11 +145,36 @@ def make_environment(base: str = "") -> Environment:
     )
     prefix = base.rstrip("/")
 
+    # One entry per distinct asset, filled on first reference. Scoped to this
+    # environment rather than to the module on purpose: the test suite renders a
+    # dozen sites in one process and one of them deliberately points ASSET_DIR
+    # somewhere else, so a module-level cache would hand back a digest computed
+    # by an earlier test. It also guarantees every page in a build cites the
+    # same hash even if a file changes on disk mid-render.
+    digests: dict[str, str] = {}
+
     def url(path: str) -> str:
-        """Resolve a site-root-relative path against the deployment base."""
+        """Resolve a site-root-relative path against the deployment base.
+
+        Assets additionally carry a content fingerprint — see the module
+        docstring for why. The query string is part of the browser's cache key,
+        so a changed file simply becomes a URL it has never seen.
+
+        Only ``/assets/`` is fingerprinted. Page URLs are what people paste into
+        the family group chat, and ``/data/standings.json`` is a documented
+        interface; both need to stay stable and clean.
+        """
         if path.startswith(("http://", "https://", "#", "mailto:")):
             return path
-        return f"{prefix}/{path.lstrip('/')}"
+
+        resolved = f"{prefix}/{path.lstrip('/')}"
+        if path.startswith("/assets/"):
+            rel = path.removeprefix("/assets/")
+            if rel not in digests:
+                digests[rel] = _asset_digest(rel)
+            if digests[rel]:
+                resolved = f"{resolved}?v={digests[rel]}"
+        return resolved
 
     def points(value: float | None) -> str:
         """Points always show two decimals so columns line up."""
