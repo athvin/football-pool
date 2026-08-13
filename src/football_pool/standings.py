@@ -76,10 +76,18 @@ class GameLog:
         return sum(r[1] - r[2] for r in self.log[team])
 
     def strength_of_victory(self, team: str) -> float:
-        beaten = sum(r[3] for r in self.log[team])
-        if not beaten:
+        """Combined win percentage of the opponents this team has *defeated*.
+
+        Defeated only — the NFL's definition. A tie is not a victory, so a
+        tied opponent contributes nothing here (it still counts fully in
+        strength of schedule). Weighting ties at half, as this previously did,
+        deviates from the written procedure in exactly the seasons where the
+        deep tiebreakers get reached.
+        """
+        victories = [r for r in self.log[team] if r[3] == 1.0]
+        if not victories:
             return 0.0
-        return sum(self.win_pct(r[0]) * r[3] for r in self.log[team]) / beaten
+        return sum(self.win_pct(r[0]) for r in victories) / len(victories)
 
     def strength_of_schedule(self, team: str) -> float:
         rows = self.log[team]

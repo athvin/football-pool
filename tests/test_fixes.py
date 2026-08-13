@@ -119,3 +119,21 @@ def test_cli_standings_awards_berth_bonuses(monkeypatch, season, games_2025, cap
         season, score_teams(season, games_2025, final_seeds(season, games_2025))
     )
     assert f"{float(seeded['total'].iloc[0]):.2f}" in out
+
+
+def test_strength_of_victory_excludes_ties(season):
+    gl = GameLog(season, {t: [] for t in season.teams})
+    gl.log["KC"] = [("DEN", 20, 10, 1.0), ("LV", 14, 14, 0.5)]
+    gl.log["DEN"] = [("KC", 10, 20, 0.0)]
+    gl.log["LV"] = [("KC", 14, 14, 0.5), ("DEN", 30, 0, 1.0)]
+    # Only the defeated opponent (DEN, .000) counts; the tied one (LV, .750
+    # here) previously leaked in at half weight and lifted the number.
+    assert gl.strength_of_victory("KC") == pytest.approx(0.0)
+
+
+def test_a_neutral_site_wild_card_game_refuses_to_guess(season, games_2025):
+    g = games_2025.copy()
+    wc = g[g["game_type"] == "WC"].index[0]
+    g.loc[wc, "location"] = "Neutral"
+    with pytest.raises(ValueError, match="neutral site"):
+        score_teams(season, g, final_seeds(season, g))
