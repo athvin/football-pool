@@ -117,10 +117,43 @@ def cmd_check_lf(args) -> int:
     return 0
 
 
+# How many overdue games mean the data is behind by a slate rather than by a
+# single late upload. Measured, not guessed: replaying a real season a day at a
+# time, the count is 0 for the first four days, 1 for the next three — the lone
+# Thursday game of the following week — and then jumps straight to 13 once a
+# Sunday has been missed. Anything in that empty band works; this sits in the
+# middle of it, so an unusual week's scheduling cannot drift across the line.
+STALE_GAME_LIMIT = 8
+
+
 def cmd_build(args) -> int:
     from .render import render_site
 
     season, gd = _load(args)
+
+    # Publishing stale numbers is worse than not publishing. The site's whole
+    # promise is that the leaderboard is current, and a silently wrong board
+    # looks exactly like a correct one — whereas a skipped deploy leaves
+    # yesterday's good site up and fixes itself on the next run.
+    #
+    # Only a *fallback* is blocked. An explicit --offline build is a deliberate
+    # request for the committed copy and is how CI builds deterministically.
+    if gd.source == "fallback" and gd.overdue >= STALE_GAME_LIMIT:
+        print(
+            f"\nrefusing to publish: could not reach the results feed, and the "
+            f"committed copy in data/{season.year}/ is behind by "
+            f"{gd.overdue} games.\n"
+            f"  Publishing it would replace a correct leaderboard with a stale "
+            f"one, which is indistinguishable from a correct one to anyone "
+            f"reading it.\n"
+            f"  The previous build stays live. The next run self-heals once the "
+            f"feed is reachable.\n"
+            f"  If this persists, the committed copy is not being refreshed — "
+            f"see DATA_PUSH_TOKEN in the README.\n",
+            file=sys.stderr,
+        )
+        return 1
+
     out = Path(args.out) if args.out else REPO_ROOT / "public"
 
     # A project site lives at https://<user>.github.io/<repo>/, so every URL

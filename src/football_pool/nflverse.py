@@ -48,6 +48,12 @@ COLUMNS = [
 # actually set — during the regular season the file has only REG rows.
 PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 
+# How long after kickoff a game may still be missing a result before it counts
+# as evidence the data is behind. Monday Night Football finishes late on Monday
+# and the morning job runs at 07:37 Tuesday, so one day is already enough; two
+# leaves room for a genuinely late upload without ever spanning a second slate.
+STALE_GRACE_DAYS = 2
+
 
 class DataError(Exception):
     """Upstream data was unreachable or did not look like what we expect."""
@@ -61,7 +67,13 @@ class GameData:
     season: int
     fetched_at: datetime
     upstream_modified: datetime | None
-    source: str  # "network" or "cache"
+    # "network"  — fetched live, the normal case
+    # "cache"    — the committed copy, asked for deliberately with --offline
+    # "fallback" — the network was tried and failed, so the committed copy is
+    #              standing in. Distinct from "cache" on purpose: one is a
+    #              choice and the other is a degraded state, and only the
+    #              degraded one should be able to stop a publish.
+    source: str
 
     @property
     def played(self) -> pd.DataFrame:
@@ -90,6 +102,29 @@ class GameData:
         """Lowest regular-season week with games still to play."""
         reg = self.unplayed[self.unplayed["game_type"] == "REG"]
         return None if reg.empty else int(reg["week"].min())
+
+    @property
+    def overdue(self) -> int:
+        """Regular-season games whose date has passed with no result recorded.
+
+        The staleness measure, and it calibrates itself: zero before week one no
+        matter how old the file is, zero whenever the data is current, and
+        roughly a full slate for every week the data is behind. That beats
+        anything clock-based, which cannot tell a months-old file in June from a
+        months-old file in November.
+
+        Measured against ``fetched_at`` rather than a call to now(), so the
+        answer is a property of this object and a test can construct any
+        situation it likes.
+
+        A rescheduled game is not counted: nflverse moves ``gameday`` forward
+        when a game is postponed, so it stops being in the past.
+        """
+        reg = self.games[(self.games["game_type"] == "REG") & ~self.games["played"]]
+        if reg.empty:
+            return 0
+        cutoff = pd.Timestamp(self.fetched_at.date()) - pd.Timedelta(days=STALE_GRACE_DAYS)
+        return int((pd.to_datetime(reg["gameday"]) < cutoff).sum())
 
 
 def fetch_games(
@@ -141,6 +176,11 @@ def fetch_games(
         if cache_path is None or not cache_path.exists():
             raise DataError(f"no cached games file at {cache_path}")
         raw = cache_path.read_bytes()
+        # Reading the committed copy because it was asked for is a different
+        # event from reading it because the network failed, even though the
+        # bytes are identical. Only the caller can tell them apart, and only
+        # the second one is a reason to refuse to publish.
+        source = "cache" if offline else "fallback"
 
     games = parse_games(raw, season)
 

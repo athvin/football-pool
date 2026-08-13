@@ -141,6 +141,29 @@ outage degrades the site to yesterday's numbers rather than breaking it. The
 footer shows two timestamps for that reason: when the **data** was published and
 when the **site** was built, because a fresh build of stale data is still stale.
 
+That fallback has a floor under it. "Yesterday's numbers" is only acceptable
+while the committed copy really is from yesterday, and it stops being true the
+moment something prevents it being refreshed — which branch protection does,
+since the daily job can no longer push to `main`. Left alone, an unreachable
+feed in week 12 would republish an August snapshot and quietly show everyone
+`0.00`. A silently wrong leaderboard is worse than a missing one, because it
+looks exactly like a right one.
+
+So the build refuses to publish a fallback that is materially behind, and the
+deploy job depends on the build, so the previous good site simply stays up until
+the next run. Staleness is measured as **regular-season games whose date has
+passed with no result recorded**, which calibrates itself: zero before week one
+however old the file is, zero when the data is current, and about a full slate
+for every week it is behind. Replaying a real season a day at a time, the count
+holds at 0 for four days, sits at 1 for three more — the lone Thursday game —
+then jumps straight to 13 once a Sunday has been missed. The limit sits in that
+empty band.
+
+An explicit `--offline` build is never blocked. Asking for the committed copy is
+a choice, and CI relies on it to build deterministically; falling back to it
+because the network failed is a degraded state. The two report as `cache` and
+`fallback` so they can never be confused.
+
 Standings and playoff seeds are derived here rather than read, because nflverse
 publishes neither. The tiebreaker implementation reproduces all 70 playoff seeds
 for 2021–2025 exactly against ESPN's published seeding, and the test suite

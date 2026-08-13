@@ -211,3 +211,97 @@ def test_path_helpers_are_season_scoped(tmp_path):
     assert cli.data_dir(2026, tmp_path) == tmp_path / "data" / "2026"
     assert cli.games_cache(2027, tmp_path).name == "games.csv"
     assert "2027" in str(cli.games_cache(2027, tmp_path))
+
+
+# -- refusing to publish stale data ------------------------------------------
+def _stale_data(games, source):
+    """A fallback holding preseason data, consulted deep into the season."""
+    frozen = games.copy()
+    frozen[["played", "home_won", "away_won", "is_tie"]] = False
+    return GameData(frozen, 2025, datetime(2025, 12, 1, tzinfo=timezone.utc), None, source)
+
+
+def test_build_refuses_to_publish_a_stale_fallback(monkeypatch, season, tmp_path, capsys):
+    """The failure this guard exists for.
+
+    The daily job cannot refresh the committed copy while main is protected, so
+    it sits at preseason. If the feed is unreachable in week 12, publishing it
+    would replace a correct leaderboard with an all-zeros one — and a silently
+    wrong board looks exactly like a right one to whoever opens it.
+    """
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    monkeypatch.setattr(cli, "load_season", lambda year: season)
+    monkeypatch.setattr(
+        "football_pool.nflverse.fetch_games",
+        lambda *a, **k: _stale_data(games, "fallback"),
+    )
+
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out)]) == 1
+
+    err = capsys.readouterr().err
+    assert "refusing to publish" in err
+    assert "DATA_PUSH_TOKEN" in err  # tells the operator how to fix it
+    assert not (out / "index.html").exists(), "nothing may be written"
+
+
+def test_an_explicit_offline_build_is_never_blocked(monkeypatch, season, tmp_path):
+    """CI builds --offline on purpose, and must stay green all season.
+
+    Identical bytes to the case above; only the provenance differs. That is the
+    whole reason "cache" and "fallback" are separate values.
+    """
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    monkeypatch.setattr(cli, "load_season", lambda year: season)
+    monkeypatch.setattr(
+        "football_pool.nflverse.fetch_games",
+        lambda *a, **k: _stale_data(games, "cache"),
+    )
+
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out), "--offline"]) == 0
+    assert (out / "index.html").exists()
+
+
+def test_a_fallback_that_is_merely_recent_still_publishes(monkeypatch, season, tmp_path):
+    """An outage on an ordinary day degrades to yesterday's numbers, as designed.
+
+    The guard is for data that is behind by a slate, not for any fallback at
+    all — otherwise a single flaky morning would stop the site updating.
+    """
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    fresh = GameData(
+        games, 2025, datetime(2026, 6, 1, tzinfo=timezone.utc), None, "fallback"
+    )
+    assert fresh.overdue == 0
+
+    monkeypatch.setattr(cli, "load_season", lambda year: season)
+    monkeypatch.setattr("football_pool.nflverse.fetch_games", lambda *a, **k: fresh)
+
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out)]) == 0
+    assert (out / "index.html").exists()
+
+
+def test_a_preseason_fallback_publishes_because_nothing_is_late(
+    monkeypatch, season, tmp_path
+):
+    """In August a schedule with no results is correct, not stale.
+
+    This is why the measure counts overdue games rather than the age of the
+    file: the committed copy can be months old and still perfectly current.
+    """
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    preseason = games.copy()
+    preseason[["played", "home_won", "away_won", "is_tie"]] = False
+    before_kickoff = GameData(
+        preseason, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "fallback"
+    )
+    assert before_kickoff.overdue == 0
+
+    monkeypatch.setattr(cli, "load_season", lambda year: season)
+    monkeypatch.setattr(
+        "football_pool.nflverse.fetch_games", lambda *a, **k: before_kickoff
+    )
+
+    assert cli.main(["build", "--out", str(tmp_path / "s")]) == 0
