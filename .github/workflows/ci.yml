@@ -91,11 +91,15 @@ jobs:
       - name: Build at the project path
         run: uv run pool build --out ./public-project --base "/football-pool" --offline
 
-      - name: Check the base path actually reached the markup
+      # The regex, rather than a plain substring, so a malformed or missing
+      # cache-busting stamp fails here too — an asset URL is only correct if it
+      # carries both the deployment prefix and the content fingerprint.
+      - name: Check the base path and fingerprint reached the markup
         run: |
           set -euo pipefail
-          grep -q 'href="/assets/site.css"' public-root/index.html
-          grep -q 'href="/football-pool/assets/site.css"' public-project/index.html
+          grep -qE 'href="/assets/site\.css\?v=[0-9a-f]{8}"' public-root/index.html
+          grep -qE 'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"' public-project/index.html
+          grep -qE 'src="/football-pool/assets/site\.js\?v=[0-9a-f]{8}"' public-project/index.html
           test -f public-project/rules/index.html
           test -f public-project/data/standings.json
-          echo 'both base paths render correctly'
+          echo 'both base paths render correctly, assets fingerprinted'

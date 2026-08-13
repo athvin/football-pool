@@ -105,7 +105,9 @@ def test_build_writes_a_site(wired, capsys, tmp_path):
 def test_build_applies_the_deployment_base(wired, tmp_path):
     out = tmp_path / "site"
     assert cli.main(["build", "--out", str(out), "--base", "/football-pool"]) == 0
-    assert '"/football-pool/assets/site.css"' in (out / "index.html").read_text()
+    # The asset URL carries the deployment prefix and a cache-busting stamp, so
+    # this matches the prefix rather than the whole attribute.
+    assert '"/football-pool/assets/site.css?v=' in (out / "index.html").read_text()
 
 
 def test_build_reports_preseason(monkeypatch, season, capsys, tmp_path):

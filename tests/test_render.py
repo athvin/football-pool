@@ -10,8 +10,10 @@ local preview server and 404s only once deployed to a project page.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -19,7 +21,7 @@ import pytest
 
 from football_pool.history import weekly_frame
 from football_pool.nflverse import GameData, parse_games
-from football_pool.render import build_context, make_environment, render_site
+from football_pool.render import ASSET_DIR, build_context, make_environment, render_site
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -57,13 +59,17 @@ def pool(make_season):
 
 
 # -- the url filter, the deployment footgun ---------------------------------
+# Non-asset paths only: assets additionally carry a cache-busting fingerprint,
+# which is asserted separately below so that an edit to site.css cannot turn
+# this test into a tripwire on an unrelated commit.
 @pytest.mark.parametrize(
     "base, path, expected",
     [
-        ("", "/assets/site.css", "/assets/site.css"),
-        ("/football-pool", "/assets/site.css", "/football-pool/assets/site.css"),
-        ("/football-pool/", "/assets/site.css", "/football-pool/assets/site.css"),
+        ("", "/rules/", "/rules/"),
+        ("/football-pool", "/rules/", "/football-pool/rules/"),
+        ("/football-pool/", "/rules/", "/football-pool/rules/"),
         ("/football-pool", "/", "/football-pool/"),
+        ("/football-pool", "/data/standings.json", "/football-pool/data/standings.json"),
     ],
 )
 def test_url_filter_applies_the_deployment_base(base, path, expected):
@@ -71,11 +77,92 @@ def test_url_filter_applies_the_deployment_base(base, path, expected):
 
 
 @pytest.mark.parametrize(
-    "path", ["https://example.com/x", "http://example.com/x", "#scoring", "mailto:a@b.c"]
+    "path",
+    [
+        "https://example.com/x",
+        "http://example.com/x",
+        "#scoring",
+        "mailto:a@b.c",
+        # An external URL that happens to contain /assets/ must not be
+        # fingerprinted: the passthrough has to run before the asset check.
+        "https://cdn.example.com/assets/site.css",
+    ],
 )
 def test_url_filter_leaves_absolute_and_anchor_links_alone(path):
     """Rewriting '#scoring' would turn an in-page jump into a navigation."""
     assert make_environment("/football-pool").filters["url"](path) == path
+
+
+# -- asset fingerprinting, the cache footgun --------------------------------
+# GitHub Pages pins every response to max-age=600 and offers no way to change
+# it, so for ten minutes after a deploy a returning visitor can hold the old
+# stylesheet against new markup. That skew looks exactly like a layout bug and
+# was once reported as one.
+def expected_digest(name: str) -> str:
+    """Recompute the fingerprint the filter should produce for an asset.
+
+    Derived rather than hardcoded on purpose: a hardcoded digest would have to
+    be updated on every unrelated CSS edit, and a test people routinely
+    regenerate without reading stops being a test.
+    """
+    return hashlib.sha256((ASSET_DIR / name).read_bytes()).hexdigest()[:8]
+
+
+@pytest.mark.parametrize("name", ["site.css", "site.js", "favicon.svg"])
+def test_every_asset_carries_its_content_hash(name):
+    url = make_environment("").filters["url"](f"/assets/{name}")
+    assert url == f"/assets/{name}?v={expected_digest(name)}"
+
+
+def test_the_fingerprint_composes_with_the_deployment_base():
+    """The stamp goes after the path, never before the prefix."""
+    url = make_environment("/football-pool/").filters["url"]("/assets/site.css")
+    assert url == f"/football-pool/assets/site.css?v={expected_digest('site.css')}"
+
+
+def test_only_assets_are_fingerprinted():
+    """Page URLs get pasted into the family group chat; keep them clean."""
+    url = make_environment("").filters["url"]
+    for path in ("/", "/rules/", "/entrant/brandon/", "/data/standings.json"):
+        assert "?v=" not in url(path)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/assets/nope.css",  # no such file
+        "/assets/fonts/",  # a directory, not a file
+        "/assets/",  # the directory itself
+    ],
+)
+def test_an_unhashable_asset_degrades_to_a_plain_url(path):
+    """A deleted favicon must not take the whole scoreboard down with it."""
+    url = make_environment("").filters["url"](path)
+    assert url == path
+    assert "?v=" not in url
+
+
+def test_a_changed_asset_changes_the_url(tmp_path, monkeypatch):
+    """The actual cache-busting behaviour, not merely that a hash exists."""
+    assets = tmp_path / "assets"
+    shutil.copytree(ASSET_DIR, assets)
+    monkeypatch.setattr("football_pool.render.ASSET_DIR", assets)
+
+    before = make_environment("").filters["url"]("/assets/site.css")
+
+    (assets / "site.css").write_text((assets / "site.css").read_text() + "\n/* x */")
+    # A fresh environment, because the digest cache is per build by design.
+    after = make_environment("").filters["url"]("/assets/site.css")
+
+    assert before != after
+    assert before.split("?v=")[0] == after.split("?v=")[0]
+
+
+def test_an_unchanged_asset_keeps_its_url():
+    """The guard against anyone reaching for a timestamp later."""
+    first = make_environment("").filters["url"]("/assets/site.css")
+    second = make_environment("").filters["url"]("/assets/site.css")
+    assert first == second
 
 
 def test_no_root_absolute_urls_survive_a_based_build(pool, game_data, tmp_path):
@@ -509,3 +596,83 @@ def test_seeds_return_once_the_season_is_under_way(season, mid_season, tmp_path)
     render_site(season, mid_season, tmp_path)
     html = (tmp_path / "teams" / "index.html").read_text()
     assert len(re.findall(r'<span class="badge money">(\d)</span>', html)) == 14
+
+
+# -- fingerprints in the built site -------------------------------------------
+ASSET_URL_RE = re.compile(r'(?:href|src)="([^"]*/assets/[^"]*)"')
+
+
+def test_every_asset_url_on_every_page_is_fingerprinted(season, game_data, tmp_path):
+    """Guards assets that do not exist yet.
+
+    The point of doing this inside the one filter every URL already passes
+    through is that a new asset cannot forget to opt in — this asserts it.
+    """
+    render_site(season, game_data, tmp_path, base="/football-pool")
+
+    seen = 0
+    for page in tmp_path.rglob("*.html"):
+        for url in ASSET_URL_RE.findall(page.read_text()):
+            seen += 1
+            assert re.search(r"\?v=[0-9a-f]{8}$", url), f"{page.name}: {url}"
+    assert seen >= 3, "expected at least the stylesheet, the script and the favicon"
+
+
+def test_the_fingerprint_matches_the_bytes_that_shipped(season, game_data, tmp_path):
+    """The URL the browser asks for must name the file that was published.
+
+    This is the real invariant. It is also what would catch a minifier being
+    slipped in between hashing the source and copying it to the output.
+    """
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    checked = 0
+    for url in ASSET_URL_RE.findall(html):
+        path, _, stamp = url.partition("?v=")
+        shipped = tmp_path / path.lstrip("/")
+        assert shipped.is_file(), f"{url} does not exist in the output"
+        assert stamp == hashlib.sha256(shipped.read_bytes()).hexdigest()[:8]
+        checked += 1
+    assert checked >= 3
+
+
+def test_page_links_are_never_fingerprinted(season, game_data, tmp_path):
+    """A stamp on /entrant/x/ would break every in-page link regex, and look daft."""
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    links = [u for u in re.findall(r'href="(/[^"]*)"', html) if "/assets/" not in u]
+    assert links, "expected at least the nav links"
+    for url in links:
+        assert "?v=" not in url, url
+
+
+def test_the_stylesheet_still_finds_its_fonts(season, game_data, tmp_path):
+    """A relative url() inside the CSS resolves against the path, not the query.
+
+    RFC 3986 §5.3: a non-empty relative reference does not inherit the base's
+    query, so `fonts/x.woff2` resolves correctly under `site.css?v=...`. This is
+    also the regression guard against anyone rewriting the CSS to rename files.
+    """
+    render_site(season, game_data, tmp_path)
+    css = (tmp_path / "assets" / "site.css").read_text()
+
+    assert "url('fonts/big-shoulders.woff2')" in css
+    assert sorted(p.name for p in (tmp_path / "assets" / "fonts").glob("*.woff2"))
+
+
+def test_the_ci_contract_holds(season, game_data, tmp_path):
+    """Mirrors the greps in ci.yml so this breaks in pytest, not a required check."""
+    root = tmp_path / "root"
+    project = tmp_path / "project"
+    render_site(season, game_data, root, base="")
+    render_site(season, game_data, project, base="/football-pool")
+
+    assert re.search(
+        r'href="/assets/site\.css\?v=[0-9a-f]{8}"', (root / "index.html").read_text()
+    )
+    assert re.search(
+        r'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"',
+        (project / "index.html").read_text(),
+    )
