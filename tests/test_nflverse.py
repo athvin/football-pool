@@ -1,0 +1,244 @@
+"""The data layer: fetching, parsing, normalization, and graceful degradation.
+
+No test here touches the network — the transport is stubbed so the failure
+modes (timeout, 500, missing column) are exercised deterministically.
+"""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pandas as pd
+import pytest
+
+from football_pool.nflverse import (
+    DataError,
+    fetch_games,
+    parse_games,
+    team_records,
+    validate_teams,
+)
+
+FIXTURES = Path(__file__).parent / "fixtures"
+CSV_2025 = FIXTURES / "games_2025.csv"
+
+
+class FakeResponse:
+    def __init__(self, content: bytes, status: int = 200, headers: dict | None = None):
+        self.content = content
+        self.status_code = status
+        self.headers = headers or {}
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise RuntimeError(f"HTTP {self.status_code}")
+
+
+@pytest.fixture
+def csv_bytes():
+    return CSV_2025.read_bytes()
+
+
+# -- parsing ----------------------------------------------------------------
+def test_parses_the_season_and_flags_played_games(games_2025):
+    assert len(games_2025) == 285
+    assert games_2025["played"].all()  # 2025 is complete
+    assert set(games_2025["game_type"]) == {"REG", "WC", "DIV", "CON", "SB"}
+
+
+def test_scores_are_integers_not_floats(games_2025):
+    """float64 would render as '24.0' on the page."""
+    assert str(games_2025["home_score"].dtype) == "Int64"
+    assert str(games_2025["away_score"].dtype) == "Int64"
+
+
+def test_identifies_the_real_tie(games_2025):
+    ties = games_2025[games_2025["is_tie"]]
+    assert len(ties) == 1
+    row = ties.iloc[0]
+    assert {row["home_team"], row["away_team"]} == {"GB", "DAL"}
+    assert row["home_score"] == row["away_score"] == 40
+    # A tie is neither a home nor an away win.
+    assert not row["home_won"] and not row["away_won"]
+
+
+def test_normalizes_upstream_team_codes(games_2025):
+    """Upstream says LA; the pool says LAR."""
+    seen = set(games_2025["home_team"]) | set(games_2025["away_team"])
+    assert "LAR" in seen
+    assert "LA" not in seen
+
+
+def test_unplayed_games_are_not_counted(csv_bytes):
+    """Blank result means scheduled, even though blank scores look like 0."""
+    doctored = csv_bytes.decode().splitlines()
+    header = doctored[0]
+    # Blank out the scores and result of one game.
+    cols = header.split(",")
+    i_hs, i_as, i_res = cols.index("home_score"), cols.index("away_score"), cols.index("result")
+    parts = doctored[1].split(",")
+    parts[i_hs] = parts[i_as] = parts[i_res] = ""
+    doctored[1] = ",".join(parts)
+
+    df = parse_games("\n".join(doctored).encode(), 2025)
+    assert int(df["played"].sum()) == 284
+    assert not df.iloc[0]["played"]
+    assert not df.iloc[0]["is_tie"]  # blank is not a 0-0 tie
+
+
+def test_missing_season_raises(csv_bytes):
+    with pytest.raises(DataError, match="no games found for season"):
+        parse_games(csv_bytes, 1998)
+
+
+def test_schema_change_raises(csv_bytes):
+    lines = csv_bytes.decode().splitlines()
+    lines[0] = lines[0].replace("result", "outcome")
+    with pytest.raises(DataError, match="missing expected column"):
+        parse_games("\n".join(lines).encode(), 2025)
+
+
+def test_accepts_a_path(games_2025):
+    assert parse_games(CSV_2025, 2025).equals(games_2025)
+
+
+# -- validation -------------------------------------------------------------
+def test_validate_teams_accepts_a_matching_set(season, games_2025):
+    validate_teams(games_2025, season.teams)
+
+
+def test_validate_teams_reports_a_missing_alias(season, games_2025):
+    broken = games_2025.copy()
+    broken.loc[broken["home_team"] == "LAR", "home_team"] = "LA"
+    with pytest.raises(DataError, match="In data only"):
+        validate_teams(broken, season.teams)
+
+
+# -- records ----------------------------------------------------------------
+def test_team_records_count_every_game_once(season, games_2025):
+    rec = team_records(games_2025, season.teams)
+    assert rec["gp"].sum() == 272 * 2
+    assert (rec["gp"] == 17).all()
+    assert rec["t"].sum() == 2  # one tie, counted for both teams
+
+
+def test_win_pct_treats_a_tie_as_half(season, games_2025):
+    rec = team_records(games_2025, season.teams)
+    gb = rec.loc["GB"]
+    assert gb["win_pct"] == pytest.approx((gb["w"] + 0.5 * gb["t"]) / 17)
+
+
+# -- fetching ---------------------------------------------------------------
+def test_fetch_writes_and_reports_provenance(monkeypatch, tmp_path, csv_bytes):
+    monkeypatch.setattr(
+        "httpx.get",
+        lambda *a, **k: FakeResponse(
+            csv_bytes, headers={"last-modified": "Wed, 12 Aug 2026 22:16:24 GMT"}
+        ),
+    )
+    cache = tmp_path / "games.csv"
+    gd = fetch_games(2025, cache_path=cache)
+
+    assert gd.source == "network"
+    assert cache.exists()
+    assert gd.upstream_modified == datetime(2026, 8, 12, 22, 16, 24, tzinfo=timezone.utc)
+    assert gd.fetched_at.tzinfo is timezone.utc
+
+
+def test_fetch_falls_back_to_cache_when_upstream_is_down(monkeypatch, tmp_path, csv_bytes):
+    """An nflverse outage degrades to yesterday's numbers, not a red build."""
+    cache = tmp_path / "games.csv"
+    cache.write_bytes(csv_bytes)
+
+    calls = []
+
+    def boom(*a, **k):
+        calls.append(1)
+        raise RuntimeError("connection reset")
+
+    monkeypatch.setattr("httpx.get", boom)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    gd = fetch_games(2025, cache_path=cache, retries=3)
+    assert gd.source == "cache"
+    assert len(calls) == 3  # retried before giving up
+    assert len(gd.games) == 285
+
+
+def test_fetch_retries_then_succeeds(monkeypatch, tmp_path, csv_bytes):
+    attempts = {"n": 0}
+
+    def flaky(*a, **k):
+        attempts["n"] += 1
+        if attempts["n"] < 3:
+            raise RuntimeError("timeout")
+        return FakeResponse(csv_bytes)
+
+    monkeypatch.setattr("httpx.get", flaky)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+
+    gd = fetch_games(2025, cache_path=tmp_path / "g.csv")
+    assert gd.source == "network"
+    assert attempts["n"] == 3
+
+
+def test_fetch_raises_when_offline_with_no_cache(tmp_path):
+    with pytest.raises(DataError, match="no cached games file"):
+        fetch_games(2025, cache_path=tmp_path / "absent.csv", offline=True)
+
+
+def test_offline_skips_the_network(monkeypatch, tmp_path, csv_bytes):
+    cache = tmp_path / "games.csv"
+    cache.write_bytes(csv_bytes)
+    monkeypatch.setattr(
+        "httpx.get", lambda *a, **k: pytest.fail("offline must not hit the network")
+    )
+    assert fetch_games(2025, cache_path=cache, offline=True).source == "cache"
+
+
+def test_fetch_without_cache_or_network_raises(monkeypatch):
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(b"", 500))
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    with pytest.raises(DataError, match="could not fetch"):
+        fetch_games(2025, cache_path=None)
+
+
+# -- derived views ----------------------------------------------------------
+def test_week_helpers_on_a_partial_season(csv_bytes):
+    """Mid-season: weeks 1-3 final, the rest still scheduled."""
+    lines = csv_bytes.decode().splitlines()
+    cols = lines[0].split(",")
+    i_week, i_type = cols.index("week"), cols.index("game_type")
+    i_hs, i_as, i_res = cols.index("home_score"), cols.index("away_score"), cols.index("result")
+
+    out = [lines[0]]
+    for ln in lines[1:]:
+        p = ln.split(",")
+        if p[i_type] != "REG" or int(p[i_week]) > 3:
+            p[i_hs] = p[i_as] = p[i_res] = ""
+        out.append(",".join(p))
+
+    df = parse_games("\n".join(out).encode(), 2025)
+
+    class G:
+        games = df
+
+    from football_pool.nflverse import GameData
+
+    gd = GameData(df, 2025, datetime.now(timezone.utc), None, "cache")
+    assert gd.current_week == 3
+    assert gd.next_week == 4
+    assert gd.last_completed is not None
+    assert len(gd.played) + len(gd.unplayed) == len(df)
+
+
+def test_week_helpers_before_the_season_starts(games_2025):
+    from football_pool.nflverse import GameData
+
+    empty = games_2025.copy()
+    empty["played"] = False
+    gd = GameData(empty, 2025, datetime.now(timezone.utc), None, "cache")
+    assert gd.current_week is None
+    assert gd.last_completed is None
+    assert gd.next_week == 1

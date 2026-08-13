@@ -1,0 +1,109 @@
+# =============================================================================
+# FORECASTING INPUTS — 2026   (NOT POOL RULES)
+# =============================================================================
+# IMPORTANT: nothing in this file affects anybody's score. Ever.
+#
+# These are the inputs to the optional Monte Carlo projection layer, which
+# forecasts how the REST of the season might play out. They came from the
+# owner's own preseason research and are opinions about future games, not
+# properties of the pool.
+#
+#   - The scoring engine never reads this file.
+#   - The /rules/ page never renders from this file.
+#   - If this file is missing or `enabled: false`, the site still builds and
+#     everything actual (standings, banked points, potentials, week-by-week
+#     history) is unaffected — only the projection panels disappear.
+#
+# Anything derived from these numbers is rendered in the "modeled" colour on
+# the site, never the "actual" colour, so a projection is never mistaken for a
+# result.
+# =============================================================================
+
+enabled: true
+
+# Number of simulated seasons per build. 25,000 takes about a second.
+simulations: 25000
+seed: 7 # fixed, so a day with no games rebuilds byte-identically
+
+# Market win totals (Aug 2026). Used only to calibrate team strength so the
+# simulation's expected wins match the betting market's.
+win_totals:
+  "ARI": 4.5
+  "ATL": 6.5
+  "BAL": 11.5
+  "BUF": 10.5
+  "CAR": 7.5
+  "CHI": 9.5
+  "CIN": 9.5
+  "CLE": 6.5
+  "DAL": 9.5
+  "DEN": 9.5
+  "DET": 10.5
+  "GB": 10.5
+  "HOU": 9.5
+  "IND": 7.5
+  "JAX": 8.5
+  "KC": 10.5
+  "LV": 5.5
+  "LAC": 9.5
+  "LAR": 10.5
+  "MIA": 4.5
+  "MIN": 8.5
+  "NE": 9.5
+  "NO": 7.5
+  "NYG": 7.5
+  "NYJ": 5.5
+  "PHI": 10.5
+  "PIT": 8.5
+  "SF": 10.5
+  "SEA": 10.5
+  "TB": 8.5
+  "TEN": 6.5
+  "WAS": 7.5
+
+# Researched deviation from the market, in Elo points, with per-team
+# uncertainty. Purely the owner's preseason opinion; set every mean to 0 to
+# forecast the market exactly.
+qualitative_elo:
+  "ARI": {mean: 0, sd: 17}
+  "ATL": {mean: -1, sd: 16}
+  "BAL": {mean: -4, sd: 15}
+  "BUF": {mean: -3, sd: 15}
+  "CAR": {mean: -7, sd: 16}
+  "CHI": {mean: -5, sd: 15}
+  "CIN": {mean: 6, sd: 14}
+  "CLE": {mean: -2, sd: 15}
+  "DAL": {mean: 4, sd: 15}
+  "DEN": {mean: 3, sd: 16}
+  "DET": {mean: -3, sd: 15}
+  "GB": {mean: -6, sd: 16}
+  "HOU": {mean: 2, sd: 15}
+  "IND": {mean: 0, sd: 16}
+  "JAX": {mean: 0, sd: 15}
+  "KC": {mean: 6, sd: 18}
+  "LV": {mean: 0, sd: 16}
+  "LAC": {mean: 4, sd: 15}
+  "LAR": {mean: 0, sd: 15}
+  "MIA": {mean: -1, sd: 17}
+  "MIN": {mean: -5, sd: 17}
+  "NE": {mean: 2, sd: 15}
+  "NO": {mean: 4, sd: 17}
+  "NYG": {mean: -2, sd: 16}
+  "NYJ": {mean: 0, sd: 15}
+  "PHI": {mean: -4, sd: 15}
+  "PIT": {mean: -4, sd: 16}
+  "SEA": {mean: -2, sd: 15}
+  "SF": {mean: 3, sd: 16}
+  "TB": {mean: -4, sd: 15}
+  "TEN": {mean: 4, sd: 18}
+  "WAS": {mean: 5, sd: 16}
+
+# Simulation model constants.
+model:
+  home_field_elo: 48.0
+  playoff_elo_multiplier: 1.2
+  elo_scale: 400.0
+  rating_shock_sd: 70.0
+  qb_out_season_prob: 0.35
+  qb_missed_games: [2, 9] # uniform int, [lo, hi)
+  qb_elo_drop: 110.0

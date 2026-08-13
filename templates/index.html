@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ season.year }} Family Pool · {{ state.phase }}{% endblock %}
+
+{% block description %}
+{%- if state.leader -%}
+{{ state.phase }} — {{ state.leader.name }} leads with {{ state.leader.banked|points }} points
+{%- if state.week_leaders %}, {{ state.week_leaders[0][0] }} scored {{ '%.2f'|format(state.week_leaders[0][1]) }} this week{% endif -%}.
+{%- else -%}
+{{ season.year }} family NFL pool standings.
+{%- endif -%}
+{% endblock %}
+
+{% block content %}
+
+<section class="state" aria-label="State of the pool">
+  <div class="state-cell">
+    <p class="state-label">Where we are</p>
+    <p class="state-value">{{ state.phase }}</p>
+  </div>
+  <div class="state-cell">
+    <p class="state-label">Games left</p>
+    <p class="state-value">{{ state.games_remaining }}<span class="unit"> / {{ state.games_played + state.games_remaining }}</span></p>
+  </div>
+  <div class="state-cell">
+    <p class="state-label">In the pot</p>
+    <p class="state-value">${{ '%.0f'|format(state.pot) }}<span class="unit"> · {{ state.entrants }} in</span></p>
+  </div>
+  <div class="state-cell">
+    <p class="state-label">Leader</p>
+    <p class="state-value sm">{{ state.leader.name if state.leader else '—' }}</p>
+  </div>
+  <div class="state-cell">
+    <p class="state-label">Biggest riser</p>
+    <p class="state-value sm">
+      {% if state.risers %}{{ state.risers[0][0] }} <span class="unit">+{{ state.risers[0][1]|int }}</span>{% else %}—{% endif %}
+    </p>
+  </div>
+</section>
+
+<div class="page-head">
+  <h1 class="page-title">Standings</h1>
+  <p class="page-sub">
+    {% if state.week %}
+      Through week {{ state.week }}.
+    {% else %}
+      Nothing has kicked off yet — every entry is level until week 1.
+    {% endif %}
+    Solid bar is banked, hatched is guaranteed by your own teams playing each
+    other, and the outline is everything still reachable.
+  </p>
+  <div class="legend">
+    <span><i class="key-banked"></i> banked</span>
+    <span><i class="key-guaranteed"></i> guaranteed</span>
+    <span><i class="key-ceiling"></i> ceiling</span>
+  </div>
+</div>
+
+{% if not rows %}
+  <p class="empty">No entries yet. Add people to <code>seasons/{{ season.year }}/picks.yaml</code>.</p>
+{% else %}
+<div class="board">
+  {% for r in rows %}
+  <a class="row {% if loop.first and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
+     style="--i: {{ r.index }}"
+     href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}"
+     aria-label="{{ r.name }}, rank {{ r.rank }}, {{ r.banked|points }} points">
+
+    <span class="row-rank">{{ r.rank }}</span>
+
+    <span class="row-who">
+      <span class="row-name">{{ r.name }}</span>
+      <span class="row-teams">
+        {% for t in r.teams %}
+          <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% endif %}">{{ t }}</span>
+        {% endfor %}
+        {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
+        {% if r.money %}<span class="badge money">{{ r.money|money }}</span>{% endif %}
+      </span>
+    </span>
+
+    <span class="row-score">
+      <span class="row-points">{{ r.banked|points }}</span>
+      {% if r.rank_delta %}
+      <span class="row-sub">
+        {% if r.rank_delta > 0 %}
+          <span class="delta up" style="--i: {{ r.index }}">▲{{ r.rank_delta }}</span>
+        {% else %}
+          <span class="delta down" style="--i: {{ r.index }}">▼{{ -r.rank_delta }}</span>
+        {% endif %}
+      </span>
+      {% endif %}
+    </span>
+
+    <span class="row-bars">
+      {{ r.bar|safe }}
+      {{ r.spark|safe }}
+      <span class="row-sub">
+        next wk ≤{{ r.next_week_max|points }} · ceiling {{ r.ceiling|points }}
+      </span>
+    </span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if projecting %}
+<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
+<p class="page-sub">
+  {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every game
+  already played. These are forecasts, not results — everything in this section
+  is shown in cyan for that reason.
+</p>
+<div class="table-scroll">
+  <table>
+    <caption>Chance of finishing first, chance of cashing, and the likely final range.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        <th scope="col" class="num">P(1st)</th>
+        <th scope="col" class="num">P(cash)</th>
+        <th scope="col" class="num">Expected $</th>
+        <th scope="col">Projected final score</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows|sort(attribute='projection.expected_payout', reverse=true) %}
+      {% set p = r.projection %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num model">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
+        <td class="num model">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
+        <td class="num model">
+          {{ '$%.0f'|format(p.expected_payout) }}
+          <span class="net {{ 'up' if p.expected_net > 0 else 'down' }}">{{ '%+.0f'|format(p.expected_net) }}</span>
+        </td>
+        <td class="band-cell">
+          {{ p.band|safe }}
+          <span class="row-sub">{{ '%.0f'|format(p.p10) }}–{{ '%.0f'|format(p.p90) }}, mid {{ '%.0f'|format(p.mean_points) }}</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if state.week_leaders %}
+<h2 class="section-title">Best of week {{ state.week }}</h2>
+<div class="stat-grid">
+  {% for name, pts in state.week_leaders %}
+  <div class="stat">
+    <p class="stat-label">{{ loop.index }}{{ 'st' if loop.index == 1 else ('nd' if loop.index == 2 else 'rd') }} this week</p>
+    <p class="stat-value live">{{ '%.2f'|format(pts) }}</p>
+    <p class="stat-note">{{ name }}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

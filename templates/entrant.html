@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ entrant.name }} · {{ season.year }} Family Pool{% endblock %}
+{% block description %}{{ entrant.name }} is {{ entrant.rank }}{{ 'st' if entrant.rank == 1 else ('nd' if entrant.rank == 2 else ('rd' if entrant.rank == 3 else 'th')) }} with {{ entrant.banked|points }} points from {{ entrant.teams|join(', ') }}.{% endblock %}
+
+{% block content %}
+
+<div class="hero">
+  <div>
+    <p class="state-label">Rank {{ entrant.rank }} of {{ state.entrants }}</p>
+    <h1 class="hero-name">{{ entrant.name }}</h1>
+    <div class="row-teams" style="margin-top:.6rem">
+      {% for t in entrant.teams %}
+        <span class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% endif %}">{{ t }}</span>
+      {% endfor %}
+      {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
+      {% if entrant.money %}<span class="badge money">{{ entrant.money|money }} if it ended today</span>{% endif %}
+    </div>
+  </div>
+  <div style="text-align:right">
+    <p class="state-label">Banked</p>
+    <p class="hero-total">{{ entrant.banked|points }}</p>
+  </div>
+</div>
+
+<h2 class="section-title">Where the points come from</h2>
+{{ entrant.contrib|safe }}
+
+<div class="cards">
+  {% for c in entrant.cards %}
+  <div class="card">
+    <div class="card-head">
+      <span class="card-team">{{ c.team }}</span>
+      <span class="card-points">{{ c.points|points }}</span>
+    </div>
+    <p class="card-meta">
+      <span>LF {{ '%.2f'|format(c.lf) }}</span>
+      <span>{{ c.record }}</span>
+      <span>{{ c.division }}</span>
+      {% if c.seed %}<span>seed {{ c.seed }}</span>{% endif %}
+    </p>
+    {% if c.berth_points or c.playoff_points %}
+    <p class="card-meta">
+      <span>{{ c.win_points|points }} from wins</span>
+      {% if c.berth_points %}<span>+{{ c.berth_points|points }} berth</span>{% endif %}
+      {% if c.playoff_points %}<span>+{{ c.playoff_points|points }} playoffs</span>{% endif %}
+    </p>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<h2 class="section-title">Outlook</h2>
+<div class="stat-grid">
+  <div class="stat">
+    <p class="stat-label">Floor</p>
+    <p class="stat-value live">{{ entrant.floor|points }}</p>
+    <p class="stat-note">
+      {% if entrant.guaranteed_extra %}
+        {{ entrant.banked|points }} banked plus {{ entrant.guaranteed_extra|points }} your own
+        teams must win off each other
+      {% else %}
+        nothing further is guaranteed
+      {% endif %}
+    </p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Next week</p>
+    <p class="stat-value">≤ {{ entrant.next_week_max|points }}</p>
+    <p class="stat-note">
+      {% if entrant.next_week_min %}at least {{ entrant.next_week_min|points }}{% else %}nothing guaranteed{% endif %}
+    </p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Ceiling</p>
+    <p class="stat-value">{{ entrant.ceiling|points }}</p>
+    <p class="stat-note">every remaining game plus the best possible January</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Still on the table</p>
+    <p class="stat-value">{{ entrant.upside|points }}</p>
+    <p class="stat-note">ceiling minus floor</p>
+  </div>
+</div>
+
+{% if entrant.projection %}
+<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
+<div class="stat-grid">
+  <div class="stat">
+    <p class="stat-label">Chance of winning</p>
+    <p class="stat-value model">{{ '%.0f%%'|format(entrant.projection.p_first * 100) }}</p>
+    <p class="stat-note">{{ entrant.projection.odds_meter|safe }}</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Chance of cashing</p>
+    <p class="stat-value model">{{ '%.0f%%'|format(entrant.projection.p_cash * 100) }}</p>
+    <p class="stat-note">top {{ season.payout_split|length }} finish</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Expected winnings</p>
+    <p class="stat-value model">{{ '$%.0f'|format(entrant.projection.expected_payout) }}</p>
+    <p class="stat-note">
+      {{ '%+.0f'|format(entrant.projection.expected_net) }} after the
+      ${{ '%.0f'|format(season.entry_fee) }} entry
+    </p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Likely final score</p>
+    <p class="stat-value model">{{ '%.0f'|format(entrant.projection.mean_points) }}</p>
+    <p class="stat-note">
+      {{ entrant.projection.band|safe }}
+      {{ '%.0f'|format(entrant.projection.p10) }}–{{ '%.0f'|format(entrant.projection.p90) }}
+      in nine seasons out of ten
+    </p>
+  </div>
+</div>
+<p class="page-sub">
+  From {{ '{:,}'.format(sim_count) }} simulated seasons, with every completed
+  game held fixed. A forecast, not a result.
+</p>
+{% endif %}
+
+<h2 class="section-title">Season so far</h2>
+{% if entrant.series %}
+  <div class="card">
+    {{ svg.sparkline(entrant.series, 640, 90)|safe }}
+    <p class="card-meta"><span>cumulative points, week {{ weeks[0] }} to {{ weeks[-1] }}</span></p>
+  </div>
+{% else %}
+  <p class="empty">No games played yet.</p>
+{% endif %}
+
+{% set rivals = rows | rejectattr('slug', 'equalto', entrant.slug) | list %}
+{% if rivals %}
+<h2 class="section-title">The field</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Gap to {{ entrant.name }}, and whether they can still be caught.</caption>
+    <thead>
+      <tr>
+        <th scope="col">#</th>
+        <th scope="col">Entrant</th>
+        <th scope="col" class="num">Banked</th>
+        <th scope="col" class="num">Gap</th>
+        <th scope="col" class="num">Their ceiling</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rivals %}
+      <tr>
+        <td class="num">{{ r.rank }}</td>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num">{{ r.banked|points }}</td>
+        <td class="num">{{ '%+.2f'|format(r.banked - entrant.banked) }}</td>
+        <td class="num">
+          {{ r.ceiling|points }}
+          {% if r.ceiling < entrant.floor %}<span class="badge out">can't catch you</span>{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<a class="back" href="{{ '/'|url }}">← All standings</a>
+
+{% endblock %}

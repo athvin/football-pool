@@ -1,0 +1,25 @@
+{
+  "_source": "The commissioner's published sheet, as supplied by the pool owner. Every value here has been read off the official sheet — nothing is inferred. This file is the regression baseline: if rules.yaml ever drifts from it, tests/test_official_rules.py fails and names the team and both numbers.",
+  "_not_covered": "The sheet is silent on tied games. NFL games can end level (2025 had one), so the pool's tie policy lives in rules.yaml as `tie_multiplier` and is a commissioner decision rather than something derived.",
+  "2026": {
+    "entry_fee": 10.0,
+    "payout_split": [0.5, 0.3, 0.2],
+    "bonuses": {
+      "division_winner": 3.0,
+      "wild_card_berth": 1.5,
+      "wild_card_upset": {"flat": 1.0, "add_lf": false},
+      "divisional_win": {"flat": 1.0, "add_lf": true},
+      "conference_win": {"flat": 1.5, "add_lf": true},
+      "super_bowl_win": {"flat": 2.0, "add_lf": true}
+    },
+    "verified": {
+      "SEA": 1.10, "LAR": 1.25, "SF": 1.25, "PHI": 1.45, "CHI": 1.45,
+      "GB": 1.60, "MIN": 1.75, "DET": 1.75, "CAR": 2.00, "TB": 2.00,
+      "ATL": 2.00, "DAL": 2.20, "NO": 2.30, "WAS": 2.40, "NYG": 2.50,
+      "ARI": 2.60, "NE": 1.10, "DEN": 1.20, "JAX": 1.30, "BUF": 1.45,
+      "HOU": 1.45, "LAC": 1.60, "PIT": 1.70, "BAL": 1.85, "IND": 1.85,
+      "MIA": 2.00, "CIN": 2.15, "KC": 2.15, "CLE": 2.30, "TEN": 2.50,
+      "NYJ": 2.50, "LV": 2.50
+    }
+  }
+}

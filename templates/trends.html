@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+
+{% block title %}Trends · {{ season.year }} Family Pool{% endblock %}
+{% block description %}How the standings have moved all season — points and rank, week by week.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Trends</h1>
+  <p class="page-sub">
+    Every entrant is drawn; the current top few are brought forward and labelled.
+    Hover any line to pick it out — everyone gets one colour on purpose, because
+    thirty colours would be unreadable and colouring by rank would mean people
+    change colour week to week.
+  </p>
+</div>
+
+{% if not weeks %}
+  <p class="empty">Nothing has been played yet. The season's shape starts filling in from week 1.</p>
+{% else %}
+
+<h2 class="section-title">Points, week by week</h2>
+<div class="chart-card">
+  {{ svg.emphasis_lines(points_series, lead_names, weeks, 900, 340)|safe }}
+</div>
+
+<h2 class="section-title">Rank, week by week</h2>
+<div class="chart-card">
+  {{ svg.emphasis_lines(rank_series, lead_names, weeks, 900, 300, true)|safe }}
+  <p class="card-meta"><span>first place at the top</span></p>
+</div>
+
+{% endif %}
+
+<h2 class="section-title">Leverage</h2>
+<p class="page-sub">
+  A team half the pool owns barely moves the standings when it wins — everyone
+  rises together. Points only separate you from the field when they come from
+  teams nobody else has.
+</p>
+<div class="table-scroll">
+  <table>
+    <caption>Exclusive leveling factor held by each entry.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        <th scope="col">Teams nobody else has</th>
+        <th scope="col" class="num">Leverage</th>
+        <th scope="col">Shared with the field</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in leverage %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td>
+          <span class="row-teams">
+            {% for t in r.unique_teams %}<span class="team-chip scored">{{ t }}</span>{% endfor %}
+            {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
+          </span>
+        </td>
+        <td class="num">{{ '%.2f'|format(r.leverage) }}</td>
+        <td>
+          <span class="row-teams">
+            {% for t in r.shared_teams %}<span class="team-chip">{{ t }}</span>{% endfor %}
+          </span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if state.week %}
+<h2 class="section-title">Who is carrying whom</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Each entry's best and worst performer, measured against its own three team-mates.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        <th scope="col">Carrying them</th>
+        <th scope="col" class="num">Share</th>
+        <th scope="col">Dead weight</th>
+        <th scope="col" class="num">Points</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in picks %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td><span class="team-chip scored">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
+        <td class="num">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
+        <td><span class="team-chip">{{ r.worst_team }}</span></td>
+        <td class="num">{{ r.worst_points|points }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2 class="section-title">Gaps</h2>
+<div class="table-scroll">
+  <table>
+    <caption>Who each entrant is chasing, and who is chasing them.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Entrant</th>
+        <th scope="col" class="num">Behind the leader</th>
+        <th scope="col">Chasing</th>
+        <th scope="col">Being chased by</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rivals %}
+      <tr>
+        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num">{{ '—' if not r.gap_to_leader else '%.2f'|format(r.gap_to_leader) }}</td>
+        <td>{{ r.chasing ~ ' by ' ~ '%.2f'|format(r.chasing_gap) if r.chasing else '— leading —' }}</td>
+        <td>{{ r.chased_by ~ ' by ' ~ '%.2f'|format(r.chased_gap) if r.chased_by else '— last —' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

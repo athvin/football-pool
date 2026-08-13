@@ -1,0 +1,47 @@
+# =============================================================================
+# ENTRANTS AND THEIR PICKS — 2026
+# =============================================================================
+# Everyone picks exactly 4 teams for the whole season.
+#
+# The build validates this file hard and FAILS LOUDLY on any problem, because a
+# silent typo here would just make someone score zero for a team all year:
+#   - exactly 4 teams per entrant
+#   - every code must be one of the 32 in rules.yaml (KAN is not KC)
+#   - no duplicate team within a single entry
+#   - no duplicate entrant name
+#
+# Team codes (use these exactly):
+#   AFC East   NE  BUF MIA NYJ      NFC East   PHI DAL WAS NYG
+#   AFC North  BAL PIT CIN CLE      NFC North  DET GB  MIN CHI
+#   AFC South  JAX HOU IND TEN      NFC South  CAR TB  ATL NO
+#   AFC West   KC  LAC DEN LV       NFC West   SEA LAR SF  ARI
+#
+# Note: the Rams are LAR here (upstream data calls them LA; we normalize).
+# =============================================================================
+
+entrants:
+  - name: Brian Moore
+    teams: ["KC", "BAL", "DAL", "CIN"]
+
+  - name: Paul Moore
+    teams: ["DET", "BUF", "SF", "NE"]
+
+  - name: Brenda Moore
+    teams: ["TB", "BUF", "CHI", "BAL"]
+
+  # One entry, shared three ways.
+  - name: "Shannon (plus Si & Rachel)"
+    teams: ["DET", "CIN", "PHI", "BAL"]
+
+  - name: Eric Riggs
+    teams: ["WAS", "KC", "NYG", "CIN"]
+
+  - name: "Asher O'Hara"
+    teams: ["BAL", "CIN", "KC", "BUF"]
+
+  # As family members send in their picks, add them here — nothing else in the
+  # project needs to change. The pot, the payouts, and every pool-relative
+  # metric recompute from however many entrants are in this list.
+  #
+  # - name: Aunt Carol
+  #   teams: [CIN, WAS, TEN, NO]

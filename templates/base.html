@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-page="{{ page }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>{% block title %}{{ season.year }} Family Pool{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ season.year }} family NFL pool standings.{% endblock %}">
+
+{# When the link lands in the family group chat, the unfurl should be the scoreboard. #}
+<meta property="og:type" content="website">
+<meta property="og:title" content="{% block og_title %}{{ season.year }} Family Pool{% endblock %}">
+<meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
+
+<link rel="icon" href="{{ '/assets/favicon.svg'|url }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ '/assets/site.css'|url }}">
+</head>
+<body>
+{# Set the stored theme before first paint so the page never flashes the wrong one. #}
+<script>
+  try {
+    var t = localStorage.getItem('pool-theme');
+    if (t) document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+
+<div class="grain" aria-hidden="true"></div>
+
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <a class="brand" href="{{ '/'|url }}">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-text">
+        <span class="brand-name">Family Pool</span>
+        <span class="brand-season">{{ season.year }}</span>
+      </span>
+    </a>
+
+    <nav class="tabs" aria-label="Sections">
+      <a href="{{ '/'|url }}" {% if page == 'standings' %}aria-current="page"{% endif %}>Standings</a>
+      <a href="{{ '/weeks/'|url }}" {% if page == 'weeks' %}aria-current="page"{% endif %}>Weeks</a>
+      <a href="{{ '/trends/'|url }}" {% if page == 'trends' %}aria-current="page"{% endif %}>Trends</a>
+      <a href="{{ '/teams/'|url }}" {% if page == 'teams' %}aria-current="page"{% endif %}>Teams</a>
+      <a href="{{ '/rules/'|url }}" {% if page == 'rules' %}aria-current="page"{% endif %}>Rules</a>
+    </nav>
+
+    <button class="theme-toggle" type="button" data-theme-toggle
+            aria-label="Switch between dark and light">
+      <span class="theme-icon" aria-hidden="true"></span>
+    </button>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="stamps">
+      <p class="stamp">
+        <span class="stamp-label">Data through</span>
+        {% if fresh.data_at %}
+          <time datetime="{{ fresh.data_at }}" data-ts>{{ fresh.data_at }}</time>
+        {% else %}
+          <span class="stamp-value">unknown</span>
+        {% endif %}
+      </p>
+      <p class="stamp">
+        <span class="stamp-label">Site built</span>
+        <time datetime="{{ fresh.built_at }}" data-ts>{{ fresh.built_at }}</time>
+      </p>
+    </div>
+
+    <label class="tz">
+      <span class="tz-label">Time zone</span>
+      <select data-tz-select>
+        <option value="America/New_York">Eastern</option>
+        <option value="America/Chicago">Central</option>
+        <option value="America/Denver">Mountain</option>
+        <option value="America/Phoenix">Arizona</option>
+        <option value="America/Los_Angeles">Pacific</option>
+        <option value="America/Anchorage">Alaska</option>
+        <option value="Pacific/Honolulu">Hawaii</option>
+        <option value="UTC">UTC</option>
+      </select>
+    </label>
+  </div>
+</footer>
+
+<script type="module" src="{{ '/assets/site.js'|url }}"></script>
+</body>
+</html>

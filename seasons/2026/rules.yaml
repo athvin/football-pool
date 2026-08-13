@@ -1,0 +1,103 @@
+# =============================================================================
+# THE POOL RULES — 2026
+# =============================================================================
+# This file is the single source of truth for how points are scored.
+# The scoring engine reads it, AND the /rules/ page on the site renders from it,
+# so the posted rules can never drift from the math.
+#
+# Nothing in this file is a projection or a prediction. Forecasting inputs live
+# in forecast.yaml and are never consulted when scoring actual results.
+# =============================================================================
+
+season: 2026
+
+# Money
+entry_fee: 10.0
+payout_split: [0.50, 0.30, 0.20] # 1st / 2nd / 3rd share of the pot
+picks_per_entrant: 4
+
+# ---------------------------------------------------------------------------
+# Leveling factors: points scored per regular-season win.
+# Commissioner-set handicap from last year's record — bad teams pay more.
+# Roughly LF = 3.05 - 0.136 * (prior season wins).
+# ---------------------------------------------------------------------------
+# Team codes are quoted throughout this file. YAML 1.1 reads a bare NO as the
+# boolean false, which would silently drop the Saints from the entire pool.
+leveling_factors:
+  # AFC East
+  "NE": 1.10
+  "BUF": 1.45
+  "MIA": 2.00
+  "NYJ": 2.50
+  # AFC North
+  "BAL": 1.85
+  "PIT": 1.70
+  "CIN": 2.15
+  "CLE": 2.30
+  # AFC South
+  "JAX": 1.30
+  "HOU": 1.45
+  "IND": 1.85
+  "TEN": 2.50
+  # AFC West
+  "KC": 2.15
+  "LAC": 1.60
+  "DEN": 1.20
+  "LV": 2.50
+  # NFC East
+  "PHI": 1.45
+  "DAL": 2.20
+  "WAS": 2.40
+  "NYG": 2.50
+  # NFC North
+  "DET": 1.75
+  "GB": 1.60
+  "MIN": 1.75
+  "CHI": 1.45
+  # NFC South
+  "CAR": 2.00
+  "TB": 2.00
+  "ATL": 2.00
+  "NO": 2.30
+  # NFC West
+  "SEA": 1.10
+  "LAR": 1.25
+  "SF": 1.25
+  "ARI": 2.60
+
+# ---------------------------------------------------------------------------
+# Scoring
+# ---------------------------------------------------------------------------
+scoring:
+  # Regular season: a win pays the team's LF. An NFL game can end in a tie;
+  # the pool treats it as half a win. Set to 0.0 if the commissioner rules
+  # that ties pay nothing.
+  win_multiplier: 1.0
+  tie_multiplier: 0.5
+
+  # End-of-regular-season berth bonuses. A team earns exactly one of these:
+  # division winners take seeds 1-4, wild cards take seeds 5-7.
+  division_winner: 3.0
+  wild_card_berth: 1.5
+
+  # Playoff wins. `wild_card_upset` is a FLAT bonus with no LF added, and it is
+  # awarded only when a wild card beats a division winner. Seeds 2-4 host in the
+  # wild-card round and are always division winners, so a division winner that
+  # wins its own wild-card game scores nothing for it.
+  wild_card_upset: {flat: 1.0, add_lf: false}
+  divisional_win: {flat: 1.0, add_lf: true}
+  conference_win: {flat: 1.5, add_lf: true}
+  super_bowl_win: {flat: 2.0, add_lf: true}
+
+# ---------------------------------------------------------------------------
+# Division alignment. Used for standings, seeding, and ceiling constraints.
+# ---------------------------------------------------------------------------
+divisions:
+  AFC East: ["NE", "BUF", "MIA", "NYJ"]
+  AFC North: ["BAL", "PIT", "CIN", "CLE"]
+  AFC South: ["JAX", "HOU", "IND", "TEN"]
+  AFC West: ["KC", "LAC", "DEN", "LV"]
+  NFC East: ["PHI", "DAL", "WAS", "NYG"]
+  NFC North: ["DET", "GB", "MIN", "CHI"]
+  NFC South: ["CAR", "TB", "ATL", "NO"]
+  NFC West: ["SEA", "LAR", "SF", "ARI"]
