@@ -137,3 +137,49 @@ def test_a_neutral_site_wild_card_game_refuses_to_guess(season, games_2025):
     g.loc[wc, "location"] = "Neutral"
     with pytest.raises(ValueError, match="neutral site"):
         score_teams(season, g, final_seeds(season, g))
+
+
+def test_an_overfull_payout_split_is_rejected(season_writer, tmp_path):
+    with pytest.raises(ConfigError, match="more than 100%"):
+        _rewrite(season_writer, tmp_path, {"payout_split": [0.5, 0.3, 0.3]})
+
+
+def test_a_negative_entry_fee_is_rejected(season_writer, tmp_path):
+    with pytest.raises(ConfigError, match="entry_fee is negative"):
+        _rewrite(season_writer, tmp_path, {"entry_fee": -10})
+
+
+def test_a_negative_payout_share_is_rejected(season_writer, tmp_path):
+    with pytest.raises(ConfigError, match="negative share"):
+        _rewrite(season_writer, tmp_path, {"payout_split": [1.0, -0.5, 0.3]})
+
+
+def test_a_missing_flat_bonus_is_a_config_error_not_a_traceback(
+    season_writer, tmp_path
+):
+    import yaml
+
+    sdir = season_writer(
+        tmp_path, 2032,
+        [{"name": "Solo", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        forecast=False,
+    )
+    rules = yaml.safe_load((sdir / "rules.yaml").read_text())
+    del rules["scoring"]["division_winner"]
+    (sdir / "rules.yaml").write_text(yaml.safe_dump(rules))
+    with pytest.raises(ConfigError, match="scoring.division_winner"):
+        load_season(2032, root=tmp_path)
+
+
+def test_the_placeholder_hint_does_not_teach_the_yaml_no_trap(
+    season_writer, tmp_path
+):
+    """The error's own example used to be `teams: [CIN, WAS, TEN, NO]` —
+    unquoted NO, the exact boolean trap the loader exists to catch."""
+    season_writer(
+        tmp_path, 2033,
+        [{"name": "Solo", "teams": ["TODO", "SEA", "DAL", "NE"]}],
+        forecast=False,
+    )
+    with pytest.raises(ConfigError, match=r'\["CIN", "WAS", "TEN", "NO"\]'):
+        load_season(2033, root=tmp_path)

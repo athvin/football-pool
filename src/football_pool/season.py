@@ -181,6 +181,7 @@ def load_season(year: int | None = None, root: Path | None = None) -> Season:
     rules = _read_yaml(sdir / "rules.yaml")
     teams, lf, divisions = _parse_teams(rules, sdir)
     bonuses, win_mult, tie_mult = _parse_scoring(rules, sdir)
+    _validate_money(rules, sdir)
     entrants = _parse_picks(_read_yaml(sdir / "picks.yaml"), set(teams), rules, sdir)
 
     # forecast.yaml is optional and never affects scoring.
@@ -274,9 +275,20 @@ def _parse_scoring(rules: dict, sdir: Path) -> tuple[Bonuses, float, float]:
     cf_flat, cf_lf = stage("conference_win")
     sb_flat, sb_lf = stage("super_bowl_win")
 
+    def flat(key: str) -> float:
+        # The staged bonuses already fail with a legible ConfigError; a missing
+        # flat bonus used to leak a raw KeyError traceback instead. Same
+        # loudness for both.
+        try:
+            return float(sc[key])
+        except (KeyError, TypeError, ValueError) as e:
+            raise ConfigError(
+                f"{sdir / 'rules.yaml'}: scoring.{key} must be a number"
+            ) from e
+
     bonuses = Bonuses(
-        division_winner=float(sc["division_winner"]),
-        wild_card_berth=float(sc["wild_card_berth"]),
+        division_winner=flat("division_winner"),
+        wild_card_berth=flat("wild_card_berth"),
         wild_card_upset_flat=wc_flat,
         wild_card_upset_add_lf=wc_lf,
         divisional_flat=dv_flat,
@@ -287,6 +299,34 @@ def _parse_scoring(rules: dict, sdir: Path) -> tuple[Bonuses, float, float]:
         super_bowl_add_lf=sb_lf,
     )
     return bonuses, float(sc.get("win_multiplier", 1.0)), float(sc.get("tie_multiplier", 0.5))
+
+
+def _validate_money(rules: dict, sdir: Path) -> None:
+    """The dollars get the same hard validation the picks do.
+
+    A payout_split summing past 1.0 pays out more than the pot; a negative
+    entry fee produces negative payouts. Both previously loaded silently and
+    would have been published as-is.
+    """
+    path = sdir / "rules.yaml"
+    try:
+        fee = float(rules["entry_fee"])
+        split = [float(x) for x in rules["payout_split"]]
+    except (KeyError, TypeError, ValueError) as e:
+        raise ConfigError(
+            f"{path}: entry_fee must be a number and payout_split a list of numbers"
+        ) from e
+    if fee < 0:
+        raise ConfigError(f"{path}: entry_fee is negative ({fee})")
+    if not split:
+        raise ConfigError(f"{path}: payout_split is empty — nobody gets paid")
+    if any(s < 0 for s in split):
+        raise ConfigError(f"{path}: payout_split has a negative share: {split}")
+    if sum(split) > 1.0 + 1e-9:
+        raise ConfigError(
+            f"{path}: payout_split sums to {sum(split):.2f} — that pays out "
+            f"more than 100% of the pot"
+        )
 
 
 def _parse_picks(
@@ -324,8 +364,9 @@ def _parse_picks(
         if placeholders:
             raise ConfigError(
                 f"{path}: {name} still has placeholder picks {placeholders}. "
-                f"Replace them with {n_required} real team codes "
-                f"(e.g. teams: [CIN, WAS, TEN, NO])."
+                f'Replace them with {n_required} real team codes, quoted '
+                f'(e.g. teams: ["CIN", "WAS", "TEN", "NO"] — a bare NO is '
+                f"YAML for false)."
             )
         if len(teams) != n_required:
             raise ConfigError(
