@@ -21,6 +21,15 @@ from __future__ import annotations
 
 # (primary, secondary). Primaries are the clubs' published identity colours;
 # secondaries are picked to give the chip an edge that survives a dark page.
+#
+# These are hand-maintained rather than read from nflverse's
+# teams_colors_logos.csv, and twenty-two of the thirty-two agree with it
+# exactly. The other ten differ because that file's `team_color` is not
+# consistently the club's primary: it gives Denver navy and Cleveland orange,
+# which are those clubs' secondaries, and Tennessee light blue rather than
+# navy. Since the colour here is identity rather than data, the published
+# identity wins. Nothing downstream depends on the choice — the contrast tests
+# hold whichever value is used, so correcting one is a one-line edit.
 TEAM_COLORS: dict[str, tuple[str, str]] = {
     "ARI": ("#97233f", "#ffb612"),
     "ATL": ("#a71930", "#a5acaf"),
