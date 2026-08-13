@@ -852,6 +852,42 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 [data-me-only] { display: none; }
 .is-me [data-me-only] { display: inline-block; }
 
+/* --- viewer bar -------------------------------------------------------- */
+/* A thin strip under the masthead for the two settings that change what you
+   see. It has to read as chrome rather than as content, or it competes with
+   the standings for the top of the page — hence the muted surface, the small
+   type, and the right alignment that tucks it under the nav. */
+.viewer-bar {
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  border-bottom: 1px solid var(--rule);
+}
+
+.viewer-inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-block: 0.45rem;
+}
+
+/* Label beside the control, not above it, so the bar stays one line tall. */
+.viewer-inner .me-picker,
+.viewer-inner .tz {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.viewer-label {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  white-space: nowrap;
+}
+
 .me-picker { display: flex; flex-direction: column; gap: 0.15rem; }
 .me-picker select, .tz select {
   font-family: var(--mono);
@@ -909,16 +945,7 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
 .stamp { font-family: var(--mono); font-size: 0.72rem; color: var(--chalk-dim); }
 .stamp-label { display: block; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
 
-.footer-controls { display: flex; gap: 1.25rem; flex-wrap: wrap; }
-
 .tz { display: flex; flex-direction: column; gap: 0.15rem; }
-.tz-label, .me-label {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--chalk-dim);
-}
 
 /* --- motion ------------------------------------------------------------ */
 @keyframes rise {
@@ -976,6 +1003,20 @@ html:active-view-transition .row { animation: none; }
   .row-bars .spark { display: none; }
   .row-bars .outlook { width: 100%; }
   .team-chip { font-size: 0.6rem; padding: 0.1rem 0.28rem; }
+
+  /* Two controls will not fit on one 390px line beside their labels, so each
+     takes half the width with its label stacked above. Still one bar, still
+     above the fold. */
+  .viewer-inner { justify-content: stretch; gap: 0.55rem; }
+  .viewer-inner .me-picker,
+  .viewer-inner .tz {
+    flex: 1 1 45%;
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.1rem;
+  }
+  .viewer-inner select { width: 100%; }
 
   .state-value { font-size: 1.3rem; }
   /* No inner scroll region on a phone: a nested scrollport inside a page that

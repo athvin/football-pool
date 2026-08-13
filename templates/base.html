@@ -60,6 +60,41 @@
   </div>
 </header>
 
+{# The two viewer preferences live here rather than in the footer. Both change
+   what you are looking at — which row is yours, and what clock the timestamps
+   are in — so they have to be findable before you have read the page, not
+   after. Deliberately not sticky: the masthead already claims that space, and
+   on a phone a third pinned row costs more than it gives. #}
+<div class="viewer-bar">
+  <div class="wrap viewer-inner">
+    {% if rows %}
+    <label class="me-picker">
+      <span class="viewer-label">Who are you?</span>
+      <select data-me-select>
+        <option value="">Nobody in particular</option>
+        {% for r in rows %}
+        <option value="{{ r.slug }}">{{ r.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+
+    <label class="tz">
+      <span class="viewer-label">Time zone</span>
+      <select data-tz-select>
+        <option value="America/New_York">Eastern</option>
+        <option value="America/Chicago">Central</option>
+        <option value="America/Denver">Mountain</option>
+        <option value="America/Phoenix">Arizona</option>
+        <option value="America/Los_Angeles">Pacific</option>
+        <option value="America/Anchorage">Alaska</option>
+        <option value="Pacific/Honolulu">Hawaii</option>
+        <option value="UTC">UTC</option>
+      </select>
+    </label>
+  </div>
+</div>
+
 <main class="wrap" id="main">
   {% block content %}{% endblock %}
 </main>
@@ -81,36 +116,6 @@
       </p>
     </div>
 
-    <div class="footer-controls">
-      {% if rows %}
-      {# Choosing your name highlights your row on every page and preselects
-         you on the comparison chart. Stored locally and never sent anywhere —
-         there is no server here to send it to. #}
-      <label class="me-picker">
-        <span class="me-label">Who are you?</span>
-        <select data-me-select>
-          <option value="">Nobody in particular</option>
-          {% for r in rows %}
-          <option value="{{ r.slug }}">{{ r.name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      {% endif %}
-
-      <label class="tz">
-        <span class="tz-label">Time zone</span>
-        <select data-tz-select>
-          <option value="America/New_York">Eastern</option>
-          <option value="America/Chicago">Central</option>
-          <option value="America/Denver">Mountain</option>
-          <option value="America/Phoenix">Arizona</option>
-          <option value="America/Los_Angeles">Pacific</option>
-          <option value="America/Anchorage">Alaska</option>
-          <option value="Pacific/Honolulu">Hawaii</option>
-          <option value="UTC">UTC</option>
-        </select>
-      </label>
-    </div>
   </div>
 </footer>
 
