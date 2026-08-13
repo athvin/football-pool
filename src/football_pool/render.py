@@ -187,7 +187,14 @@ def make_environment(base: str = "") -> Environment:
         return f"${float(value):,.0f}"
 
     env.filters.update(
-        url=url, points=points, money=money, chip_style=teamcolors.chip_style
+        url=url,
+        points=points,
+        money=money,
+        chip_style=teamcolors.chip_style,
+        # One ordinal implementation for the whole site. The hand-rolled
+        # template version rendered "21th"/"22th"/"23th" the moment the pool
+        # grew past twenty entries; svg._ordinal has always done it right.
+        ordinal=svg._ordinal,
     )
     env.globals.update(
         svg=svg,
@@ -363,19 +370,37 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
     remaining = int((~games["played"]).sum())
     movers = history_mod.movers(ctx.history)
     leaders = history_mod.week_leaders(ctx.season, ctx.history)
+    weeks = ctx.history.attrs.get("weeks", [])
+
+    # "Final" means a played Super Bowl, nothing weaker. In the window between
+    # the last week-18 game and nflverse publishing the bracket rows, the file
+    # has zero unplayed games — "remaining == 0" would have declared the pool
+    # over with the entire postseason still to play.
+    sb_done = bool(((games["game_type"] == "SB") & games["played"]).any())
 
     if ctx.data.current_week is None:
         phase = "Preseason"
     elif not ctx.seeds_final:
         phase = f"Week {ctx.data.current_week}"
-    elif remaining:
-        phase = "Playoffs"
-    else:
+    elif sb_done:
         phase = "Final"
+    else:
+        phase = "Playoffs"
 
     return {
         "phase": phase,
         "week": ctx.data.current_week,
+        # The most recent week anyone scored in — 19-22 during the playoffs,
+        # where ``week`` (max REG week) sticks at 18. This is the number the
+        # "Best of week N" panel must use, or January points get a week-18
+        # headline.
+        "scored_week": weeks[-1] if weeks else None,
+        # REG games still to play. ``games_remaining`` counts the playoffs
+        # too, which is the wrong test for "should projections exist" — the
+        # model only simulates the regular season.
+        "reg_games_remaining": int(
+            ((~games["played"]) & (games["game_type"] == "REG")).sum()
+        ),
         "next_week": ctx.data.next_week,
         "games_played": played,
         "games_remaining": remaining,
@@ -409,6 +434,9 @@ def _team_rows(ctx: SiteContext) -> list[dict[str, Any]]:
                 "l": int(tp["l"]),
                 "t": int(tp["t"]),
                 "record": f"{int(tp['w'])}-{int(tp['l'])}" + (f"-{int(tp['t'])}" if tp["t"] else ""),
+                # Sort key for the record column: win percentage, so 10-6-1
+                # orders above 10-7 instead of tying with it on raw wins.
+                "win_pct": float(st["win_pct"]),
                 "points": float(tp["total"]),
                 "division": st["division"],
                 "conference": st["conference"],
@@ -548,7 +576,22 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
     for window in windows:
         slate = games[games["week"] == window.week]
         rows = [_game_row(ctx, r, owners, slugs, short) for r in slate.itertuples()]
-        on_the_table = round(sum(max(g["home"]["stake"], g["away"]["stake"]) for g in rows), 2)
+        # The frame arrives sorted by (week, gameday, game_id) — within one
+        # Sunday that is matchup-alphabetical, which rendered the night game
+        # above the afternoon slate (57 inversions across the 2026 file).
+        # Kickoffs are ISO-8601 UTC strings, so lexicographic is chronological.
+        rows.sort(key=lambda g: g["kickoff"])
+        # "Field maximum" has to mean what it says: the most the pool can
+        # actually bank. A side nobody holds is not on anyone's table — taking
+        # the bigger side of every game counted 233 phantom points across the
+        # 2026 slate, and every fully idle game inflated its week.
+        on_the_table = round(
+            sum(
+                max((s["stake"] for s in (g["home"], g["away"]) if s["owners"]), default=0.0)
+                for g in rows
+            ),
+            2,
+        )
 
         outlooks = []
         for e in ctx.season.entrants:

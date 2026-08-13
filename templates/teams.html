@@ -41,7 +41,7 @@
                 style="{{ t.team|chip_style }}">{{ t.team }}</span>
         </th>
         <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
-        <td data-value="{{ t.w }}">{{ t.record }}</td>
+        <td data-value="{{ '%.4f'|format(t.win_pct) }}">{{ t.record }}</td>
         <td class="num" data-value="{{ t.points }}">{{ t.points|points }}</td>
         <td data-value="{{ t.seed if t.seed else 99 }}">
           {% if t.seed %}

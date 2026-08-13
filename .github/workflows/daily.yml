@@ -112,7 +112,11 @@ jobs:
             echo 'no data change today'
             exit 0
           fi
-          git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+          # [skip ci] matters once DATA_PUSH_TOKEN exists: a PAT push (unlike the
+          # default token) fires the push trigger above, so every data commit was
+          # buying a second full build-test-deploy cycle a few minutes after the
+          # first. Actions honours [skip ci] in the head commit message.
+          git commit -m "data: refresh $(date -u +%Y-%m-%d) [skip ci]"
           if git push; then
             echo 'data snapshot committed'
           else
