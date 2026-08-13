@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import httpx
 import pandas as pd
@@ -48,6 +49,30 @@ COLUMNS = [
 # actually set — during the regular season the file has only REG rows.
 PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 
+# nflverse dates every game by its US Eastern calendar date — including the
+# 09:30 kickoffs played in London, which carry the Sunday they are watched on
+# rather than a UK date. Reading the clock in any other zone puts the day
+# boundary in the middle of a slate: once the clocks go back, the 19:37 Eastern
+# job runs at 00:37 UTC, so a UTC date would call that evening's games late
+# before they had kicked off.
+SCHEDULE_TZ = ZoneInfo("America/New_York")
+
+# How many days of results may be missing before publishing does more harm than
+# not publishing. Measured, not guessed: replaying a real season at both cron
+# times, a current file scores 0 at every build instant, a file up to thirty
+# hours old scores at most 1, and thirty-six hours is the first to reach 2.
+#
+# So 2 keeps the degradation this was always meant to allow — an outage falls
+# back to yesterday's numbers — while refusing anything that has lost a slate.
+# Two consecutive failed runs is not an ordinary day.
+#
+# Days rather than games, deliberately. A count cannot span a sixteen-game
+# Sunday and a one-game Super Bowl with a single threshold, and a threshold set
+# for a slate keeps publishing a wrong leaderboard for a week and a half after a
+# Sunday freeze. Days treat one missed Super Bowl exactly as one missed Sunday,
+# with no second rule and no bracket calendar to keep in step.
+STALE_DAYS_LIMIT = 2
+
 
 class DataError(Exception):
     """Upstream data was unreachable or did not look like what we expect."""
@@ -61,7 +86,13 @@ class GameData:
     season: int
     fetched_at: datetime
     upstream_modified: datetime | None
-    source: str  # "network" or "cache"
+    # "network"  — fetched live, the normal case
+    # "cache"    — the committed copy, asked for deliberately with --offline
+    # "fallback" — the network was tried and failed, so the committed copy is
+    #              standing in. Distinct from "cache" on purpose: one is a
+    #              choice and the other is a degraded state, and only the
+    #              degraded one should be able to stop a publish.
+    source: str
 
     @property
     def played(self) -> pd.DataFrame:
@@ -91,6 +122,49 @@ class GameData:
         reg = self.unplayed[self.unplayed["game_type"] == "REG"]
         return None if reg.empty else int(reg["week"].min())
 
+    @property
+    def days_behind(self) -> int:
+        """How many days of results this file is missing. 0 when it is current.
+
+        The oldest game that ought to have a result and does not, measured
+        against the day the data was fetched. One number, and it calibrates
+        itself the way no clock can: the committed copy can be six months old in
+        August and still be perfectly correct, because nothing has been played.
+
+        Measured from ``fetched_at`` rather than a live call to now(), so the
+        answer is a property of this object and a test can construct any
+        situation it likes.
+
+        A rescheduled game is not counted — nflverse moves ``gameday`` forward
+        when a game is postponed, so it stops being in the past.
+        """
+        asof = pd.Timestamp(self.fetched_at.astimezone(SCHEDULE_TZ).date())
+        gameday = pd.to_datetime(self.games["gameday"])
+        outstanding = gameday[~self.games["played"]]
+
+        overdue = outstanding[outstanding < asof]
+        if not overdue.empty:
+            return int((asof - overdue.min()).days)
+
+        if outstanding.empty:
+            # Nothing outstanding is either a finished season or a file missing
+            # rows it cannot know it is missing. Playoff rows do not exist
+            # upstream until the bracket is set, so a copy frozen at the end of
+            # week 18 has every game it knows about played and looks perfectly
+            # current for the whole of January — the window that decides the
+            # money. A truncated copy looks identical, because the rows it loses
+            # are the most recent ones. Absence cannot be counted, so ask
+            # instead how long we have been in the dark. A season that really
+            # ended ran to a played Super Bowl; one that did not is still owed
+            # rows that never arrived.
+            finished = bool(
+                (self.games["game_type"] == "SB").any() and self.games["played"].all()
+            )
+            if not finished:
+                return int((asof - gameday.max()).days)
+
+        return 0
+
 
 def fetch_games(
     season: int,
@@ -109,7 +183,12 @@ def fetch_games(
     """
     raw: bytes | None = None
     upstream_modified: datetime | None = None
-    source = "cache"
+    # Initialised to the guarded state, not the exempt one. Every path below
+    # reassigns this, so the value is dead today — but "cache" is what waives
+    # the staleness check, and a default that waives it means any future path
+    # that forgets to set it publishes unguarded while claiming to be a
+    # deliberate offline build. Failing closed costs nothing here.
+    source = "fallback"
 
     if not offline:
         last_err: Exception | None = None
@@ -141,24 +220,43 @@ def fetch_games(
         if cache_path is None or not cache_path.exists():
             raise DataError(f"no cached games file at {cache_path}")
         raw = cache_path.read_bytes()
+        # Reading the committed copy because it was asked for is a different
+        # event from reading it because the network failed, even though the
+        # bytes are identical. Only the caller can tell them apart, and only
+        # the second one is a reason to refuse to publish.
+        source = "cache" if offline else "fallback"
 
     games = parse_games(raw, season)
-
-    if source == "network" and cache_path is not None:
-        # Cache only this season's rows. The upstream file carries every season
-        # back to 1999 (~2 MB), and the daily job commits its cache — storing
-        # the whole thing would add megabytes of near-identical history to the
-        # repository every day for the sake of ~20 KB that changes.
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        games[COLUMNS].to_csv(cache_path, index=False)
-
-    return GameData(
+    data = GameData(
         games=games,
         season=season,
         fetched_at=datetime.now(timezone.utc),
         upstream_modified=upstream_modified,
         source=source,
     )
+
+    # A 200 is not the same as good data. A regenerated release asset or a stale
+    # CDN object can answer perfectly while carrying no results at all, and
+    # writing that over the committed copy destroys the very thing the fallback
+    # exists to be. So the cache is only refreshed from data that is current.
+    if source == "network" and cache_path is not None and data.days_behind < STALE_DAYS_LIMIT:
+        # Cache only this season's rows. The upstream file carries every season
+        # back to 1999 (~2 MB), and the daily job commits its cache — storing
+        # the whole thing would add megabytes of near-identical history to the
+        # repository every day for the sake of ~20 KB that changes.
+        # Written to a sibling and renamed, because rename is atomic on POSIX
+        # and a direct write is not. A run cancelled or killed mid-write would
+        # otherwise leave a truncated file that pandas reads back perfectly
+        # happily — the columns are all present and the season filter still
+        # matches, so nothing raises. Because rows are sorted by week, the part
+        # it loses is the most recent one, which is exactly the part that would
+        # make the staleness check say everything is fine.
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        partial = cache_path.with_suffix(cache_path.suffix + ".partial")
+        games[COLUMNS].to_csv(partial, index=False)
+        partial.replace(cache_path)
+
+    return data
 
 
 def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:

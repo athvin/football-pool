@@ -141,6 +141,55 @@ outage degrades the site to yesterday's numbers rather than breaking it. The
 footer shows two timestamps for that reason: when the **data** was published and
 when the **site** was built, because a fresh build of stale data is still stale.
 
+That fallback has a floor under it. "Yesterday's numbers" is only acceptable
+while the committed copy really is from yesterday, and it stops being true the
+moment something prevents it being refreshed — which branch protection does,
+since the daily job can no longer push to `main`. Left alone, an unreachable
+feed in week 12 would republish an August snapshot and quietly show everyone
+`0.00`. A silently wrong leaderboard is worse than a missing one, because it
+looks exactly like a right one.
+
+So the build refuses to publish a fallback that is materially behind, and the
+deploy job depends on the build, so the previous good site simply stays up until
+the next run.
+
+Staleness is one number: **how many days of results the file is missing**,
+read on the Eastern clock that `gameday` is written in. Zero when current.
+
+It calibrates itself where a clock cannot — the committed copy can be six months
+old in August and still be perfectly correct, because nothing has been played.
+The limit is two days, measured rather than guessed: replaying a real season at
+both cron times, a current file scores 0 at every build instant, a file up to
+thirty hours old scores at most 1, and thirty-six hours is the first to reach 2.
+So the degradation this was always meant to allow still happens — an outage
+falls back to yesterday's numbers — while anything that has lost a slate is
+refused. Two consecutive failed runs is not an ordinary day.
+
+Days rather than games, deliberately. A game count cannot span a sixteen-game
+Sunday and a one-game Super Bowl with one threshold, and a threshold set for a
+slate keeps publishing a wrong leaderboard for **ten days** after a Sunday
+freeze. Days catch the same freeze on the fourth.
+
+Two cases need care, and both are handled by asking what "nothing outstanding"
+means. nflverse does not publish postseason rows until the field is set, so a
+copy frozen at the end of week 18 has every game it knows about played and reads
+as perfectly current — for the whole of January, the window that decides the
+money. A truncated copy looks identical, because the rows it loses are the most
+recent ones. Absence cannot be counted, so nothing outstanding is only trusted
+when the file ran to a played Super Bowl; otherwise the measure becomes how long
+we have been in the dark.
+
+The test is the data, never where it came from. A 200 is not the same as good
+data — a regenerated release asset or a stale CDN object answers perfectly while
+carrying no results — so the same measure also gates the cache write. A
+successful but empty response can neither be published nor overwrite the good
+committed copy.
+
+An explicit `--offline` build is never blocked. Asking for the committed copy is
+a choice, and CI relies on it to build deterministically; falling back to it
+because the network failed is a degraded state. The two report as `cache` and
+`fallback` so they can never be confused.
+
 Standings and playoff seeds are derived here rather than read, because nflverse
 publishes neither. The tiebreaker implementation reproduces all 70 playoff seeds
 for 2021–2025 exactly against ESPN's published seeding, and the test suite
