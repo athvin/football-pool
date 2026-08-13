@@ -299,6 +299,91 @@ def emphasis_lines(
     return "".join(out)
 
 
+def compare_lines(
+    series: Sequence[tuple[str, str, Sequence[float]]],
+    x_ticks: Sequence[int] | None = None,
+    width: int = 900,
+    height: int = 340,
+    invert: bool = False,
+) -> str:
+    """Every entrant drawn once, tagged so the viewer can pick who to compare.
+
+    A different question from :func:`emphasis_lines` and so a different chart.
+    That one shows the shape of the whole season and is deliberately monochrome.
+    This one answers "how am I doing against Paul", where the viewer has named a
+    handful of people — and for a small, self-chosen set, distinct colours are
+    exactly right. The colours are assigned in the browser in pick order, so the
+    first person picked always gets the first colour and nobody's line changes
+    hue as the season moves.
+
+    Everything is rendered once, at build time. The interaction is purely a
+    class toggle, so the chart is complete and readable with scripting off; it
+    simply shows the full field in one colour, which is the honest default.
+
+    ``series`` is ``(display name, slug, values)``. The slug is what the picker
+    matches on, so it must be the same slug used in the entrant page URLs.
+    """
+    series = [(n, s, list(v)) for n, s, v in series if len(v) > 0]
+    if not series:
+        return (
+            f'<svg class="compare" width="{width}" height="{height}" '
+            f'viewBox="0 0 {width} {height}" aria-hidden="true"></svg>'
+        )
+
+    pad_l, pad_r, pad_t, pad_b = 8, 132, 14, 26
+    plot_w = width - pad_l - pad_r
+    plot_h = height - pad_t - pad_b
+
+    values = [v for _, _, vs in series for v in vs]
+    lo, hi = min(values), max(values)
+    span = (hi - lo) or 1.0
+    n_points = max(len(vs) for _, _, vs in series)
+    step = plot_w / max(n_points - 1, 1)
+
+    def y(v: float) -> float:
+        frac = (v - lo) / span
+        if not invert:
+            frac = 1 - frac
+        return pad_t + plot_h * frac
+
+    out = [
+        f'<svg class="compare" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" '
+        f'aria-label="{escape(str(len(series)))} entrants over {n_points} weeks, '
+        f'select entrants to compare" preserveAspectRatio="xMidYMid meet">'
+    ]
+
+    for i in range(n_points):
+        x = pad_l + i * step
+        out.append(
+            f'<line x1="{x:.1f}" y1="{pad_t}" x2="{x:.1f}" y2="{pad_t + plot_h}" '
+            f'stroke="var(--rule)" stroke-width="0.5" opacity="0.5"/>'
+        )
+        if x_ticks and i < len(x_ticks):
+            out.append(
+                f'<text x="{x:.1f}" y="{height - 8}" text-anchor="middle" '
+                f'class="trend-tick">{escape(str(x_ticks[i]))}</text>'
+            )
+
+    for name, slug, vs in series:
+        pts = " ".join(f"{pad_l + i * step:.1f},{y(v):.1f}" for i, v in enumerate(vs))
+        ex, ey = pad_l + (len(vs) - 1) * step, y(vs[-1])
+        tag = f'data-entrant="{escape(slug)}"'
+        out.append(
+            f'<polyline class="cmp-line" {tag} points="{pts}" fill="none" '
+            f'stroke-linejoin="round" stroke-linecap="round">'
+            f"<title>{escape(name)}</title></polyline>"
+        )
+        out.append(f'<circle class="cmp-dot" {tag} cx="{ex:.1f}" cy="{ey:.1f}" r="3.5"/>')
+        out.append(
+            f'<text class="cmp-label" {tag} x="{ex + 8:.1f}" y="{ey + 4:.1f}" '
+            f'data-y="{ey:.1f}">{escape(name[:18])}</text>'
+        )
+
+    out.append("</svg>")
+    return "".join(out)
+
+
 def _spread(
     points: Sequence[tuple[str, float, float]],
     minimum_gap: float,

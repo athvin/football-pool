@@ -186,7 +186,20 @@ def playoff_seeds(season: Season, games: pd.DataFrame) -> dict[str, int]:
     Mid-season this is the *projected* field if the standings froze today, which
     is what the site shows as a projection. Berth bonuses are only banked once
     :func:`regular_season_complete` is true.
+
+    Before kickoff it is nothing at all, and says so. With every club 0-0 the
+    tiebreaker ladder has no information to work with, exhausts every step, and
+    reaches the coin-toss fallback — which sorts alphabetically to keep builds
+    reproducible. That produced a full, confident-looking fourteen-team field in
+    which Arizona was the AFC... the NFC one seed and Baltimore the AFC one
+    seed, purely for starting with an A and a B. A projection that is really
+    alphabetical order is worse than no projection, so return nothing and let
+    the pages render an honest dash.
     """
+    played_regular_season = games[(games["game_type"] == "REG") & games["played"]]
+    if played_regular_season.empty:
+        return {}
+
     gl = GameLog.build(season, games)
     seeds: dict[str, int] = {}
 

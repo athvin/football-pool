@@ -61,26 +61,32 @@
 {% else %}
 <div class="board">
   {% for r in rows %}
+  {# view-transition-name pairs this row with the hero on the entrant page, so
+     clicking morphs the name and score into place instead of cross-fading the
+     whole document. The names must be unique per document; a slug is. #}
   <a class="row {% if loop.first and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
      style="--i: {{ r.index }}"
+     data-slug="{{ r.slug }}"
      href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}"
      aria-label="{{ r.name }}, rank {{ r.rank }}, {{ r.banked|points }} points">
 
     <span class="row-rank">{{ r.rank }}</span>
 
     <span class="row-who">
-      <span class="row-name">{{ r.name }}</span>
+      <span class="row-name" style="view-transition-name: name-{{ r.slug }}">{{ r.name }}</span>
       <span class="row-teams">
         {% for t in r.teams %}
-          <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% endif %}">{{ t }}</span>
+          <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
+                style="{{ t|chip_style }}">{{ t }}</span>
         {% endfor %}
+        <span class="badge you" data-me-only>you</span>
         {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
         {% if r.money %}<span class="badge money">{{ r.money|money }}</span>{% endif %}
       </span>
     </span>
 
     <span class="row-score">
-      <span class="row-points">{{ r.banked|points }}</span>
+      <span class="row-points" style="view-transition-name: total-{{ r.slug }}">{{ r.banked|points }}</span>
       {% if r.rank_delta %}
       <span class="row-sub">
         {% if r.rank_delta > 0 %}

@@ -29,7 +29,12 @@
 }
 
 /* --- tokens ------------------------------------------------------------ */
+/* Dark is the default, deliberately and unconditionally. This is a night-game
+   scoreboard, so there is no `prefers-color-scheme` rule here: only an explicit
+   data-theme="light" repitches the palette, and only the toggle sets it. */
 :root {
+  color-scheme: dark;
+
   --display: 'Big Shoulders', 'Haettenschweiler', 'Arial Narrow', sans-serif;
   --body: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
   --mono: 'Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
@@ -60,8 +65,10 @@
   --shadow: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 30px rgb(0 0 0 / 45%);
 }
 
-/* Day game. Same semantics, repitched for a light surface. */
+/* Day game. Same semantics, repitched for a light surface. Opt-in only. */
 :root[data-theme='light'] {
+  color-scheme: light;
+
   --field: #f4f1ea;
   --surface: #fffefb;
   --surface-2: #ece7dc;
@@ -80,27 +87,6 @@
   --series-3: #b26800;
   --series-4: #6b48a8;
   --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 8%);
-}
-
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme='dark']) {
-    --field: #f4f1ea;
-    --surface: #fffefb;
-    --surface-2: #ece7dc;
-    --chalk: #14181b;
-    --chalk-dim: #5c6874;
-    --rule: #d9d2c4;
-    --live: #4f7a06;
-    --live-dim: #8aa85c;
-    --model: #0d7c8c;
-    --heat: #c4400d;
-    --edge: #b9b0a0;
-    --series-1: #4f7a06;
-    --series-2: #0d7c8c;
-    --series-3: #b26800;
-    --series-4: #6b48a8;
-    --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 8%);
-  }
 }
 
 /* --- reset ------------------------------------------------------------- */
@@ -422,6 +408,37 @@ a { color: inherit; }
 }
 .team-chip.scored { color: var(--chalk); border-color: color-mix(in srgb, var(--live) 30%, var(--rule)); }
 
+/* Wearing the club's colours. Identity only — every chip still carries its
+   three-letter code, because a dozen NFL primaries are indistinguishable from
+   each other and several are indistinguishable to colour-blind vision. The
+   text colour is computed per team in Python by contrast ratio, and the edge
+   is the club's secondary so near-black teams keep a readable outline. */
+.team-chip[style*='--team-bg'] {
+  background: var(--team-bg);
+  color: var(--team-fg);
+  border-color: var(--team-edge);
+  text-shadow: none;
+}
+
+/* A team that has not scored yet is dimmed rather than hidden. The mix has to
+   be per-theme: 22% of a dark club colour over a dark surface stays dark and
+   keeps its hue, but the same mix over a near-white surface comes out pastel
+   and every chip on the page looks bleached in the preseason. */
+.team-chip[style*='--team-bg'].dim {
+  background: color-mix(in srgb, var(--team-bg) 22%, var(--surface));
+  color: var(--chalk-dim);
+  border-color: color-mix(in srgb, var(--team-edge) 35%, var(--rule));
+}
+
+:root[data-theme='light'] .team-chip[style*='--team-bg'].dim {
+  background: color-mix(in srgb, var(--team-bg) 45%, var(--surface));
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--team-edge) 55%, var(--rule));
+}
+
+a.team-chip { text-decoration: none; transition: transform 0.14s ease, filter 0.14s ease; }
+a.team-chip:hover { transform: translateY(-1px); filter: brightness(1.12); }
+
 .delta {
   font-family: var(--mono);
   font-size: 0.68rem;
@@ -450,7 +467,19 @@ a { color: inherit; }
 .badge.money { color: var(--live); }
 
 /* --- generic tables ---------------------------------------------------- */
+/* `overflow-x: auto` forces the computed `overflow-y` to `auto` as well, which
+   makes this element a scroll container. That matters for the sticky header
+   below: a sticky offset resolves against the nearest scrollport, so a `top`
+   meant to clear the page masthead would instead push the header that far
+   *down into* the table and sit it on top of the first row. The header
+   therefore sticks to `top: 0` — this container's own top edge — and never to
+   a viewport-relative offset. */
 .table-scroll { overflow-x: auto; border-radius: var(--radius); }
+
+/* Long tables scroll inside themselves so the header can genuinely stay put
+   while you read down. Short ones never reach this height, so no inner
+   scrollbar appears and the sticky header is simply inert. */
+.table-scroll.is-tall { max-height: min(68vh, 620px); }
 
 table {
   width: 100%;
@@ -478,12 +507,17 @@ thead th {
   color: var(--chalk-dim);
   background: var(--surface-2);
   position: sticky;
-  top: 60px; /* clears the masthead */
+  top: 0; /* this container's top edge — see .table-scroll above */
   z-index: 1; /* otherwise rows scroll over the header instead of under it */
+  /* border-collapse drops a sticky cell's own border, so the rule under the
+     header has to be drawn as a shadow or the first row runs into it. */
+  box-shadow: inset 0 -1px 0 var(--rule);
 }
 
 tbody tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--surface-2); }
+tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface-2) 40%, transparent); }
+tbody tr:nth-child(even):hover { background: var(--surface-2); }
 
 .num {
   font-family: var(--mono);
@@ -532,6 +566,28 @@ tbody tr:hover { background: var(--surface-2); }
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   padding: 0.9rem 1rem;
+}
+
+/* A team card wears its club's colour as a top rail and a faint wash. The wash
+   is kept low enough that body text on it still clears contrast, so the colour
+   is atmosphere rather than something the reader has to fight. */
+.team-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(160deg,
+      color-mix(in srgb, var(--team-bg, transparent) 14%, transparent),
+      transparent 60%),
+    var(--surface);
+}
+
+.team-card::before {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--team-bg, var(--rule)), var(--team-edge, var(--rule)));
 }
 
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
@@ -690,6 +746,153 @@ tbody tr:hover { background: var(--surface-2); }
   letter-spacing: 0.04em;
 }
 
+/* --- compare chart ----------------------------------------------------- */
+/* The emphasis chart above answers "what is the shape of the season". This one
+   answers "how am I doing against Paul", which is a different question and
+   needs the opposite treatment: the viewer names a handful of people, so a few
+   genuinely distinct colours are correct here where thirty would not be. */
+.compare-picks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+
+.pick {
+  --pick-color: var(--chalk-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--chalk-dim);
+  cursor: pointer;
+  transition: color 0.16s, border-color 0.16s, background-color 0.16s, transform 0.16s;
+}
+
+.pick::before {
+  content: '';
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pick-color);
+  opacity: 0.35;
+  transition: opacity 0.16s;
+}
+
+.pick:hover { color: var(--chalk); transform: translateY(-1px); }
+
+.pick[aria-pressed='true'] {
+  color: var(--chalk);
+  border-color: var(--pick-color);
+  background: color-mix(in srgb, var(--pick-color) 14%, var(--surface));
+}
+.pick[aria-pressed='true']::before { opacity: 1; }
+
+.pick.is-me { border-style: dashed; }
+.pick .pick-you {
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  color: var(--chalk-dim);
+}
+
+.compare-card { position: relative; }
+.compare-card .compare { width: 100%; height: auto; min-width: 520px; }
+
+/* Unpicked lines stay on the page as context — the shape of the field is
+   informative even when you are only reading two of them — but drop back far
+   enough that they never compete with a picked line. */
+.cmp-line {
+  stroke: var(--chalk-dim);
+  stroke-width: 1.2;
+  opacity: 0.16;
+  transition: opacity 0.2s, stroke-width 0.2s;
+}
+
+.cmp-line.is-picked {
+  stroke: var(--pick-color);
+  stroke-width: 2.6;
+  opacity: 1;
+}
+
+.cmp-dot, .cmp-label { opacity: 0; transition: opacity 0.2s; }
+.cmp-dot.is-picked, .cmp-label.is-picked { opacity: 1; }
+.cmp-dot.is-picked { fill: var(--pick-color); }
+.cmp-label.is-picked { fill: var(--chalk); }
+
+.cmp-label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.compare-empty {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--chalk-dim);
+  margin-top: 0.5rem;
+}
+
+/* --- "this is me" ------------------------------------------------------ */
+/* Pick your name once and it follows you around the site. Six near-identical
+   rows on a phone is exactly the situation where finding yourself is the whole
+   job, so this earns its keep. */
+.row.is-me {
+  --accent: var(--model);
+  border-color: color-mix(in srgb, var(--model) 40%, var(--rule));
+}
+.row.is-me::before { transform: scaleY(1); }
+
+.badge.you { color: var(--model); }
+[data-me-only] { display: none; }
+.is-me [data-me-only] { display: inline-block; }
+
+.me-picker { display: flex; flex-direction: column; gap: 0.15rem; }
+.me-picker select, .tz select {
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--chalk);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+}
+.me-picker select:focus-visible, .tz select:focus-visible { outline: 2px solid var(--live); }
+
+/* --- sortable tables --------------------------------------------------- */
+/* The indicator is an inline ::after rather than an absolutely positioned one.
+   Absolute positioning would need the th to be `position`ed, which collides
+   with the phone rule that makes thead th static — and an attribute selector
+   outranks it, so the arrows would silently dictate the header's positioning.
+   Flowing the glyph inline sidesteps that entirely. */
+th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+th[data-sort]:hover { color: var(--chalk); }
+
+th[data-sort]::after { content: ' ↕'; opacity: 0.35; }
+th[data-sort][aria-sort='ascending']::after { content: ' ↑'; opacity: 1; color: var(--live); }
+th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; color: var(--live); }
+
+/* --- skip link --------------------------------------------------------- */
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: var(--live);
+  color: var(--field);
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 0 0 6px 0;
+}
+.skip:focus { left: 0; }
+
 /* --- footer ------------------------------------------------------------ */
 .footer { margin-top: auto; padding: 1.5rem 0 2.5rem; border-top: 1px solid var(--rule); }
 
@@ -706,17 +909,15 @@ tbody tr:hover { background: var(--surface-2); }
 .stamp { font-family: var(--mono); font-size: 0.72rem; color: var(--chalk-dim); }
 .stamp-label { display: block; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.75; }
 
-.tz { display: flex; flex-direction: column; gap: 0.15rem; }
-.tz-label { font-family: var(--mono); font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--chalk-dim); }
+.footer-controls { display: flex; gap: 1.25rem; flex-wrap: wrap; }
 
-.tz select {
+.tz { display: flex; flex-direction: column; gap: 0.15rem; }
+.tz-label, .me-label {
   font-family: var(--mono);
-  font-size: 0.76rem;
-  padding: 0.3rem 0.5rem;
-  color: var(--chalk);
-  background: var(--surface);
-  border: 1px solid var(--rule);
-  border-radius: 6px;
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
 }
 
 /* --- motion ------------------------------------------------------------ */
@@ -731,10 +932,25 @@ tbody tr:hover { background: var(--surface-2); }
 }
 
 /* Clicking a row morphs it into the detail page hero. Needs no framework —
-   this is a plain multi-page site. */
+   this is a plain multi-page site, and the browser does the tweening.
+   The names are assigned per entrant in the templates: a row's name and score
+   carry the same `view-transition-name` as the hero name and total on that
+   entrant's page, which is what tells the browser they are the same object
+   moving rather than two elements to cross-fade. Names must be unique within a
+   document, and a slug is unique by construction. */
 @view-transition { navigation: auto; }
 
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 0.25s; }
+
+/* The morph should feel like the row lifting into place, not a slow zoom. */
+::view-transition-group(*) {
+  animation-duration: 0.34s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* A morphing element is lifted out of the page, so the row's own entry
+   animation must not fire underneath it and fight the transition. */
+html:active-view-transition .row { animation: none; }
 
 /* --- phones ------------------------------------------------------------ */
 /* The leaderboard must never scroll sideways. Below 640px the row folds so
@@ -762,7 +978,11 @@ tbody tr:hover { background: var(--surface-2); }
   .team-chip { font-size: 0.6rem; padding: 0.1rem 0.28rem; }
 
   .state-value { font-size: 1.3rem; }
-  thead th { position: static; }
+  /* No inner scroll region on a phone: a nested scrollport inside a page that
+     already scrolls is a trap for a thumb, so the table just runs full length
+     and the page carries it. */
+  .table-scroll.is-tall { max-height: none; }
+  thead th { position: static; box-shadow: none; border-bottom: 1px solid var(--rule); }
   th, td { padding: 0.45rem 0.55rem; font-size: 0.8rem; }
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }

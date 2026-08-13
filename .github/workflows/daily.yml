@@ -36,6 +36,10 @@ jobs:
       pages: read
     steps:
       - uses: actions/checkout@v4
+        with:
+          # DATA_PUSH_TOKEN is optional. Without it the data commit below is
+          # simply skipped — see that step for why you may want to add it.
+          token: ${{ secrets.DATA_PUSH_TOKEN || github.token }}
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -82,11 +86,23 @@ jobs:
       # offseason is roughly 200 days, so without something touching the repo
       # the cron would be dead by the following September.
       #
-      # Pushes made with the default GITHUB_TOKEN are widely reported not to
-      # count as activity for that timer. If the cron ever goes quiet over an
-      # offseason, add a fine-grained PAT as the DATA_PUSH_TOKEN secret and give
-      # checkout `token: ${{ secrets.DATA_PUSH_TOKEN }}` above; GitHub also
-      # emails a warning before disabling, and re-enabling is one click.
+      # This push is best-effort, and deliberately cannot fail the run. Two
+      # reasons it may be rejected, both expected:
+      #
+      #   * main requires a pull request (see the "main" ruleset). Only the
+      #     admin role bypasses that, and github-actions[bot] does not hold it.
+      #     A user-owned repository cannot grant a ruleset bypass to the Actions
+      #     app at all — that option is organisation-only — so there is no
+      #     configuration that lets the default token push here.
+      #   * Pushes made with the default GITHUB_TOKEN are widely reported not to
+      #     count as activity against the 60-day timer anyway.
+      #
+      # Both are fixed by the same thing: add a fine-grained PAT belonging to
+      # the repository owner as the DATA_PUSH_TOKEN secret. It inherits the
+      # owner's admin bypass, so the push lands, and it counts as real activity.
+      # Until then the site still builds and deploys from freshly fetched data
+      # every run — only the committed snapshot pauses, and nothing about the
+      # published scoreboard depends on it.
       - name: Commit the day's data
         run: |
           git config user.name 'pool-bot'
@@ -94,9 +110,16 @@ jobs:
           git add -A data/
           if git diff --staged --quiet; then
             echo 'no data change today'
+            exit 0
+          fi
+          git commit -m "data: refresh $(date -u +%Y-%m-%d)"
+          if git push; then
+            echo 'data snapshot committed'
           else
-            git commit -m "data: refresh $(date -u +%Y-%m-%d)"
-            git push
+            echo "::warning title=Data snapshot not committed::main is protected \
+          and the default token cannot push to it. Add a fine-grained PAT as the \
+          DATA_PUSH_TOKEN secret to restore the snapshot and keep the scheduled \
+          job alive through the offseason. The site itself deployed normally."
           fi
 
   deploy:

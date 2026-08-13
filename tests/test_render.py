@@ -336,3 +336,176 @@ def test_history_and_render_agree_on_week_count(pool, mid_season):
     ctx = build_context(pool, mid_season)
     assert ctx.history.attrs["weeks"] == list(range(1, 12))
     assert weekly_frame(pool, mid_season.games).attrs["weeks"] == ctx.history.attrs["weeks"]
+
+
+# -- theme, identity and the morph -------------------------------------------
+def test_the_markup_itself_is_dark(season, game_data, tmp_path):
+    """Dark is the default in the document, not merely in the stylesheet.
+
+    Anything that reads the page before CSS lands — or with scripting off —
+    must already be on the dark theme rather than flashing light first.
+    """
+    render_site(season, game_data, tmp_path)
+    assert 'data-theme="dark"' in (tmp_path / "index.html").read_text()
+
+
+def test_the_row_and_the_hero_share_a_transition_name(season, game_data, tmp_path):
+    """This pairing is what makes clicking a row morph instead of cross-fade.
+
+    The names live in two separate templates, so nothing but a test notices
+    when one of them is renamed and the effect silently degrades.
+    """
+    render_site(season, game_data, tmp_path)
+    index = (tmp_path / "index.html").read_text()
+
+    for entrant in season.entrants:
+        slug = _slug_of(tmp_path, entrant.name)
+        page = (tmp_path / "entrant" / slug / "index.html").read_text()
+        for name in (f"name-{slug}", f"total-{slug}"):
+            assert f"view-transition-name: {name}" in index, f"{name} missing from the board"
+            assert f"view-transition-name: {name}" in page, f"{name} missing from the hero"
+
+
+def test_transition_names_are_unique_within_a_page(season, game_data, tmp_path):
+    """A duplicate name makes the browser drop the transition for both elements."""
+    render_site(season, game_data, tmp_path)
+    names = re.findall(r"view-transition-name: ([\w-]+)", (tmp_path / "index.html").read_text())
+    assert len(names) == len(set(names))
+
+
+def test_every_page_offers_the_identity_picker(season, game_data, tmp_path):
+    written = render_site(season, game_data, tmp_path)
+    for page in (p for p in written if p.suffix == ".html"):
+        assert "data-me-select" in page.read_text(), page
+
+
+def test_rows_carry_the_slug_the_picker_matches_on(season, game_data, tmp_path):
+    """The picker's option values and the rows' data-slug must be the same set."""
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    row_slugs = set(re.findall(r'class="row[^"]*"\s+style="[^"]*"\s+data-slug="([\w-]+)"', html))
+    # Scope to the identity picker: the time zone control is a <select> too, and
+    # matching every <option> on the page would sweep up "UTC".
+    picker = re.search(r"<select data-me-select>(.*?)</select>", html, re.S).group(1)
+    option_slugs = set(re.findall(r'<option value="([\w-]+)">', picker))
+    assert row_slugs
+    assert row_slugs == option_slugs
+
+
+# -- team colours -------------------------------------------------------------
+def test_team_chips_wear_their_club_colours(season, game_data, tmp_path):
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+    assert "--team-bg:" in html and "--team-fg:" in html and "--team-edge:" in html
+
+
+def test_every_chip_that_names_a_team_is_coloured(season, game_data, tmp_path):
+    """A chip with no colour block would render as an unexplained grey outlier."""
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+
+    chips = re.findall(r'<span class="team-chip[^"]*"\s*\n?\s*style="([^"]*)">([A-Z]{2,3})</span>', html)
+    assert len(chips) >= 32
+    for style, team in chips:
+        assert "--team-bg:" in style, f"{team} chip has no colour"
+
+
+# -- sortable tables ----------------------------------------------------------
+def test_the_teams_table_is_sortable_with_real_sort_keys(season, game_data, tmp_path):
+    """Every sortable column needs a key that sorts correctly as a number.
+
+    Displayed text would sort "10-2" before "3-1" and put unseeded teams above
+    the top seed, so the sort keys are emitted separately.
+    """
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+
+    assert html.count("data-sort") == 6
+    assert 'class="table-scroll is-tall"' in html
+    # An unseeded team sorts to the bottom rather than sorting as empty.
+    assert 'data-value="99"' in html
+
+
+def test_the_seed_sort_key_orders_playoff_teams_first(season, game_data, tmp_path):
+    """Seeds 1..7 must come before the 99 that stands in for "did not qualify"."""
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+    seeds = [int(v) for v in re.findall(r'<td data-value="(\d+)">\s*\n?\s*(?:<span class="badge money">|—)', html)]
+    assert sorted(s for s in seeds if s != 99)[:1] == [1]
+    assert 99 in seeds
+
+
+# -- the comparison chart -----------------------------------------------------
+def test_the_compare_chart_offers_every_entrant(season, game_data, tmp_path):
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "trends" / "index.html").read_text()
+
+    picks = set(re.findall(r'data-pick="([\w-]+)"', html))
+    lines = set(re.findall(r'<polyline class="cmp-line" data-entrant="([\w-]+)"', html))
+    assert picks
+    assert picks == lines, "a name you can pick must have a line to light up"
+
+
+def test_the_compare_chart_ships_unpicked(season, game_data, tmp_path):
+    """The server does not choose for the viewer; the browser does."""
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "trends" / "index.html").read_text()
+    assert "is-picked" not in html
+    assert html.count("data-compare>") == 2  # points and rank
+
+
+def test_the_compare_chart_is_absent_before_any_games(season, tmp_path, games_2025):
+    """Nothing to compare in the preseason, so it must not render an empty frame."""
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+
+    render_site(season, preseason, tmp_path)
+    html = (tmp_path / "trends" / "index.html").read_text()
+    assert "data-pick=" not in html
+
+
+def _slug_of(out_dir: Path, name: str) -> str:
+    """Find the slug the site actually generated for an entrant."""
+    data = json.loads((out_dir / "data" / "standings.json").read_text())
+    return next(e["slug"] for e in data["entrants"] if e["name"] == name)
+
+
+# -- preseason honesty --------------------------------------------------------
+def test_no_playoff_seeds_are_shown_before_any_game(season, tmp_path, games_2025):
+    """The Teams page must not claim a playoff field in the preseason.
+
+    Every club is 0-0, so the tiebreaker ladder exhausted and fell through to
+    its alphabetical coin-toss fallback — and the page printed the result as
+    fourteen seeded teams, with the one seeds going to whoever came first in
+    the alphabet. This is the page-level guard for that.
+    """
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+
+    render_site(season, preseason, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+
+    seeded = re.findall(r'<span class="badge money">(\d)</span>', html)
+    assert seeded == [], f"{len(seeded)} teams shown as seeded before kickoff"
+    # All 32 rows sort to the bottom of the seed column instead.
+    assert html.count('<td data-value="99">') == 32
+
+
+def test_entrant_cards_omit_the_seed_before_any_game(season, tmp_path, games_2025):
+    g = games_2025.copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    preseason = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+
+    written = render_site(season, preseason, tmp_path)
+    for page in (p for p in written if p.parent.parent.name == "entrant"):
+        assert "seed " not in page.read_text()
+
+
+def test_seeds_return_once_the_season_is_under_way(season, mid_season, tmp_path):
+    """The projection is a feature — this must not have thrown it away."""
+    render_site(season, mid_season, tmp_path)
+    html = (tmp_path / "teams" / "index.html").read_text()
+    assert len(re.findall(r'<span class="badge money">(\d)</span>', html)) == 14

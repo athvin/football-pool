@@ -11,13 +11,32 @@
 
 export const THEME_KEY = 'pool-theme';
 export const TZ_KEY = 'pool-tz';
+export const ME_KEY = 'pool-me';
+export const COMPARE_KEY = 'pool-compare';
 export const DEFAULT_TZ = 'America/New_York';
+export const DEFAULT_THEME = 'dark';
 
-/** Flip between themes, resolving "no stored preference" against the OS. */
-export function nextTheme(current, prefersDark) {
-  if (current === 'dark') return 'light';
-  if (current === 'light') return 'dark';
-  return prefersDark ? 'light' : 'dark';
+/**
+ * Colours for the comparison chart, assigned in the order people are picked.
+ *
+ * Pick order rather than a fixed per-entrant colour, so the first person you
+ * choose is always the first colour and nobody's line changes hue as the
+ * standings move. Six is the cap: beyond that the hues stop being reliably
+ * distinguishable, which is the whole reason to have distinct ones.
+ */
+export const PICK_COLORS = [
+  '#c6ff3d', '#4dd8e6', '#ff9f1c', '#b48ce8', '#ff6b35', '#5ee6a8',
+];
+
+/**
+ * Flip between themes.
+ *
+ * Dark is the site's default, unconditionally — it does not follow the
+ * operating system — so anything that is not an explicit "light" is dark, and
+ * the first click always lands on light.
+ */
+export function nextTheme(current) {
+  return current === 'light' ? DEFAULT_THEME : 'light';
 }
 
 /**
@@ -64,6 +83,59 @@ export function countUpValue(target, progress) {
   return target * easeOutCubic(progress);
 }
 
+/**
+ * Push overlapping endpoint labels apart, keeping their vertical order.
+ *
+ * Two people finishing a week on the same score put their labels in exactly the
+ * same place. The markers stay on the true values; only the text moves.
+ */
+export function spreadLabels(items, gap = 14) {
+  let previous = -Infinity;
+  return [...items]
+    .sort((a, b) => a.y - b.y)
+    .map(({ slug, y }) => {
+      const placed = Math.max(y, previous + gap);
+      previous = placed;
+      return { slug, y: placed };
+    });
+}
+
+/**
+ * Order two table cells.
+ *
+ * Numeric when both sides genuinely are numbers, lexical otherwise — so a
+ * points column sorts 9 before 10, while a "0-0" record column falls back to
+ * text instead of being silently read as zero.
+ */
+export function compareValues(a, b) {
+  const left = String(a).trim();
+  const right = String(b).trim();
+  const nl = Number(left);
+  const nr = Number(right);
+  if (left !== '' && right !== '' && Number.isFinite(nl) && Number.isFinite(nr)) {
+    return nl - nr;
+  }
+  return left.localeCompare(right, 'en', { numeric: true, sensitivity: 'base' });
+}
+
+/** The value a cell sorts on: an explicit data-value if present, else its text. */
+export function cellValue(row, index) {
+  const cell = row.children[index];
+  if (!cell) return '';
+  const explicit = cell.getAttribute('data-value');
+  return explicit === null ? cell.textContent : explicit;
+}
+
+/** Reorder a table body in place. Returns the rows in their new order. */
+export function sortTable(table, index, direction) {
+  const body = table.tBodies[0];
+  if (!body) return [];
+  const rows = Array.from(body.rows);
+  rows.sort((a, b) => direction * compareValues(cellValue(a, index), cellValue(b, index)));
+  for (const row of rows) body.appendChild(row);
+  return rows;
+}
+
 /** Storage that silently no-ops when it is unavailable (private browsing). */
 export function safeStorage(store) {
   return {
@@ -87,14 +159,150 @@ export function safeStorage(store) {
 // ---------------------------------------------------------------------------
 // DOM wiring
 // ---------------------------------------------------------------------------
-function initTheme(doc, storage, media) {
+function initTheme(doc, storage) {
   const button = doc.querySelector('[data-theme-toggle]');
   if (!button) return;
   button.addEventListener('click', () => {
-    const theme = nextTheme(doc.documentElement.dataset.theme, media.matches);
+    const theme = nextTheme(doc.documentElement.dataset.theme);
     doc.documentElement.dataset.theme = theme;
     storage.set(THEME_KEY, theme);
   });
+}
+
+/**
+ * "This is me": one stored slug that highlights the viewer everywhere.
+ *
+ * Six near-identical rows on a phone is exactly where finding yourself is the
+ * whole job. The choice never leaves the browser — there is no server here to
+ * send it to.
+ */
+function initMe(doc, storage) {
+  const select = doc.querySelector('[data-me-select]');
+  const stored = storage.get(ME_KEY) || '';
+
+  const apply = (slug) => {
+    doc.documentElement.dataset.me = slug;
+    for (const el of doc.querySelectorAll('[data-slug]')) {
+      el.classList.toggle('is-me', Boolean(slug) && el.dataset.slug === slug);
+    }
+  };
+
+  if (select) {
+    // A stored name that is no longer in the pool must not leave the picker
+    // showing a blank: next season's picks file will not have last year's
+    // entrants in it.
+    select.value = stored;
+    const slug = select.value === stored ? stored : '';
+    apply(slug);
+    if (slug !== stored) storage.set(ME_KEY, slug);
+
+    select.addEventListener('change', () => {
+      storage.set(ME_KEY, select.value);
+      apply(select.value);
+    });
+    return;
+  }
+  apply(stored);
+}
+
+/**
+ * The comparison chart: pick who you want to read against.
+ *
+ * Every line is already in the document; picking only toggles classes and sets
+ * a colour, so with scripting off the chart still renders the whole field.
+ */
+function initCompare(doc, storage) {
+  const charts = Array.from(doc.querySelectorAll('[data-compare]'));
+  const buttons = Array.from(doc.querySelectorAll('[data-pick]'));
+  if (!charts.length || !buttons.length) return;
+
+  const known = new Set(buttons.map((b) => b.dataset.pick));
+  const stored = (storage.get(COMPARE_KEY) || '').split(' ').filter(Boolean);
+  const me = doc.documentElement.dataset.me;
+
+  // Nothing stored yet, but they have told us who they are: start on them.
+  // Opening the page already showing your own line is the point of the chart.
+  let picked = (stored.length ? stored : (me ? [me] : [])).filter((s) => known.has(s));
+
+  const empty = doc.querySelector('[data-compare-empty]');
+
+  const paint = () => {
+    const colors = new Map(
+      picked.map((slug, i) => [slug, PICK_COLORS[i % PICK_COLORS.length]]),
+    );
+
+    for (const button of buttons) {
+      const color = colors.get(button.dataset.pick);
+      button.setAttribute('aria-pressed', String(Boolean(color)));
+      if (color) button.style.setProperty('--pick-color', color);
+      else button.style.removeProperty('--pick-color');
+    }
+
+    for (const chart of charts) {
+      for (const el of chart.querySelectorAll('[data-entrant]')) {
+        const color = colors.get(el.dataset.entrant);
+        el.classList.toggle('is-picked', Boolean(color));
+        if (color) el.style.setProperty('--pick-color', color);
+        else el.style.removeProperty('--pick-color');
+      }
+
+      const labels = Array.from(chart.querySelectorAll('.cmp-label.is-picked'));
+      const placed = spreadLabels(
+        labels.map((el) => ({ slug: el.dataset.entrant, y: Number(el.dataset.y) })),
+      );
+      for (const { slug, y } of placed) {
+        const el = chart.querySelector(`.cmp-label[data-entrant="${slug}"]`);
+        if (el) el.setAttribute('y', String(y + 4));
+      }
+    }
+
+    if (empty) empty.hidden = picked.length > 0;
+    storage.set(COMPARE_KEY, picked.join(' '));
+  };
+
+  for (const button of buttons) {
+    button.addEventListener('click', () => {
+      const slug = button.dataset.pick;
+      picked = picked.includes(slug)
+        ? picked.filter((s) => s !== slug)
+        // Past the palette, the oldest pick drops out rather than two lines
+        // sharing a colour — which would defeat the entire chart.
+        : [...picked, slug].slice(-PICK_COLORS.length);
+      paint();
+    });
+  }
+  paint();
+}
+
+/** Click (or Enter/Space) a marked column heading to sort the table by it. */
+function initSort(doc) {
+  for (const table of doc.querySelectorAll('table')) {
+    const heads = Array.from(table.querySelectorAll('th[data-sort]'));
+    if (!heads.length) continue;
+
+    for (const th of heads) {
+      th.tabIndex = 0;
+      const activate = () => {
+        const index = Array.from(th.parentElement.children).indexOf(th);
+        // First click on a column sorts the way that column is most useful:
+        // biggest-first for numbers, A-Z for names.
+        const wasAscending = th.getAttribute('aria-sort') === 'ascending';
+        const direction = wasAscending ? -1 : 1;
+
+        for (const other of heads) other.removeAttribute('aria-sort');
+        th.setAttribute('aria-sort', direction === 1 ? 'ascending' : 'descending');
+        sortTable(table, index, direction);
+      };
+
+      th.addEventListener('click', activate);
+      th.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activate();
+        }
+      });
+    }
+  }
 }
 
 function initTimeZone(doc, storage) {
@@ -162,8 +370,13 @@ function initOdometer(doc, win) {
 
 export function init(doc = document, win = window) {
   const storage = safeStorage(win.localStorage);
-  initTheme(doc, storage, win.matchMedia('(prefers-color-scheme: dark)'));
+  initTheme(doc, storage);
+  // Identity first: the comparison chart opens on whoever the viewer says
+  // they are, so it has to know before it paints.
+  initMe(doc, storage);
   initTimeZone(doc, storage);
+  initCompare(doc, storage);
+  initSort(doc);
   initOdometer(doc, win);
 }
 

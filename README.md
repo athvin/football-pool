@@ -145,6 +145,14 @@ publishes neither. The tiebreaker implementation reproduces all 70 playoff seeds
 for 2021–2025 exactly against ESPN's published seeding, and the test suite
 checks that on every run.
 
+Mid-season the seed shown is the *projected* field if the standings froze that
+day. Before the first kickoff there is no field and the site says so with a
+dash: with every club 0-0 the tiebreaker ladder has nothing to work with, runs
+out of steps and reaches its coin-toss fallback, which sorts alphabetically to
+keep builds reproducible — so a "projection" then would only be reporting the
+alphabet. Berth bonuses are a separate and stricter matter: they are not banked
+until the regular season is mathematically over.
+
 ## Projections
 
 The site also forecasts. On every build it fits team ratings to the market's
@@ -180,10 +188,25 @@ off, and nothing else changes.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads.
 
-On the trend charts every entrant is drawn in one colour and only the top few
-are labelled. Thirty distinguishable hues do not exist, and colouring by rank
-would make people change colour week to week — so the chart would contradict
-itself as the season moved. Hovering any line brings it forward.
+The Trends page carries two kinds of chart, because they answer two different
+questions.
+
+**Compare** is the one you will use. Pick up to six people and their lines come
+forward, each in its own colour, assigned in the order you pick them so nobody
+changes hue as the season moves. Set *who are you?* in the footer and the chart
+opens on your own line every time — that choice also highlights your row on
+every other page. It is stored in your browser and goes nowhere else.
+
+**The whole field** draws everyone in a single colour with only the top few
+labelled. Thirty distinguishable hues do not exist, and colouring by rank would
+make people change colour week to week, so the chart would contradict itself as
+the season moved. Hovering any line brings it forward.
+
+Both are rendered as inline SVG at build time; picking only toggles classes, so
+with JavaScript off the charts still show the full field.
+
+The site is dark by default and does not follow your operating system — light is
+an opt-in from the toggle in the header, remembered per browser.
 
 ## Two things the numbers account for
 
@@ -197,6 +220,49 @@ wild-card bonus, never both; two of your teams in one division cannot both win
 it; only one team in the league wins the Super Bowl. The ceiling is computed
 against those constraints, which is what makes the "mathematically eliminated"
 badge trustworthy.
+
+## Changing anything
+
+`main` is protected by a repository ruleset, so changes land through a pull
+request:
+
+```bash
+git checkout -b bm/whatever
+# ... work ...
+git push -u origin bm/whatever
+gh pr create --fill
+```
+
+`.github/workflows/ci.yml` then runs three required checks — **python**,
+**javascript** and **build** — and the merge button stays disabled until all
+three are green. The build check renders the site twice, once at `/` and once at
+`/football-pool/`, because a root-absolute asset URL works perfectly on a local
+preview and 404s only in production.
+
+The ruleset also blocks force-pushes and deletion of `main`. The repository
+admin can bypass it, which is deliberate: with one maintainer, a ruleset nobody
+can override is a lockout waiting to happen the first time CI itself breaks.
+To make the gate absolute, remove the bypass:
+
+```bash
+gh api /repos/athvin/football-pool/rulesets            # find the id
+gh api --method PUT /repos/athvin/football-pool/rulesets/<id> \
+  -f 'bypass_actors=[]'
+```
+
+### The one wrinkle
+
+Requiring pull requests means the daily job can no longer push its data
+snapshot: `github-actions[bot]` does not hold the admin role, and a user-owned
+repository cannot grant a ruleset bypass to the Actions app — that option is
+organisation-only. The push is therefore best-effort and logs a warning instead
+of failing the run; **the site still builds and deploys from freshly fetched
+data every time**, since nothing on the page comes from the committed snapshot.
+
+Adding a fine-grained PAT with contents:write as the `DATA_PUSH_TOKEN` secret
+restores it, and is worth doing anyway — it inherits your admin bypass *and*
+counts as real repository activity against the 60-day timer below, which the
+default token does not.
 
 ## Deploying
 

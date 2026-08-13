@@ -29,6 +29,7 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from . import history as history_mod
 from . import metrics
 from . import svg
+from . import teamcolors
 from .nflverse import GameData
 from .potential import entrant_outlook
 from .project import Projections, project
@@ -126,7 +127,9 @@ def make_environment(base: str = "") -> Environment:
             return ""
         return f"${float(value):,.0f}"
 
-    env.filters.update(url=url, points=points, money=money)
+    env.filters.update(
+        url=url, points=points, money=money, chip_style=teamcolors.chip_style
+    )
     env.globals.update(
         svg=svg,
         base=prefix,
@@ -385,6 +388,15 @@ def render_site(
         points_series=[(r["name"], r["series"]) for r in rows if r["series"]],
         rank_series=[
             (r["name"], history_mod.rank_series_for(ctx.history, r["name"]))
+            for r in rows
+            if r["series"]
+        ],
+        # The same numbers again, carrying each entrant's slug, because the
+        # comparison chart is picked by slug — the identity the whole site
+        # already uses for URLs and for "this is me".
+        compare_points=[(r["name"], r["slug"], r["series"]) for r in rows if r["series"]],
+        compare_ranks=[
+            (r["name"], r["slug"], history_mod.rank_series_for(ctx.history, r["name"]))
             for r in rows
             if r["series"]
         ],
