@@ -219,6 +219,57 @@ def _team_card(ctx: SiteContext, team: str) -> dict[str, Any]:
     }
 
 
+def _short_names(names: list[str]) -> dict[str, str]:
+    """First names for chart axes, falling back to the full name on a clash.
+
+    "Shannon (plus Si & Rachel)" does not fit a heatmap column header, and the
+    full names would force the chart three times wider than the page.
+    """
+    first = [n.split()[0] if n.split() else n for n in names]
+    counts = {f: first.count(f) for f in first}
+    return {n: (f if counts[f] == 1 else n) for n, f in zip(names, first)}
+
+
+def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
+    """The three distribution charts, or ``None`` when nothing is projected."""
+    p = ctx.projections
+    if p is None or p.entrants.empty:
+        return None
+
+    # Ordered by chance of winning, so the charts read top to bottom as the
+    # model's own ranking rather than as the current standings.
+    order = p.entrants.sort_values("p_first", ascending=False)["name"].tolist()
+    short = _short_names(order)
+
+    finish = p.finish_probs.reindex(order)
+    h2h = p.head_to_head.reindex(index=order, columns=order)
+    density = p.distribution.density.reindex(order)
+
+    return {
+        "places": [int(c) for c in finish.columns],
+        "finish_rows": [
+            {
+                "name": name,
+                "slug": ctx.projections.entrants.set_index("name").loc[name, "slug"],
+                "bar": svg.finish_bar(finish.loc[name].tolist()),
+                "probs": [float(v) for v in finish.loc[name]],
+            }
+            for name in order
+        ],
+        "ridge": svg.ridgeline(
+            [float(c) for c in p.distribution.centers],
+            [(short[n], density.loc[n].tolist()) for n in order],
+        ),
+        # NaN on the diagonal becomes None so the template and the chart both
+        # read it as "no cell" rather than trying to format a float.
+        "heatmap": svg.heatmap(
+            [[None if pd.isna(v) else float(v) for v in h2h.loc[n]] for n in order],
+            [short[n] for n in order],
+        ),
+        "order": order,
+    }
+
+
 def _projection_for(ctx: SiteContext, name: str) -> dict[str, Any] | None:
     """One entrant's modelled outcome, or ``None`` when not projecting."""
     if ctx.projections is None:
@@ -245,6 +296,16 @@ def _projection_for(ctx: SiteContext, name: str) -> dict[str, Any] | None:
             float(band["p10"].min()), float(band["p90"].max()),
         ),
         "odds_meter": svg.meter(float(r["p_first"])),
+        "finish_bar": svg.finish_bar(ctx.projections.finish_probs.loc[name].tolist()),
+        # Who this entrant is favoured against, best chance first. Their own
+        # cell is NaN and drops out.
+        "rivals": [
+            {"name": other, "p": float(v)}
+            for other, v in ctx.projections.head_to_head.loc[name]
+            .dropna()
+            .sort_values(ascending=False)
+            .items()
+        ],
     }
 
 
@@ -418,6 +479,7 @@ def render_site(
         "seeds_final": ctx.seeds_final,
         "projecting": ctx.projections is not None,
         "sim_count": ctx.projections.simulations if ctx.projections else 0,
+        "forecast": _forecast(ctx),
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -436,6 +498,7 @@ def render_site(
         written.append(target)
 
     write("index.html", "index.html", page="standings")
+    write("forecast/index.html", "forecast.html", page="forecast")
     write("rules/index.html", "rules.html", page="rules")
     write("teams/index.html", "teams.html", page="teams")
     write("weeks/index.html", "weeks.html", page="weeks", week_rows=_week_rows(ctx, rows))
@@ -496,7 +559,10 @@ def render_site(
                             {
                                 k: v
                                 for k, v in (r["projection"] or {}).items()
-                                if k not in ("band", "odds_meter")
+                                # Rendered SVG is markup, not data. It belongs
+                                # on the page, not in the machine-readable feed
+                                # — it tripled the file the one time it leaked.
+                                if k not in ("band", "odds_meter", "finish_bar")
                             }
                             or None
                         ),

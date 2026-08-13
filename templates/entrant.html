@@ -119,6 +119,37 @@
     </p>
   </div>
 </div>
+
+<h3 class="section-title">Where {{ entrant.name }} finishes</h3>
+<div class="card">
+  {{ entrant.projection.finish_bar|safe }}
+  <p class="card-meta"><span>chance of each place, first on the left</span></p>
+</div>
+
+{% if entrant.projection.rivals %}
+<h3 class="section-title">Favoured against</h3>
+<div class="table-scroll">
+  <table>
+    <caption>How often {{ entrant.name }} finishes above each of the others, ignoring everybody else.</caption>
+    <thead>
+      <tr>
+        <th scope="col">Rival</th>
+        <th scope="col" class="num">Finishes above them</th>
+        <th scope="col"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in entrant.projection.rivals %}
+      <tr>
+        <th scope="row">{{ r.name }}</th>
+        <td class="num model">{{ '%.0f%%'|format(r.p * 100) }}</td>
+        <td>{{ svg.meter(r.p)|safe }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 <p class="page-sub">
   From {{ '{:,}'.format(sim_count) }} simulated seasons, with every completed
   game held fixed. A forecast, not a result.

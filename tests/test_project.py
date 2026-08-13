@@ -36,6 +36,22 @@ def field(make_season):
     )
 
 
+@pytest.fixture
+def three_way(field):
+    """Alias so the distribution tests read as what they are asserting about."""
+    return field
+
+
+@pytest.fixture
+def pool_projection(field, preseason):
+    """One projection, reused across the distribution assertions.
+
+    Enough simulations that the invariants are not swamped by sampling noise,
+    few enough that the suite stays quick.
+    """
+    return project(field, preseason, simulations=600)
+
+
 # -- when projections are withheld ------------------------------------------
 def test_no_projection_without_a_forecast(make_season, preseason, tmp_path):
     """forecast.yaml is optional; the rest of the site must not depend on it."""
@@ -180,3 +196,89 @@ def test_practically_eliminated_flags_hopeless_entries(field, preseason):
     assert practically_eliminated(p) == set()
     # With an impossible threshold, everyone qualifies.
     assert practically_eliminated(p, threshold=1.1) == {"Strong", "Middle", "Weak"}
+
+
+# -- the distributional detail ----------------------------------------------
+def test_finish_probabilities_sum_to_one_per_entrant(pool_projection):
+    """Every entrant holds exactly one rank in every simulated season.
+
+    Rows must sum to 1. Columns must *not* be asserted to: competition ranking
+    means two entrants tied for first leaves nobody in second at all.
+    """
+    finish = pool_projection.finish_probs
+    assert np.allclose(finish.sum(axis=1).to_numpy(), 1.0)
+    assert (finish.to_numpy() >= 0).all()
+
+
+def test_there_is_a_column_for_every_finishing_place(pool_projection, three_way):
+    assert list(pool_projection.finish_probs.columns) == [1, 2, 3]
+    assert len(pool_projection.finish_probs) == len(three_way.entrants)
+
+
+def test_first_place_probability_matches_the_summary_table(pool_projection):
+    """The chart and the money column are the same numbers, not two estimates."""
+    finish = pool_projection.finish_probs
+    entrants = pool_projection.entrants.set_index("name")
+    for name in finish.index:
+        assert finish.loc[name, 1] == pytest.approx(entrants.loc[name, "p_first"])
+
+
+def test_head_to_head_is_antisymmetric(pool_projection):
+    """P(a above b) + P(b above a) == 1, with ties splitting the difference."""
+    h = pool_projection.head_to_head.to_numpy()
+    off_diagonal = ~np.eye(h.shape[0], dtype=bool)
+    assert np.allclose((h + h.T)[off_diagonal], 1.0)
+
+
+def test_nobody_races_themselves(pool_projection):
+    h = pool_projection.head_to_head
+    assert h.to_numpy().diagonal().tolist() == [pytest.approx(np.nan, nan_ok=True)] * len(h)
+
+
+def test_head_to_head_agrees_with_the_finishing_order(pool_projection):
+    """The entrant most likely to win must be favoured over everyone."""
+    entrants = pool_projection.entrants
+    best = entrants.loc[entrants["p_first"].idxmax(), "name"]
+    row = pool_projection.head_to_head.loc[best].dropna()
+    assert (row > 0.5).all(), row.to_dict()
+
+
+def test_the_distribution_shares_one_scale(pool_projection):
+    """Per-entrant bins would destroy the comparison the chart exists to make."""
+    dist = pool_projection.distribution
+    assert dist.density.shape[1] == len(dist.centers)
+    assert np.all(np.diff(dist.centers) > 0)
+    # Scaled against the tallest peak in the field, so exactly one bin hits 1.0.
+    assert dist.density.to_numpy().max() == pytest.approx(1.0)
+    assert dist.density.to_numpy().min() >= 0.0
+
+
+def test_the_distribution_spans_the_simulated_scores(pool_projection):
+    """The curves have to cover the same range the percentiles report."""
+    dist = pool_projection.distribution
+    entrants = pool_projection.entrants
+    assert dist.centers.min() <= entrants["p10"].min()
+    assert dist.centers.max() >= entrants["p90"].max()
+
+
+def test_a_pool_smaller_than_the_payout_table_still_projects(make_season, games_2025):
+    """Two entrants and three payout tiers: third place can never be reached.
+
+    The probability of finishing there is zero, not undefined — this used to
+    raise a shape error from the payout matmul.
+    """
+    duo = make_season(
+        [
+            {"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]},
+            {"name": "B", "teams": ["ARI", "NYJ", "TEN", "CLE"]},
+        ],
+        year=2025,
+    )
+    partial = games_2025.copy()
+    partial.loc[partial["week"] > 10, "played"] = False
+
+    p = project(duo, partial, simulations=200)
+    assert list(p.finish_probs.columns) == [1, 2]
+    assert np.allclose(p.finish_probs.sum(axis=1).to_numpy(), 1.0)
+    # Cash probability cannot exceed certainty just because a tier is unreachable.
+    assert (p.entrants["p_cash"] <= 1.0 + 1e-9).all()

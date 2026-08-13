@@ -24,6 +24,20 @@ from .sim import SimConfig, Schedule, build_schedule, fit_elo, simulate
 
 
 @dataclass(frozen=True)
+class Distribution:
+    """Where each entrant's simulated final scores actually landed.
+
+    One shared set of bins across every entrant, deliberately. The interesting
+    thing about these curves is how much they overlap — that overlap is the
+    difference between "this is close" and "this is over" — and per-entrant
+    bins would destroy exactly that comparison.
+    """
+
+    centers: np.ndarray  # (bins,) midpoint score of each bin
+    density: pd.DataFrame  # index=name, one column per bin, scaled 0-1
+
+
+@dataclass(frozen=True)
 class Projections:
     """Everything the site shows about how the season might end."""
 
@@ -31,6 +45,12 @@ class Projections:
     teams: pd.DataFrame  # per-team simulated summary
     simulations: int
     games_remaining: int
+    # The distributional detail. The simulation already pays for all of this;
+    # summarising it down to three percentiles and throwing the rest away was
+    # losing the part that makes a forecast worth looking at.
+    finish_probs: pd.DataFrame  # index=name, columns 1..n places
+    head_to_head: pd.DataFrame  # index/columns=name, P(row finishes above column)
+    distribution: Distribution
 
 
 def _forecast_arrays(season: Season) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
@@ -74,39 +94,52 @@ def project(
         season, schedule, elo, cfg, qual_mean, qual_sd, n=simulations
     )
 
+    entrants, finish, h2h, dist = _score_field(season, points)
     return Projections(
-        entrants=_score_field(season, points),
+        entrants=entrants,
         teams=team_stats,
         simulations=points.shape[0],
         games_remaining=schedule.games_left,
+        finish_probs=finish,
+        head_to_head=h2h,
+        distribution=dist,
     )
 
 
-def _score_field(season: Season, points: np.ndarray) -> pd.DataFrame:
+def _score_field(
+    season: Season, points: np.ndarray
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Distribution]:
     """Rank the real entrants inside every simulated season."""
+    names = [e.name for e in season.entrants]
     picks = season.picks_matrix()  # (entrants, teams)
     totals = points @ picks.T  # (simulations, entrants)
-    n_sims, n_entrants = totals.shape
+    n_entrants = totals.shape[1]
 
     # Competition ranking: your rank is one more than the number of entrants who
     # finished strictly ahead of you, so a tie shares the better rank.
     beaten = (totals[:, None, :] > totals[:, :, None]).sum(axis=2)
     rank = beaten + 1
 
-    payouts = season.payouts
-    expected_payout = np.zeros(n_entrants)
-    p_by_rank = {}
-    for place in range(1, len(payouts) + 1):
-        p = (rank == place).mean(axis=0)
-        p_by_rank[place] = p
-        expected_payout += payouts[place - 1] * p
+    finish = _finish_probs(rank, names, n_entrants)
 
-    return pd.DataFrame(
+    # Payout probabilities are a slice of the same table rather than a second
+    # pass, so the money and the chart can never tell different stories.
+    #
+    # Truncated to the places that exist: a two-person pool with three payout
+    # tiers can never pay third, and the probability of finishing there is zero
+    # rather than undefined. Slicing past the end would otherwise leave the
+    # matmul with mismatched shapes.
+    place_p = finish.to_numpy()
+    paid = min(len(season.payouts), place_p.shape[1])
+    payouts = np.asarray(season.payouts[:paid])
+    expected_payout = place_p[:, :paid] @ payouts
+
+    entrants = pd.DataFrame(
         {
-            "name": [e.name for e in season.entrants],
+            "name": names,
             "slug": [e.slug for e in season.entrants],
-            "p_first": p_by_rank[1],
-            "p_cash": sum(p_by_rank.values()),
+            "p_first": place_p[:, 0],
+            "p_cash": place_p[:, :paid].sum(axis=1),
             "expected_payout": np.round(expected_payout, 2),
             "expected_net": np.round(expected_payout - season.entry_fee, 2),
             "mean_points": np.round(totals.mean(axis=0), 2),
@@ -116,6 +149,52 @@ def _score_field(season: Season, points: np.ndarray) -> pd.DataFrame:
             "mean_rank": np.round(rank.mean(axis=0), 2),
         }
     )
+    return entrants, finish, _head_to_head(totals, names), _distribution(totals, names)
+
+
+def _finish_probs(rank: np.ndarray, names: list[str], n_entrants: int) -> pd.DataFrame:
+    """P(finishing in each place), one row per entrant.
+
+    Rows sum to exactly 1.0 — every entrant has exactly one rank in every
+    simulated season. Columns do *not*, and must not be asserted to: competition
+    ranking means two entrants tied for first leaves nobody in second.
+    """
+    places = np.arange(1, n_entrants + 1)
+    probs = (rank[:, :, None] == places[None, None, :]).mean(axis=0)
+    return pd.DataFrame(probs, index=names, columns=places)
+
+
+def _head_to_head(totals: np.ndarray, names: list[str]) -> pd.DataFrame:
+    """P(the row's entrant finishes above the column's).
+
+    A tie counts as half to each side, which is what makes the matrix
+    antisymmetric: ``h2h[a][b] + h2h[b][a] == 1`` for every pair. Without that,
+    exact ties — two entrants holding the same four teams would tie in every
+    single simulation — would quietly vanish from both directions.
+    """
+    above = (totals[:, :, None] > totals[:, None, :]).mean(axis=0)
+    level = (totals[:, :, None] == totals[:, None, :]).mean(axis=0)
+    matrix = above + 0.5 * level
+    np.fill_diagonal(matrix, np.nan)  # nobody races themselves
+    return pd.DataFrame(matrix, index=names, columns=names)
+
+
+def _distribution(totals: np.ndarray, names: list[str], bins: int = 44) -> Distribution:
+    """Smoothed density of each entrant's simulated final score."""
+    lo, hi = float(totals.min()), float(totals.max())
+    if hi <= lo:  # a dead heat, or a single remaining outcome
+        lo, hi = lo - 1.0, hi + 1.0
+
+    edges = np.linspace(lo, hi, bins + 1)
+    counts = np.stack([np.histogram(col, bins=edges)[0] for col in totals.T])
+
+    # Scaled against the tallest peak in the whole field, not each entrant's
+    # own: a tightly clustered forecast *should* draw taller than a diffuse one,
+    # because that difference is the confidence in it.
+    peak = counts.max() or 1
+    density = counts / peak
+    centers = (edges[:-1] + edges[1:]) / 2
+    return Distribution(centers=centers, density=pd.DataFrame(density, index=names))
 
 
 def practically_eliminated(projections: Projections, threshold: float = 0.01) -> set[str]:
