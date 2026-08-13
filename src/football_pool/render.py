@@ -187,7 +187,14 @@ def make_environment(base: str = "") -> Environment:
         return f"${float(value):,.0f}"
 
     env.filters.update(
-        url=url, points=points, money=money, chip_style=teamcolors.chip_style
+        url=url,
+        points=points,
+        money=money,
+        chip_style=teamcolors.chip_style,
+        # One ordinal implementation for the whole site. The hand-rolled
+        # template version rendered "21th"/"22th"/"23th" the moment the pool
+        # grew past twenty entries; svg._ordinal has always done it right.
+        ordinal=svg._ordinal,
     )
     env.globals.update(
         svg=svg,
@@ -427,6 +434,9 @@ def _team_rows(ctx: SiteContext) -> list[dict[str, Any]]:
                 "l": int(tp["l"]),
                 "t": int(tp["t"]),
                 "record": f"{int(tp['w'])}-{int(tp['l'])}" + (f"-{int(tp['t'])}" if tp["t"] else ""),
+                # Sort key for the record column: win percentage, so 10-6-1
+                # orders above 10-7 instead of tying with it on raw wins.
+                "win_pct": float(st["win_pct"]),
                 "points": float(tp["total"]),
                 "division": st["division"],
                 "conference": st["conference"],

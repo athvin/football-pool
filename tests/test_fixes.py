@@ -183,3 +183,32 @@ def test_the_placeholder_hint_does_not_teach_the_yaml_no_trap(
     )
     with pytest.raises(ConfigError, match=r'\["CIN", "WAS", "TEN", "NO"\]'):
         load_season(2033, root=tmp_path)
+
+
+def test_fallers_lead_with_the_biggest_drop():
+    hist = pd.DataFrame(
+        {"rank_w1": [1, 2, 3, 4], "rank_w2": [1, 4, 2, 3]},
+        index=["a", "b", "c", "d"],
+    )
+    hist.attrs["weeks"] = [1, 2]
+    out = history_mod.movers(hist)
+    assert out["fallers"][0] == ("b", -2.0)
+
+
+def test_week_leaders_never_crowns_a_zero(season):
+    hist = pd.DataFrame({"w1": [3.0, 0.0], "rank_w1": [1, 2]}, index=["a", "b"])
+    hist.attrs["weeks"] = [1]
+    leaders = history_mod.week_leaders(season, hist)
+    assert leaders == [("a", 3.0)]
+
+
+def test_ordinal_filter_survives_the_twenties(season):
+    ordinal = make_environment().filters["ordinal"]
+    assert [ordinal(n) for n in (1, 2, 3, 11, 21, 22, 23)] == [
+        "1st", "2nd", "3rd", "11th", "21st", "22nd", "23rd",
+    ]
+
+
+def test_team_rows_carry_a_win_pct_sort_key(season, games_2025):
+    rows = _team_rows(_ctx(season, games_2025))
+    assert all(0.0 <= r["win_pct"] <= 1.0 for r in rows)
