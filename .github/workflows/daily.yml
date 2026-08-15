@@ -1,24 +1,96 @@
-name: Daily rebuild
+name: Build and publish
 
-# The upstream NFL results feed commits every 15-90 minutes year round and
-# lands within minutes of a game going final, so a daily rebuild always has the
-# previous night's scores. Two runs a day rather than one because GitHub
-# sometimes drops scheduled events entirely, and a dropped run would otherwise
-# mean a day-stale scoreboard.
+# The scoreboard is only worth looking at when it is current, and "current" has
+# a shape. The NFL plays in waves, a pool score only moves when a game goes
+# *final*, and both of those are on a calendar we already have. So the schedule
+# below is derived from the season rather than from a round number of runs per
+# day: dense while slates are finishing, quiet through the hours nobody is
+# playing, and absent for the six months nobody is.
+#
+# Two upstream facts size every entry:
+#
+#   * A game takes about 3h30m from kickoff to final, overtime and broadcast
+#     overrun included.
+#   * The nflverse results feed commits every 15-90 minutes, so a final reaches
+#     the data up to 90 minutes after the whistle.
+#
+# A run started ~5 hours after a kickoff therefore has that game. Scored
+# against the real 2025 and 2026 schedules — every game, worst-case feed lag —
+# the entries below leave the site at most 3.1 hours behind any final, and
+# typically 2.1. The two-runs-a-day schedule they replace was 13.1 hours at
+# worst, and its worst case was Thanksgiving.
+#
+# Publishing a slate that is still in progress is safe by construction:
+# unplayed games do not score, so an afternoon run simply shows fewer points
+# than the evening one, never wrong ones.
 on:
   schedule:
-    # `timezone:` avoids the classic UTC-cron bug: the NFL season straddles the
-    # daylight-saving change, so a hardcoded UTC time would silently shift by an
-    # hour mid-season. 07:37 Eastern is comfortably after Monday Night Football
-    # has gone final and been published. The odd minute dodges the top-of-hour
-    # window where GitHub delays scheduled jobs.
-    - cron: '37 7 * * *'
+    # `timezone:` is supported, and it really is honoured — the schedule this
+    # replaced read `37 7` and `37 19` Eastern, and the Actions tab records
+    # those runs firing at 11:37 and 23:37 UTC, which is the Eastern clock in
+    # August and not the literal UTC hour. Worth using rather than converting
+    # the entries by hand, because the season straddles the
+    # daylight-saving change: a fixed-UTC equivalent of every entry below would
+    # slip an hour on the Eastern clock from November on, across the half of
+    # the season that includes the playoffs. GitHub advances a schedule landing
+    # in a skipped spring-forward hour, and nothing here is scheduled in one.
+    #
+    # The month field is the season: September through February spans the
+    # opener (a Wednesday, 9 September 2026) to the Super Bowl, and nothing
+    # else. The preseason does not score in this pool, and the offseason has no
+    # results to fetch. The keepalive at the bottom is the single entry that
+    # runs year round, and it is not optional — see its comment.
+    #
+    # :37 rather than :00 because GitHub delays scheduled workflows under load
+    # and the top of the hour is the worst of it. Delays observed on this
+    # repository run from 13 to 51 minutes, which every entry below absorbs.
+
+    # Sunday, hourly from mid-afternoon to midnight. 84% of the season's games
+    # are played on this one day, in waves that go final at roughly 12:45 (the
+    # 09:30 kickoff in London), 16:15 (the 13:00 slate), 19:40 (the 16:05 and
+    # 16:25 games) and 23:40 (Sunday night). Hourly rather than four carefully
+    # placed runs, because the 90-minute feed lag means no single instant
+    # reliably holds a whole wave — an hourly sweep across it always does. The
+    # playoff Sundays and the Super Bowl's 18:30 kickoff fall inside this too.
+    - cron: '37 14-23 * 1,2,9-12 0'
       timezone: America/New_York
-    - cron: '37 19 * * *'
+
+    # Thursday, Friday and Saturday evenings. Thursday night is weekly;
+    # Saturday carries the December doubleheaders and the Wild Card and
+    # Divisional rounds; Friday is rarer but real — Thanksgiving Friday, the
+    # Christmas slate, and the Week 1 game in Brazil. Any of the three can
+    # start a game at 13:00, so the sweep opens at 19:37 to publish an
+    # afternoon slate the same evening people watched it, rather than the
+    # following morning. Thanksgiving is the day this entry is really for.
+    - cron: '37 19-23 * 1,2,9-12 4,5,6'
+      timezone: America/New_York
+
+    # Every night of the season, twice. 01:37 is the first hour by which an
+    # ordinary night game — Thursday, Sunday or Monday, kicking 20:15 to 20:35
+    # and final by 23:55 — is certain to be in the feed. 03:37 is the backstop,
+    # sized for the one fixture that beats 01:37: a Monday doubleheader whose
+    # late game kicks at 22:00, finals ~01:30, and is published by ~03:00. It
+    # is also what catches the strays no day-of-week entry names — the
+    # Wednesday opener, Thanksgiving eve, and any game postponed onto a
+    # Tuesday.
+    - cron: '37 1,3 * 1,2,9-12 *'
+      timezone: America/New_York
+
+    # Year round, twice a month, and load-bearing. GitHub disables scheduled
+    # workflows in a public repository after 60 days with no *commit* — runs do
+    # not count as activity, and neither do issues, tags or releases.
+    # Restricting every entry above to the season opens a March-to-September
+    # gap that trips that timer around April, and a disabled schedule does not
+    # come back by itself: the site would still be showing February's
+    # scoreboard through Week 1, until somebody noticed and pressed the button.
+    # Twice a month rather than monthly so that a failed run, or two, still
+    # leaves margin inside the 60 days. The step named "Keep the schedule
+    # alive" is the other half of this, and it fires on this entry alone.
+    - cron: '37 12 1,15 * *'
       timezone: America/New_York
   push:
     branches: [main]
-    # The nightly data commit below must not buy a second full deploy: with
+    # The data commit below must not buy a second full deploy: with
     # DATA_PUSH_TOKEN configured it is a PAT push, which (unlike the default
     # token) does fire this trigger, and the run that made the commit has
     # already deployed. A path filter rather than a `[skip ci]` marker in the
@@ -133,6 +205,42 @@ jobs:
           and the default token cannot push to it. Add a fine-grained PAT as the \
           DATA_PUSH_TOKEN secret to restore the snapshot and keep the scheduled \
           job alive through the offseason. The site itself deployed normally."
+          fi
+
+      # The other half of the keepalive cron. On the 1st and 15th the step
+      # above usually finds nothing to commit — in the offseason there are no
+      # results to refresh — so on exactly the runs whose purpose is to reset
+      # the 60-day inactivity timer, nothing lands. This writes a stamp that
+      # always changes, so the push always has something to carry.
+      #
+      # Three deliberate details:
+      #
+      #   * `!cancelled()` rather than the default success gate. The point of
+      #     this run is the commit, and it is worth more, not less, when the
+      #     build is broken: a test that fails every night in June must not
+      #     also take the schedule down with it on its way past.
+      #   * The stamp lives under data/ because the push trigger at the top of
+      #     this file ignores that path. Anywhere else and this commit would
+      #     trigger a build whose own keepalive step commits again — a loop.
+      #   * The cron string is repeated here because `github.event.schedule`
+      #     reports the entry that fired verbatim. Edit one, edit both, or the
+      #     keepalive quietly stops firing.
+      - name: Keep the schedule alive
+        if: ${{ !cancelled() && github.event.schedule == '37 12 1,15 * *' }}
+        run: |
+          date -u +'%Y-%m-%dT%H:%M:%SZ' > data/last-keepalive
+          git config user.name 'pool-bot'
+          git config user.email 'pool-bot@users.noreply.github.com'
+          git add data/last-keepalive
+          git commit -m "chore: keepalive $(date -u +%Y-%m-%d)"
+          if git push; then
+            echo 'keepalive committed — the 60-day inactivity timer is reset'
+          else
+            echo "::warning title=Schedule keepalive failed::Could not push the \
+          keepalive commit, so nothing has reset GitHub's 60-day inactivity \
+          timer. If no commit reaches this repository before it expires, the \
+          schedule is disabled and the site stops rebuilding for the season. \
+          Add a fine-grained PAT as the DATA_PUSH_TOKEN secret."
           fi
 
   deploy:
