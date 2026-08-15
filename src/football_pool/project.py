@@ -20,7 +20,14 @@ import numpy as np
 import pandas as pd
 
 from .season import Season
-from .sim import SimConfig, Schedule, build_schedule, fit_elo, simulate
+from .sim import (
+    SimConfig,
+    Schedule,
+    build_schedule,
+    fit_elo,
+    fit_elo_from_market,
+    simulate,
+)
 
 
 @dataclass(frozen=True)
@@ -52,24 +59,47 @@ class Projections:
     head_to_head: pd.DataFrame  # index/columns=name, P(row finishes above column)
     distribution: Distribution
     home_win_rate: pd.Series  # index=game_id, P(the home side wins)
+    # Which market the ratings were fitted to: "market" for this week's posted
+    # spreads, "win totals" for the preseason numbers in forecast.yaml. Shown
+    # on the forecast page, because the two answer subtly different questions
+    # and a reader deserves to know which one produced the number.
+    basis: str = "win totals"
+    market_games: int = 0  # lines the fit used; 0 on the win-totals path
 
 
-def _forecast_arrays(season: Season) -> tuple[dict[str, float], np.ndarray, np.ndarray]:
-    """Market win totals and the qualitative overlay, as aligned arrays."""
-    forecast = season.forecast or {}
-    win_totals = forecast.get("win_totals", {})
-    qualitative = forecast.get("qualitative_elo", {})
+def _qualitative_arrays(season: Season) -> tuple[np.ndarray, np.ndarray]:
+    """The researched deviation from the market, as aligned arrays.
+
+    Needed on both fitting paths: the shift is an opinion about teams, not
+    about where the ratings came from.
+    """
+    qualitative = (season.forecast or {}).get("qualitative_elo", {})
+    mean = np.array([float(qualitative.get(t, {}).get("mean", 0.0)) for t in season.teams])
+    sd = np.array([float(qualitative.get(t, {}).get("sd", 15.0)) for t in season.teams])
+    return mean, sd
+
+
+def _win_totals(season: Season) -> dict[str, float] | None:
+    """Preseason market win totals, or None if the file does not offer any.
+
+    Absent entirely is a legitimate configuration now that the live market can
+    supply the ratings on its own — a new season no longer has to start with 32
+    numbers typed in by hand. Absent *in part* is still an error, and a loud
+    one: that shape is a typo'd team code, and it would otherwise be discovered
+    only on the day the market fallback happened to fire.
+    """
+    win_totals = (season.forecast or {}).get("win_totals") or {}
+    if not win_totals:
+        return None
 
     missing = [t for t in season.teams if t not in win_totals]
     if missing:
         raise ValueError(
-            f"forecast.yaml is missing win totals for {missing}. "
-            f"Either add them or set `enabled: false` to turn projections off."
+            f"forecast.yaml has win totals, but not for {missing}. "
+            f"Add them, remove the section entirely to fit from the betting "
+            f"market alone, or set `enabled: false` to turn projections off."
         )
-
-    mean = np.array([float(qualitative.get(t, {}).get("mean", 0.0)) for t in season.teams])
-    sd = np.array([float(qualitative.get(t, {}).get("sd", 15.0)) for t in season.teams])
-    return win_totals, mean, sd
+    return win_totals
 
 
 def project(
@@ -88,9 +118,27 @@ def project(
         return None
 
     cfg = SimConfig.from_forecast(season.forecast)
-    win_totals, qual_mean, qual_sd = _forecast_arrays(season)
+    qual_mean, qual_sd = _qualitative_arrays(season)
 
-    elo, _ = fit_elo(season, schedule, cfg, win_totals, qual_sd)
+    # The live market first. `fit_elo_from_market` returns None when the posted
+    # lines cannot pin all 32 ratings — no lines yet, or only the last week of
+    # the season left — and the preseason win totals take over, which is what
+    # the projection ran on before there was a choice.
+    fitted = fit_elo_from_market(season, games, cfg)
+    if fitted is not None:
+        elo, market_games = fitted
+        basis = "market"
+    else:
+        win_totals = _win_totals(season)
+        if win_totals is None:
+            raise ValueError(
+                "forecast.yaml has no win totals and the results file has no "
+                "usable betting lines, so there is nothing to fit team ratings "
+                "to. Add a `win_totals:` section, or set `enabled: false` to "
+                "turn projections off."
+            )
+        elo, _ = fit_elo(season, schedule, cfg, win_totals, qual_sd)
+        basis, market_games = "win totals", 0
     points, team_stats, home_win_rate = simulate(
         season, schedule, elo, cfg, qual_mean, qual_sd, n=simulations
     )
@@ -111,6 +159,8 @@ def project(
         head_to_head=h2h,
         distribution=dist,
         home_win_rate=pd.Series(home_win_rate, index=game_ids.to_numpy(), name="home_win_rate"),
+        basis=basis,
+        market_games=market_games,
     )
 
 

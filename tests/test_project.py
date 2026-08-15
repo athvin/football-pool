@@ -24,6 +24,17 @@ def preseason(games_2025):
 
 
 @pytest.fixture
+def lined(preseason):
+    """The same slate, with the books' lines posted on every game.
+
+    The 2025 fixture predates the market columns, which is itself the point:
+    ``preseason`` exercises the win-totals fallback and this one the market fit,
+    from the same schedule.
+    """
+    return preseason.assign(spread_line=2.5)
+
+
+@pytest.fixture
 def field(make_season):
     """A spread of entries: strong, middling, and deliberately weak."""
     return make_season(
@@ -72,13 +83,53 @@ def test_no_projection_without_entrants(make_season, preseason):
 
 
 def test_incomplete_win_totals_are_reported_clearly(make_season, preseason):
+    """A part-filled section is a typo'd team code, not a choice — and without
+    this it would surface only on the day the fallback happened to fire."""
     s = make_season([{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}])
     forecast = dict(s.forecast)
     forecast["win_totals"] = {"KC": 10.5}
     object.__setattr__(s, "forecast", forecast)
 
-    with pytest.raises(ValueError, match="missing win totals"):
+    with pytest.raises(ValueError, match="but not for"):
         project(s, preseason)
+
+
+# -- which market the ratings come from --------------------------------------
+def test_posted_lines_are_what_the_ratings_come_from(field, lined):
+    p = project(field, lined, simulations=SIMS)
+    assert p.basis == "market"
+    assert p.market_games == int((lined["game_type"] == "REG").sum())
+
+
+def test_the_win_totals_take_over_when_nothing_is_posted(field, preseason):
+    """The path the projection ran on before there was a choice."""
+    p = project(field, preseason, simulations=SIMS)
+    assert p.basis == "win totals"
+    assert p.market_games == 0
+
+
+def test_a_season_can_be_forecast_from_the_lines_alone(make_season, lined):
+    """No win totals in the file at all is a legitimate configuration now: a new
+    season no longer has to open with 32 numbers typed in by hand."""
+    s = _without_win_totals(make_season([{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}]))
+
+    p = project(s, lined, simulations=SIMS)
+    assert p.basis == "market"
+
+
+def test_neither_lines_nor_win_totals_is_reported_clearly(make_season, preseason):
+    """Both inputs gone means there is genuinely nothing to rate teams by, and
+    the build says which of the two to supply rather than guessing."""
+    s = _without_win_totals(make_season([{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}]))
+
+    with pytest.raises(ValueError, match="nothing to fit"):
+        project(s, preseason)
+
+
+def _without_win_totals(season):
+    forecast = {k: v for k, v in season.forecast.items() if k != "win_totals"}
+    object.__setattr__(season, "forecast", forecast)
+    return season
 
 
 # -- coherence --------------------------------------------------------------

@@ -114,10 +114,20 @@
 </div>
 
 <p class="page-sub">
-  The model fits team ratings to the market's win totals and plays the rest of
-  the season out {{ '{:,}'.format(sim_count) }} times. It knows nothing about
-  the leveling factors beyond the fact that they are what turns a team's wins
-  into your points — the odds have no bearing on how anyone is actually scored.
+  {% if forecast.basis == 'market' %}
+    The model fits team ratings to the {{ forecast.market_games }} betting lines
+    the books have posted for the games ahead — this week's read on every team,
+    not August's — and plays the rest of the season out
+    {{ '{:,}'.format(sim_count) }} times.
+  {% else %}
+    The model fits team ratings to the market's preseason win totals and plays
+    the rest of the season out {{ '{:,}'.format(sim_count) }} times. No lines
+    are posted for the remaining games yet, so August's numbers are still the
+    best read available.
+  {% endif %}
+  It knows nothing about the leveling factors beyond the fact that they are what
+  turns a team's wins into your points — the odds have no bearing on how anyone
+  is actually scored.
 </p>
 
 {% endif %}

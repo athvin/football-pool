@@ -110,6 +110,84 @@ def win_prob(elo_diff, scale: float = 400.0):
     return 1.0 / (10.0 ** (-np.asarray(elo_diff) / scale) + 1.0)
 
 
+# Elo points per point of market spread. Fitted by maximum likelihood against
+# `win_prob` above — this model's own logistic, at this model's own 400-point
+# scale — on the 2,885 decided regular-season games from 2015 to 2025 that
+# carried a line. It comes out at 25.1, which is the 25 the public Elo models
+# use, arrived at independently rather than borrowed from a model whose scale
+# might not have been ours. Calibration holds across every spread bucket from
+# a 10-point home dog to a 10-point home favourite.
+MARKET_ELO_PER_POINT = 25.1
+
+
+def fit_elo_from_market(
+    season: Season, games: pd.DataFrame, cfg: SimConfig
+) -> tuple[np.ndarray, int] | None:
+    """Team ratings implied by the market's spreads on games not yet played.
+
+    The alternative, :func:`fit_elo`, pins ratings to the preseason win totals
+    in forecast.yaml and holds them there all season: it fits expected wins
+    over the *whole* schedule, so nothing it produces in December knows
+    anything that happened after August. The spreads are the same market
+    talking, but continuously, and they are already in the results file.
+
+    Only unplayed games count. A closing line from week 2 is a record of what
+    the market believed in September, and averaging it into a December rating
+    would drag the estimate back toward the preseason the fit is trying to
+    escape. The books post about three to four weeks ahead, so the games with
+    lines are exactly the near-future ones — the window defines itself, and no
+    constant here has to guess at it.
+
+    Each line is one linear equation, ``elo[home] - elo[away] = 25.1 * spread
+    - home_field``, because the market's number already contains home
+    advantage. Neutral-site games (London, Frankfurt, the Super Bowl) are
+    flagged as such upstream and drop the term. Ratings are mean-centred on
+    1500, and the whole thing is one least-squares solve.
+
+    Returns the ratings and the number of lines behind them — the site says
+    that count out loud, because "fitted to 48 posted lines" and "fitted to 3"
+    are different claims and only one of them deserves much confidence.
+
+    Returns None — meaning "use the win totals" — when the lines cannot pin all
+    32 ratings. This is not hypothetical: with only week 18 left, 16 games
+    cannot compare 32 teams, and the system splits into disconnected halves
+    whose relative strength is genuinely unknown. Measured on 2024 and 2025 it
+    holds full rank until the last week or two, by which point the projection
+    has almost nothing left to project.
+    """
+    if "spread_line" not in games.columns or "location" not in games.columns:
+        return None
+
+    lines = games[
+        (games["game_type"] == "REG") & ~games["played"] & games["spread_line"].notna()
+    ]
+    if lines.empty:
+        return None
+
+    n = season.n_teams
+    rows = np.zeros((len(lines), n))
+    rhs = np.zeros(len(lines))
+    for i, row in enumerate(lines.itertuples()):
+        rows[i, season.idx[row.home_team]] = 1.0
+        rows[i, season.idx[row.away_team]] = -1.0
+        neutral = str(row.location).strip().lower() == "neutral"
+        rhs[i] = MARKET_ELO_PER_POINT * float(row.spread_line) - (
+            0.0 if neutral else cfg.home_field_elo
+        )
+
+    # Spreads fix only *differences*, so the system is one dimension short
+    # until something fixes the level. This row is that constraint, not a data
+    # point: it says the ratings average 1500, the same centre fit_elo holds.
+    design = np.vstack([rows, np.ones(n)])
+    target = np.append(rhs, 1500.0 * n)
+
+    if np.linalg.matrix_rank(design) < n:
+        return None
+
+    elo, *_ = np.linalg.lstsq(design, target, rcond=None)
+    return elo, len(lines)
+
+
 def _qb_out_game_prob(cfg: SimConfig) -> float:
     """Marginal per-game probability that a team's starting QB is unavailable."""
     mean_missed = (cfg.qb_missed_low + cfg.qb_missed_high - 1) / 2

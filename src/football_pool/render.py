@@ -275,6 +275,10 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             [short[n] for n in order],
         ),
         "order": order,
+        # What the ratings were fitted to. The page says so plainly rather than
+        # describing one method and silently running the other.
+        "basis": p.basis,
+        "market_games": p.market_games,
     }
 
 
