@@ -43,6 +43,19 @@ def csv_bytes():
     return CSV_2025.read_bytes()
 
 
+@pytest.fixture
+def csv_with_lines(csv_bytes):
+    """The fixture file plus the market columns upstream carries alongside it.
+
+    The committed fixture predates them, which is useful in itself: everything
+    that reads ``csv_bytes`` is asserting that the market is optional, and this
+    one asserts what happens when it is there.
+    """
+    rows = csv_bytes.decode().splitlines()
+    header = rows[0] + ",spread_line,total_line,away_moneyline,home_moneyline"
+    return "\n".join([header, *(f"{r},-3.5,44.5,140,-165" for r in rows[1:])]).encode()
+
+
 # -- parsing ----------------------------------------------------------------
 def test_parses_the_season_and_flags_played_games(games_2025):
     assert len(games_2025) == 285
@@ -104,6 +117,37 @@ def test_schema_change_raises(csv_bytes):
 
 def test_accepts_a_path(games_2025):
     assert parse_games(CSV_2025, 2025).equals(games_2025)
+
+
+# -- the market columns, which are read but never required -------------------
+def test_the_market_columns_come_through_when_upstream_has_them(csv_with_lines):
+    """The pool was already downloading these every run and dropping them at the
+    column filter."""
+    df = parse_games(csv_with_lines, 2025)
+
+    assert (df["spread_line"] == -3.5).all()
+    assert (df["total_line"] == 44.5).all()
+
+
+def test_a_file_with_no_market_columns_parses_anyway(games_2025):
+    """Results are load-bearing, opinions are not: a file the books never got to
+    must still build the site, exactly as it did before the lines were read."""
+    assert "spread_line" not in games_2025.columns
+    assert len(games_2025) == 285
+
+
+def test_a_missing_market_column_is_not_a_schema_change(csv_with_lines):
+    """The counterpart to ``test_schema_change_raises``. Renaming a scoring
+    column stops the build; a line the books have not posted must not, or the
+    forecast layer would have quietly become able to take the site down.
+    """
+    lines = csv_with_lines.decode().splitlines()
+    lines[0] = lines[0].replace("spread_line", "closing_spread")
+
+    df = parse_games("\n".join(lines).encode(), 2025)
+    assert "spread_line" not in df.columns
+    assert "closing_spread" not in df.columns  # not asked for, not carried
+    assert (df["total_line"] == 44.5).all()  # the rest still arrives
 
 
 # -- validation -------------------------------------------------------------
@@ -419,6 +463,18 @@ def test_the_cache_is_written_atomically(monkeypatch, tmp_path, csv_bytes):
 
     assert cache.exists()
     assert not list(cache.parent.glob("*.partial")), "temp file left behind"
+
+
+def test_the_cache_keeps_the_lines_it_was_built_from(monkeypatch, tmp_path, csv_with_lines):
+    """The committed snapshot is a record of what the build saw that day, and
+    the lines are the part of it that moves. Dropping them would leave an
+    offline rebuild fitting to August while the live one fitted to this week."""
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(csv_with_lines))
+    cache = tmp_path / "games.csv"
+
+    fetch_games(2025, cache_path=cache)
+
+    assert (parse_games(cache, 2025)["spread_line"] == -3.5).all()
 
 
 def test_provenance_defaults_to_the_guarded_state(monkeypatch, tmp_path, csv_bytes):

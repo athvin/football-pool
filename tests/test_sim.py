@@ -9,13 +9,17 @@ case where nothing is left to simulate at all.
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
+from helpers import mkgames
 
 from football_pool.scoring import score_teams
 from football_pool.sim import (
+    MARKET_ELO_PER_POINT,
     SimConfig,
     build_schedule,
     fit_elo,
+    fit_elo_from_market,
     playoff_field,
     simulate,
     win_prob,
@@ -110,6 +114,113 @@ def test_stronger_market_expectation_gives_a_higher_rating(season, games_2025, c
     schedule = build_schedule(season, games_2025)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
     assert elo[season.idx["KC"]] > elo[season.idx["ARI"]]
+
+
+# -- elo from the betting market --------------------------------------------
+@pytest.fixture
+def lined(season):
+    """A slate of unplayed games carrying a line on every one.
+
+    Each team is paired with the next in the season's own order, so 31 games
+    chain all 32 teams together. That connectedness is the whole precondition:
+    a spread only ever says how far *apart* two teams are, so a team nobody has
+    been compared against has no rating to find.
+    """
+
+    def _build(spreads=1.0, **row):
+        n = season.n_teams - 1
+        values = [spreads] * n if np.isscalar(spreads) else list(spreads)
+        return mkgames(
+            [
+                {
+                    "home": season.teams[i],
+                    "away": season.teams[i + 1],
+                    "spread": values[i],
+                    **row,
+                }
+                for i in range(n)
+            ]
+        )
+
+    return _build
+
+
+def test_market_ratings_reproduce_every_posted_line(season, cfg, lined):
+    """31 lines against 32 teams is exactly determined, so nothing here is a
+    compromise between competing evidence — every equation comes back intact."""
+    spreads = [((i % 7) - 3) * 1.5 for i in range(season.n_teams - 1)]
+
+    elo, used = fit_elo_from_market(season, lined(spreads), cfg)
+
+    assert used == season.n_teams - 1
+    assert elo.mean() == pytest.approx(1500.0)
+    for i, spread in enumerate(spreads):
+        gap = elo[season.idx[season.teams[i]]] - elo[season.idx[season.teams[i + 1]]]
+        assert gap == pytest.approx(MARKET_ELO_PER_POINT * spread - cfg.home_field_elo)
+
+
+def test_a_neutral_site_line_carries_no_home_advantage(season, cfg, lined):
+    """London, Frankfurt and the Super Bowl: the market's number means something
+    different there, and reading it the usual way would rate one side short by
+    the whole home-field edge."""
+    home, _ = fit_elo_from_market(season, lined(0.0), cfg)
+    neutral, _ = fit_elo_from_market(season, lined(0.0, location="Neutral"), cfg)
+
+    # A pick'em on neutral ground says the two teams are level, full stop.
+    np.testing.assert_allclose(neutral, 1500.0)
+    # The same number at a home venue says the visitor is the better side, by
+    # exactly the edge the model would otherwise have handed the hosts.
+    gap = home[season.idx[season.teams[0]]] - home[season.idx[season.teams[1]]]
+    assert gap == pytest.approx(-cfg.home_field_elo)
+
+
+def test_only_unplayed_regular_season_lines_are_fitted(season, cfg, lined):
+    """A closing line on a game already played records what the market believed
+    back then, and the bracket is not what these ratings are for. Neither may
+    drag the estimate away from the market's read on the games still ahead."""
+    upcoming = lined(2.0)
+    history = mkgames(
+        [
+            {"home": season.teams[0], "away": season.teams[5], "hs": 31, "as_": 3, "spread": 21.0},
+            {"home": season.teams[3], "away": season.teams[9], "spread": -17.0, "type": "SB"},
+        ]
+    )
+
+    baseline, used = fit_elo_from_market(season, upcoming, cfg)
+    elo, used_mixed = fit_elo_from_market(
+        season, pd.concat([upcoming, history], ignore_index=True), cfg
+    )
+
+    assert used_mixed == used == season.n_teams - 1
+    np.testing.assert_allclose(elo, baseline)
+
+
+def test_a_half_measured_league_declines_to_answer(season, cfg):
+    """Week 18 alone is the real version of this: 16 games cannot place 32 teams
+    on one scale, and inventing the missing comparisons would be worse than
+    falling back to the win totals."""
+    islands = mkgames(
+        [
+            {"home": season.teams[i], "away": season.teams[i + 1], "spread": 3.0}
+            for i in range(0, season.n_teams - 1, 4)
+        ]
+    )
+    assert fit_elo_from_market(season, islands, cfg) is None
+
+
+def test_no_posted_lines_means_no_market_fit(season, cfg, lined):
+    """Preseason, before the books put anything up."""
+    blank = lined(1.0)
+    blank["spread_line"] = np.nan
+    assert fit_elo_from_market(season, blank, cfg) is None
+
+
+def test_a_file_without_the_market_columns_is_not_an_error(season, cfg, lined):
+    """Snapshots committed before the lines were kept must still project — the
+    market is an input to the forecast, never a requirement of the build."""
+    games = lined(1.0)
+    assert fit_elo_from_market(season, games.drop(columns=["spread_line"]), cfg) is None
+    assert fit_elo_from_market(season, games.drop(columns=["location"]), cfg) is None
 
 
 # -- seeding ----------------------------------------------------------------

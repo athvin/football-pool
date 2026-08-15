@@ -28,7 +28,8 @@ GAMES_URL = (
     "https://github.com/nflverse/nflverse-data/releases/download/schedules/games.csv"
 )
 
-# Everything the pool needs; the upstream file has 46 columns.
+# Everything the pool needs to score; the upstream file has 46 columns. A
+# column missing from this list is a schema change that must stop the build.
 COLUMNS = [
     "game_id",
     "season",
@@ -43,6 +44,28 @@ COLUMNS = [
     "result",
     "overtime",
     "location",
+]
+
+# The betting market's read on each game, which the same upstream file has been
+# carrying all along — the pool was downloading these every run and dropping
+# them at the `usecols` filter.
+#
+# Deliberately *not* in COLUMNS. Nothing here can reach a score: they feed the
+# optional projection layer and the schedule page, and that is the whole reason
+# their absence must not be fatal. If nflverse stops publishing lines, or a
+# season is too far out to have any, the projection falls back to the preseason
+# win totals in forecast.yaml and the site builds exactly as it did before.
+# Treating a forecast input as load-bearing would invert the rule this file
+# opens with: results are load-bearing, opinions are not.
+#
+# Only populated for games the books have posted, which runs about three to
+# four weeks ahead of the current week and fills in behind them. That is the
+# property the projection wants: it is a *live* market, not a preseason one.
+MARKET_COLUMNS = [
+    "spread_line",  # points, home perspective: positive means the home side is favoured
+    "total_line",
+    "away_moneyline",
+    "home_moneyline",
 ]
 
 # Playoff rounds, in bracket order. These rows do not exist until the bracket is
@@ -266,10 +289,19 @@ def fetch_games(
         # make the staleness check say everything is fine.
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         partial = cache_path.with_suffix(cache_path.suffix + ".partial")
-        games[COLUMNS].to_csv(partial, index=False)
+        # Market columns are written when upstream had them, so the committed
+        # snapshot stays a faithful record of what the build saw — including
+        # what the lines were that day, which is the part that moves.
+        keep = COLUMNS + [c for c in MARKET_COLUMNS if c in games.columns]
+        games[keep].to_csv(partial, index=False)
         partial.replace(cache_path)
 
     return data
+
+
+def _wanted(column: str) -> bool:
+    """Column filter for the upstream read: what we score with, plus the market."""
+    return column in COLUMNS or column in MARKET_COLUMNS
 
 
 def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
@@ -279,13 +311,14 @@ def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
     downstream speaks pool codes only.
     """
     if isinstance(raw, Path):
-        df = pd.read_csv(raw, usecols=lambda c: c in COLUMNS, low_memory=False)
+        df = pd.read_csv(raw, usecols=_wanted, low_memory=False)
     else:
         data = raw.encode() if isinstance(raw, str) else raw
-        df = pd.read_csv(
-            io.BytesIO(data), usecols=lambda c: c in COLUMNS, low_memory=False
-        )
+        df = pd.read_csv(io.BytesIO(data), usecols=_wanted, low_memory=False)
 
+    # Checked against COLUMNS alone. A missing market column is not an error —
+    # see MARKET_COLUMNS — and anything downstream that reads one must cope
+    # with the column being absent entirely, not merely null.
     missing = [c for c in COLUMNS if c not in df.columns]
     if missing:
         raise DataError(

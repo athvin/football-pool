@@ -27,6 +27,14 @@ seed: 7 # fixed, so a day with no games rebuilds byte-identically
 
 # Market win totals (Aug 2026). Used only to calibrate team strength so the
 # simulation's expected wins match the betting market's.
+#
+# The fallback, not the first choice. Once the books post spreads for the games
+# ahead, the model fits to those instead — same market, but talking about this
+# week rather than about August. These take over when no lines are up: before
+# the season, and again in the last week or two, when too few games remain to
+# compare all 32 teams. Leave the section out entirely and the projection runs
+# on the lines alone; a partly filled one is an error, because that shape is a
+# typo rather than a decision.
 win_totals:
   "ARI": 4.5
   "ATL": 6.5

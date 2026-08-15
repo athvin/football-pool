@@ -205,11 +205,21 @@ until the regular season is mathematically over.
 
 ## Projections
 
-The site also forecasts. On every build it fits team ratings to the market's
-win totals, then plays the rest of the season 25,000 times — **freezing every
-game that already has a final score** — and scores the real field against the
-results. That produces each entrant's chance of winning, chance of cashing,
-expected payout in dollars, and a p10–p90 band for their final score.
+The site also forecasts. On every build it fits team ratings to the market,
+then plays the rest of the season 25,000 times — **freezing every game that
+already has a final score** — and scores the real field against the results.
+That produces each entrant's chance of winning, chance of cashing, expected
+payout in dollars, and a p10–p90 band for their final score.
+
+"The market" means the betting lines on the games ahead. The books post spreads
+about three to four weeks out, and each one is a straight statement of how far
+apart two teams are *this week* — so the ratings keep up with the season instead
+of being pinned to what August thought. Those lines ship in the same nflverse
+file the results come from, so this costs no new dependency and no new request.
+When no usable lines exist — preseason, or the last week or two, when too few
+games remain to compare 32 teams — the fit falls back to the preseason win
+totals in `forecast.yaml`. The forecast page names which of the two produced the
+numbers you are looking at.
 
 This is what makes the site worth opening in August, when every actual total is
 still 0.00.

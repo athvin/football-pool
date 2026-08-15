@@ -11,11 +11,14 @@ def mkgames(rows: list[dict]) -> pd.DataFrame:
     Each row takes ``home``, ``away``, and either ``hs``/``as_`` scores for a
     completed game, or neither for one still to be played. Optional ``type``
     (default ``REG``), ``week`` (default 1), ``gameday``, ``gametime``,
-    ``location`` and ``overtime``.
+    ``location``, ``overtime`` and ``spread`` — the betting line, from the home
+    side's perspective, which is blank unless a row asks for one.
 
-    The last four are rarely interesting to a scoring test, but they are part of
-    the real frame — the schedule page reads all of them — so they are always
-    present rather than only when a caller thinks to ask.
+    All of those are rarely interesting to a scoring test, but they are part of
+    the real frame — the schedule page reads most of them, and the projection
+    reads the line — so they are always present rather than only when a caller
+    thinks to ask. A blank ``spread_line`` is the honest default: upstream only
+    carries a line once the books have posted one.
     """
     out = []
     for i, r in enumerate(rows):
@@ -37,6 +40,7 @@ def mkgames(rows: list[dict]) -> pd.DataFrame:
                 "result": result,
                 "overtime": r.get("overtime", 0),
                 "location": r.get("location", "Home"),
+                "spread_line": r.get("spread"),
                 "played": played,
                 "is_tie": played and result == 0,
                 "home_won": played and result > 0,

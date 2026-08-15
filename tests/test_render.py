@@ -788,6 +788,29 @@ def test_the_forecast_is_ordered_by_chance_of_winning(pool, mid_season, tmp_path
     assert shown == expected
 
 
+def test_the_forecast_page_names_what_the_ratings_came_from(pool, mid_season, tmp_path):
+    """Two different fits can produce this page, and they answer subtly
+    different questions — describing one while running the other would be the
+    quietest way for the site to mislead."""
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    without = (tmp_path / "forecast" / "index.html").read_text()
+
+    lined = GameData(
+        mid_season.games.assign(spread_line=2.5),
+        2025,
+        datetime.now(timezone.utc),
+        None,
+        "cache",
+    )
+    render_site(pool, lined, tmp_path, simulations=200)
+    with_lines = (tmp_path / "forecast" / "index.html").read_text()
+
+    assert "preseason win totals" in without
+    assert "betting lines" not in without
+    assert "betting lines" in with_lines
+    assert "preseason win totals" not in with_lines
+
+
 def test_the_forecast_tab_is_in_the_nav_on_every_page(pool, mid_season, tmp_path):
     written = render_site(pool, mid_season, tmp_path, simulations=200)
     for page, text in _real_pages(written):
