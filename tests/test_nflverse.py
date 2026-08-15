@@ -354,18 +354,19 @@ def test_the_fortnight_before_the_super_bowl_is_not_staleness(games_2025):
 def test_the_measure_reads_the_eastern_clock(games_2025):
     """gameday is a US Eastern calendar date, including the London kickoffs.
 
-    Reading it in UTC would put the day boundary mid-slate: after the clocks go
-    back the 19:37 Eastern run is 00:37 UTC, so a UTC date calls that evening's
-    games late before they have kicked off.
+    Reading it in UTC would put the day boundary mid-slate: the Sunday sweep
+    runs to 23:37 Eastern, so in UTC it is already the next day, and a UTC date
+    would call Sunday's just-finished games a day late.
     """
     played = games_2025.copy()
     played.loc[played["week"] > 11, "played"] = False
     played.loc[played["game_type"] != "REG", "played"] = False
     latest = played.loc[played["played"], "gameday"].max()
 
-    # 19:37 Eastern in December is the following day in UTC.
+    # 23:37 Eastern is the following day in UTC in both halves of the season:
+    # 04:37 on standard time, 03:37 on daylight time.
     evening_run = (
-        pd.Timestamp(latest).tz_localize(SCHEDULE_TZ) + pd.Timedelta(hours=19, minutes=37)
+        pd.Timestamp(latest).tz_localize(SCHEDULE_TZ) + pd.Timedelta(hours=23, minutes=37)
     ).to_pydatetime().astimezone(timezone.utc)
     assert evening_run.date() != pd.Timestamp(latest).date()  # UTC has rolled over
     assert _at(played, evening_run).days_behind == 0

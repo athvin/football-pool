@@ -376,11 +376,32 @@ default token does not.
 
 One-time setup: **Settings → Pages → Source: GitHub Actions.**
 
-After that `.github/workflows/daily.yml` runs at 07:37 and 19:37 Eastern, plus
-on demand from the Actions tab. Both test suites gate the deploy — if a scoring
-test breaks, the site is not republished and yesterday's good version stays up.
+After that `.github/workflows/daily.yml` builds on the football calendar, plus
+on demand from the Actions tab. Every schedule is written on the Eastern clock
+(`timezone: America/New_York`), so nothing drifts when the season crosses the
+daylight-saving change, and every one is restricted to September–February:
 
-Scheduled workflows are disabled after 60 days of repository inactivity and the
-offseason is longer than that, so the job commits its data snapshot partly to
-keep the repo active. GitHub emails a warning first, and re-enabling is one
-click.
+| When (Eastern) | Cron | What it is for |
+| --- | --- | --- |
+| Sunday, hourly 14:37–23:37 | `37 14-23 * 1,2,9-12 0` | 84% of the season's games, published wave by wave |
+| Thu/Fri/Sat, hourly 19:37–23:37 | `37 19-23 * 1,2,9-12 4,5,6` | Thursday night, December Saturdays, the playoff Saturdays, Thanksgiving and Christmas |
+| Nightly 01:37 and 03:37 | `37 1,3 * 1,2,9-12 *` | Every night game; 03:37 covers a 22:00 Monday doubleheader |
+| 1st and 15th, 12:37, year round | `37 12 1,15 * *` | Keepalive — see below |
+
+The sizing comes from two upstream facts: a game runs about 3h30m from kickoff
+to final, and the nflverse feed commits every 15–90 minutes. Scored against the
+real 2025 and 2026 schedules with worst-case feed lag, the site ends up at most
+3.1 hours behind any final and typically 2.1. Publishing mid-slate is safe —
+unplayed games do not score, so an afternoon build shows fewer points, never
+wrong ones.
+
+Both test suites gate the deploy — if a scoring test breaks, the site is not
+republished and yesterday's good version stays up.
+
+The keepalive is not decoration. GitHub disables scheduled workflows in a
+public repository after 60 days with no **commit** to it — runs, issues and
+tags do not count — and a season-only schedule leaves a March-to-September gap
+that trips it. So a run on the 1st and 15th commits a stamp to
+`data/last-keepalive` whether or not the data moved, and does it even when the
+build failed. Without it the schedule dies quietly in April and the site is
+still showing February's scoreboard on opening weekend.

@@ -52,9 +52,9 @@ PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
 # nflverse dates every game by its US Eastern calendar date — including the
 # 09:30 kickoffs played in London, which carry the Sunday they are watched on
 # rather than a UK date. Reading the clock in any other zone puts the day
-# boundary in the middle of a slate: once the clocks go back, the 19:37 Eastern
-# job runs at 00:37 UTC, so a UTC date would call that evening's games late
-# before they had kicked off.
+# boundary in the middle of a slate: the Sunday sweep runs hourly to 23:37
+# Eastern, which is already Monday in UTC, so a UTC date would call that
+# afternoon's games a day late while they were still being watched.
 SCHEDULE_TZ = ZoneInfo("America/New_York")
 
 # How many days of results may be missing before publishing does more harm than
