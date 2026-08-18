@@ -100,6 +100,16 @@ on:
     # be tripped by prose.
     paths-ignore: ['data/**']
   workflow_dispatch:
+    inputs:
+      # The keepalive step below fires on one cron entry and nothing else, so
+      # until the 1st or the 15th comes round there is no way to find out
+      # whether DATA_PUSH_TOKEN actually works — and "it silently does not"
+      # costs the whole offseason schedule. This makes that answerable on
+      # demand: set the secret, run the workflow, read the result.
+      keepalive:
+        description: 'Also push the keepalive stamp (verifies DATA_PUSH_TOKEN)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -115,6 +125,15 @@ jobs:
     permissions:
       contents: write # to commit the day's data snapshot
       pages: read
+    env:
+      # Whether a push can land at all, decided once and read by both push
+      # steps below. Only the boolean crosses into the shell — never the token
+      # — so this cannot leak the secret into a log.
+      #
+      # It exists because "the push failed" has two causes with opposite
+      # remedies, and a run that cannot tell them apart gives advice that sends
+      # you in a circle: told to add a secret you have already added.
+      HAS_PUSH_TOKEN: ${{ secrets.DATA_PUSH_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -200,6 +219,12 @@ jobs:
           git commit -m "data: refresh $(date -u +%Y-%m-%d)"
           if git push; then
             echo 'data snapshot committed'
+          elif [ "$HAS_PUSH_TOKEN" = 'true' ]; then
+            echo "::warning title=Data snapshot not committed::DATA_PUSH_TOKEN \
+          is set but the push was still rejected. Check the PAT grants Contents: \
+          read and write on this repository, belongs to an account with admin \
+          (the bypass is what gets it past the branch ruleset), and has not \
+          expired. The site itself deployed normally."
           else
             echo "::warning title=Data snapshot not committed::main is protected \
           and the default token cannot push to it. Add a fine-grained PAT as the \
@@ -225,8 +250,14 @@ jobs:
       #   * The cron string is repeated here because `github.event.schedule`
       #     reports the entry that fired verbatim. Edit one, edit both, or the
       #     keepalive quietly stops firing.
+      #
+      # The `inputs.keepalive` arm is the manual override, and it is null on
+      # every scheduled run, so it can only ever widen the condition. Its whole
+      # purpose is that this step is otherwise untestable: gated on one cron
+      # entry, it proves DATA_PUSH_TOKEN works no earlier than the next 1st or
+      # 15th, and a token that silently does not work costs the offseason.
       - name: Keep the schedule alive
-        if: ${{ !cancelled() && github.event.schedule == '37 12 1,15 * *' }}
+        if: ${{ !cancelled() && (github.event.schedule == '37 12 1,15 * *' || inputs.keepalive) }}
         run: |
           date -u +'%Y-%m-%dT%H:%M:%SZ' > data/last-keepalive
           git config user.name 'pool-bot'
@@ -235,6 +266,13 @@ jobs:
           git commit -m "chore: keepalive $(date -u +%Y-%m-%d)"
           if git push; then
             echo 'keepalive committed — the 60-day inactivity timer is reset'
+          elif [ "$HAS_PUSH_TOKEN" = 'true' ]; then
+            echo "::warning title=Schedule keepalive failed::DATA_PUSH_TOKEN is \
+          set but the keepalive push was still rejected, so nothing has reset \
+          GitHub's 60-day inactivity timer. Check the PAT grants Contents: read \
+          and write on this repository, belongs to an account with admin, and \
+          has not expired. Until a commit lands, the schedule is on course to be \
+          disabled and the site stops rebuilding for the season."
           else
             echo "::warning title=Schedule keepalive failed::Could not push the \
           keepalive commit, so nothing has reset GitHub's 60-day inactivity \
