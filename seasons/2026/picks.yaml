@@ -39,6 +39,22 @@ entrants:
   - name: "Asher O'Hara"
     teams: ["BAL", "CIN", "KC", "BUF"]
 
+  # Two entries, not a typo — one household, two sets of picks, two entry fees.
+  - name: "Zac + Sammy #1"
+    teams: ["KC", "CIN", "BAL", "DAL"]
+
+  - name: "Zac + Sammy #2"
+    teams: ["DET", "NYG", "WAS", "BUF"]
+
+  - name: Eli
+    teams: ["LAR", "SEA", "KC", "NE"]
+
+  - name: Jony
+    teams: ["DET", "DAL", "BUF", "KC"]
+
+  - name: Linda
+    teams: ["LAR", "PHI", "DEN", "BAL"]
+
   # As family members send in their picks, add them here — nothing else in the
   # project needs to change. The pot, the payouts, and every pool-relative
   # metric recompute from however many entrants are in this list.
