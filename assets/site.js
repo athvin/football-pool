@@ -185,31 +185,6 @@ export function markerNumber(yards) {
   return 50 - Math.abs(yards - FIELD_YARDS / 2);
 }
 
-/**
- * How a spot on the field reads out loud: "own 34", "midfield", "opp 12".
- *
- * ``yards`` is measured from the near goal line, so 0 is your own goal line
- * and 100 is the far end zone.
- */
-export function driveLabel(yards) {
-  if (yards <= 0.5) return 'Own goal line';
-  if (yards >= 99.5) return 'Touchdown';
-  if (yards >= 49.5 && yards <= 50.5) return 'Midfield';
-  const spot = Math.round(yards);
-  return spot < 50 ? `Own ${spot}` : `Opp ${100 - spot}`;
-}
-
-/**
- * How far down the page the reader is, as a fraction.
- *
- * A page too short to scroll has nowhere to drive to, so it reports zero
- * rather than dividing by it.
- */
-export function scrollProgress(scrollTop, scrollMax) {
-  if (!(scrollMax > 0)) return 0;
-  return Math.min(Math.max(scrollTop / scrollMax, 0), 1);
-}
-
 /** The paint tokens, read off the document so the theme owns every colour. */
 export function fieldPalette(styles) {
   const read = (name) => styles.getPropertyValue(name).trim();
@@ -805,9 +780,35 @@ function initSchedule(doc, nowMs) {
   doc.defaultView?.addEventListener('hashchange', markVisible);
 }
 
-/** The hovered head-to-head cell, written out as an English sentence. */
-export function headToHeadSentence(row, col, percent) {
-  return `${row} finishes above ${col} in ${percent}% of simulated seasons.`;
+/**
+ * The hovered head-to-head cell, written out in full.
+ *
+ * Two sentences, because one number in isolation is misleading. The pairwise
+ * figure says who wins a two-horse race that is not the race being run: "beats
+ * him 62% of the time" reads very differently when one of them wins the pool
+ * once in three and the other once in fifty. So the claim comes first and what
+ * it is worth comes second.
+ *
+ * The reverse figure is passed in from the opposite cell rather than derived as
+ * 100 − p, so the sentence always agrees with the number printed in that cell
+ * no matter how either was rounded. Outright odds are optional: without them
+ * the claim stands on its own rather than the readout inventing a number.
+ */
+export function headToHeadReadout({ row, col, percent, reverse, rowWin, colWin }) {
+  const other = reverse === undefined || reverse === null
+    ? 100 - Number(percent)
+    : Number(reverse);
+  const claim =
+    `${row} finishes above ${col} in ${percent}% of simulated seasons, `
+    + `and below them in the other ${other}%.`;
+
+  if (rowWin == null || colWin == null) return { claim, odds: null };
+  return {
+    claim,
+    odds:
+      `Outright, ${row} wins the pool ${rowWin}% of the time `
+      + `and ${col} ${colWin}%.`,
+  };
 }
 
 /**
@@ -837,6 +838,35 @@ function initHeatmap(doc) {
     }
   };
 
+  /** Outright odds live on the axis label, so there are 2n of them, not n². */
+  const winOdds = (axis, index) =>
+    chart.querySelector(`.heat-${axis}[data-${axis[0]}="${index}"]`)?.dataset.win ?? null;
+
+  const say = (cell) => {
+    if (!readout) return;
+    const { r, c } = cell.dataset;
+    const opposite = chart.querySelector(`.heat-box[data-r="${c}"][data-c="${r}"]`);
+    const parts = headToHeadReadout({
+      row: cell.dataset.row,
+      col: cell.dataset.col,
+      percent: cell.dataset.p,
+      reverse: opposite?.dataset.p,
+      rowWin: winOdds('row', r),
+      colWin: winOdds('col', c),
+    });
+
+    readout.textContent = '';
+    const claim = doc.createElement('span');
+    claim.className = 'heat-claim';
+    claim.textContent = parts.claim;
+    readout.append(claim);
+    if (!parts.odds) return;
+    const odds = doc.createElement('span');
+    odds.className = 'heat-odds';
+    odds.textContent = parts.odds;
+    readout.append(odds);
+  };
+
   const clear = () => {
     for (const el of chart.querySelectorAll('.is-lit, .is-picked')) {
       el.classList.remove('is-lit', 'is-picked');
@@ -847,11 +877,7 @@ function initHeatmap(doc) {
   for (const cell of cells) {
     cell.addEventListener('pointerenter', () => {
       mark(cell.dataset.r, cell.dataset.c);
-      if (readout) {
-        readout.textContent = headToHeadSentence(
-          cell.dataset.row, cell.dataset.col, cell.dataset.p,
-        );
-      }
+      say(cell);
     });
   }
   chart.addEventListener('pointerleave', clear);
@@ -1000,55 +1026,6 @@ function initGridiron(doc, win) {
   doc.fonts?.ready?.then(paint).catch(() => {});
 }
 
-/**
- * The first-down line, driving downfield as the page scrolls.
- *
- * Reading the scroll position inside the animation frame rather than inside
- * the scroll event is the whole trick: the handler does nothing but ask for a
- * frame, so a fast flick queues one repaint instead of forty.
- */
-function initDrive(doc, win) {
-  if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-  const drive = doc.querySelector('.drive');
-  const line = doc.querySelector('.drive-line');
-  const yard = doc.querySelector('.drive-yard');
-  if (!drive || !line) return;
-
-  let queued = false;
-
-  const place = () => {
-    queued = false;
-    const height = win.innerHeight;
-    const scrollMax = (doc.documentElement.scrollHeight || 0) - height;
-    const progress = scrollProgress(win.scrollY || 0, scrollMax);
-
-    // Goal line to goal line: the hundred yards of playing field, never the
-    // end zones, because the line of scrimmage cannot be inside one.
-    const spot = progress * 100;
-    const geom = fieldGeometry(win.innerWidth, height);
-    line.style.transform = `translate3d(0, ${yardToY(geom, END_ZONE_YARDS + spot).toFixed(1)}px, 0)`;
-    if (yard) yard.textContent = driveLabel(spot);
-    // A page with nowhere to scroll would otherwise park a bright line across
-    // the top of it and call that a feature.
-    drive.classList.toggle('is-live', scrollMax > height * 0.35);
-    // The yard chip waits until the drive has actually left the goal line. At
-    // the top of the page the line sits under the masthead, which puts the
-    // chip in the viewer bar and cuts the label in half.
-    drive.classList.toggle('is-moving', progress > 0.02);
-  };
-
-  const request = () => {
-    if (queued) return;
-    queued = true;
-    win.requestAnimationFrame(place);
-  };
-
-  place();
-  win.addEventListener('scroll', request, { passive: true });
-  win.addEventListener('resize', request);
-}
-
 function initOdometer(doc, win) {
   if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
@@ -1164,7 +1141,6 @@ export function init(doc = document, win = window) {
   initHeatmap(doc);
   initGlossary(doc, win);
   initGridiron(doc, win);
-  initDrive(doc, win);
   initReveal(doc, win);
 }
 

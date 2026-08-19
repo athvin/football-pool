@@ -23,13 +23,12 @@ import {
   compareValues,
   countUpValue,
   drawField,
-  driveLabel,
   easeOutCubic,
   fieldGeometry,
   fieldPalette,
   firstSortDirection,
   formatTimestamp,
-  headToHeadSentence,
+  headToHeadReadout,
   init,
   isStale,
   isValidTimeZone,
@@ -37,7 +36,6 @@ import {
   nextTheme,
   relativeAge,
   safeStorage,
-  scrollProgress,
   sortTable,
   spreadLabels,
   tooltipPosition,
@@ -1067,28 +1065,6 @@ describe('fieldPalette', () => {
   });
 });
 
-describe('the drive marker', () => {
-  test('scroll maps onto the field, and is clamped at both ends', () => {
-    expect(scrollProgress(0, 1000)).toBe(0);
-    expect(scrollProgress(500, 1000)).toBe(0.5);
-    expect(scrollProgress(1200, 1000)).toBe(1);
-    expect(scrollProgress(-50, 1000)).toBe(0);
-  });
-
-  test('a page with nowhere to scroll reports no progress rather than dividing by zero', () => {
-    expect(scrollProgress(0, 0)).toBe(0);
-    expect(scrollProgress(10, -40)).toBe(0);
-  });
-
-  test('the spot reads the way a commentator would say it', () => {
-    expect(driveLabel(0)).toBe('Own goal line');
-    expect(driveLabel(25)).toBe('Own 25');
-    expect(driveLabel(50)).toBe('Midfield');
-    expect(driveLabel(88)).toBe('Opp 12');
-    expect(driveLabel(100)).toBe('Touchdown');
-  });
-});
-
 // ---------------------------------------------------------------------------
 // How old is this?
 // ---------------------------------------------------------------------------
@@ -1301,10 +1277,10 @@ describe('the head-to-head grid', () => {
     document.body.innerHTML = `
       <main>
         <svg class="heat">
-          <text class="heat-head heat-col" data-c="0">Brian</text>
-          <text class="heat-head heat-col" data-c="1">Eric</text>
-          <text class="heat-head heat-row" data-r="0">Brian</text>
-          <text class="heat-head heat-row" data-r="1">Eric</text>
+          <text class="heat-head heat-col" data-c="0" data-win="30">Brian</text>
+          <text class="heat-head heat-col" data-c="1" data-win="20">Eric</text>
+          <text class="heat-head heat-row" data-r="0" data-win="30">Brian</text>
+          <text class="heat-head heat-row" data-r="1" data-win="20">Eric</text>
           <rect class="heat-box" data-r="0" data-c="1" data-p="62"
                 data-row="Brian Moore" data-col="Eric Riggs"></rect>
           <rect class="heat-box" data-r="1" data-c="0" data-p="38"
@@ -1320,16 +1296,64 @@ describe('the head-to-head grid', () => {
   });
 
   test('a cell reads as a sentence, which is what a bare 62% never did', () => {
-    expect(headToHeadSentence('Brian', 'Eric', '62'))
-      .toBe('Brian finishes above Eric in 62% of simulated seasons.');
+    const out = headToHeadReadout({
+      row: 'Brian', col: 'Eric', percent: '62', reverse: '38',
+      rowWin: '30', colWin: '20',
+    });
+    expect(out.claim).toBe(
+      'Brian finishes above Eric in 62% of simulated seasons, '
+      + 'and below them in the other 38%.',
+    );
+    // One number in isolation misleads: beating somebody 62% of the time reads
+    // very differently when neither of you is likely to win the thing.
+    expect(out.odds).toBe(
+      'Outright, Brian wins the pool 30% of the time and Eric 20%.',
+    );
   });
 
-  test('pointing at a cell writes the pair out in full names', () => {
+  test('the reverse comes from the opposite cell, not from 100 minus this one', () => {
+    // Then the sentence always agrees with the number printed over there,
+    // however either of them was rounded.
+    expect(headToHeadReadout({
+      row: 'A', col: 'B', percent: '62', reverse: '39',
+    }).claim).toContain('the other 39%');
+  });
+
+  test('without the reverse cell it falls back to the complement', () => {
+    expect(headToHeadReadout({ row: 'A', col: 'B', percent: '62' }).claim)
+      .toContain('the other 38%');
+  });
+
+  test('a grid with no outright odds states the claim and invents nothing', () => {
+    const out = headToHeadReadout({ row: 'A', col: 'B', percent: '62', reverse: '38' });
+    expect(out.claim).toBeTruthy();
+    expect(out.odds).toBeNull();
+  });
+
+  test('pointing at a cell writes the pair out in full names, with the odds', () => {
     document.querySelector('[data-r="0"][data-c="1"]')
       .dispatchEvent(new window.Event('pointerenter'));
 
-    expect(document.querySelector('[data-heat-readout]').textContent)
-      .toBe('Brian Moore finishes above Eric Riggs in 62% of simulated seasons.');
+    const readout = document.querySelector('[data-heat-readout]');
+    expect(readout.querySelector('.heat-claim').textContent).toBe(
+      'Brian Moore finishes above Eric Riggs in 62% of simulated seasons, '
+      + 'and below them in the other 38%.',
+    );
+    expect(readout.querySelector('.heat-odds').textContent).toBe(
+      'Outright, Brian Moore wins the pool 30% of the time and Eric Riggs 20%.',
+    );
+  });
+
+  test('moving to another cell replaces the readout rather than appending to it', () => {
+    const cell = (r, c) => document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+    cell(0, 1).dispatchEvent(new window.Event('pointerenter'));
+    cell(1, 0).dispatchEvent(new window.Event('pointerenter'));
+
+    const readout = document.querySelector('[data-heat-readout]');
+    expect(readout.querySelectorAll('.heat-claim')).toHaveLength(1);
+    expect(readout.querySelector('.heat-claim').textContent).toContain(
+      'Eric Riggs finishes above Brian Moore in 38%',
+    );
   });
 
   test('the row and the column light up, and only they do', () => {
@@ -1503,49 +1527,6 @@ describe('the field on a page that cannot draw', () => {
   test('no 2D context means no field, and no error either', () => {
     document.body.innerHTML = '<canvas class="gridiron" data-near="Family Pool"></canvas>';
     expect(() => init(document, fakeWindow())).not.toThrow();
-  });
-
-  test('the drive marker sits out when the reader has asked for less motion', () => {
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
-    init(document, fakeWindow({ reduceMotion: true }));
-
-    expect(document.querySelector('.drive-line').style.transform).toBe('');
-  });
-
-  test('the marker starts on the goal line and reports the page has nowhere to go', () => {
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
-    init(document, fakeWindow({ innerHeight: 900 }));
-
-    // jsdom lays nothing out, so scrollHeight is zero: no scroll, no drive.
-    expect(document.querySelector('.drive').classList.contains('is-live')).toBe(false);
-    expect(document.querySelector('.drive-yard').textContent).toBe('Own goal line');
-    expect(document.querySelector('.drive-line').style.transform)
-      .toBe('translate3d(0, 75.0px, 0)');
-  });
-
-  test('the yard chip waits until the drive has left its own goal line', () => {
-    // On the goal line the marker sits under the masthead, which would put
-    // the label in the viewer bar and cut it in half.
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
-    Object.defineProperty(document.documentElement, 'scrollHeight', {
-      value: 4000, configurable: true,
-    });
-
-    const win = fakeWindow({ innerHeight: 900, scrollY: 0 });
-    init(document, win);
-    const drive = document.querySelector('.drive');
-    expect(drive.classList.contains('is-live')).toBe(true);
-    expect(drive.classList.contains('is-moving')).toBe(false);
-
-    win.scrollY = 1550; // half way down a 3100px scroll
-    win._fire('scroll');
-    win._frames.pop()();
-
-    expect(drive.classList.contains('is-moving')).toBe(true);
-    expect(document.querySelector('.drive-yard').textContent).toBe('Midfield');
   });
 });
 

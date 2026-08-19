@@ -579,6 +579,7 @@ def heatmap(
     matrix: Sequence[Sequence[float | None]],
     labels: Sequence[str],
     full_labels: Sequence[str] | None = None,
+    win_odds: Sequence[float] | None = None,
     cell: int = 62,
     label_width: int = 132,
     header_height: int = 46,
@@ -604,6 +605,12 @@ def heatmap(
     ``full_labels`` carries the untruncated names for the client's hover
     readout; the drawn labels stay short because "Shannon (plus Si & Rachel)"
     is not a column header.
+
+    ``win_odds`` are each entrant's chance of finishing first, as percentages
+    in the same order. They ride on the axis labels rather than on the hundred
+    cells, and they are what lets the hover readout put a pairwise number next
+    to what it actually means for the pool — "beats him 62% of the time" reads
+    very differently when both of them win it once in five.
     """
     n = len(labels)
     if n == 0:
@@ -642,18 +649,24 @@ def heatmap(
         f'text-anchor="middle">&#8230; finishes above these &#8595;</text>'
     )
 
+    def win_attr(index: int) -> str:
+        """This entrant's outright odds, or nothing at all when unknown."""
+        if win_odds is None or index >= len(win_odds):
+            return ""
+        return f' data-win="{float(win_odds[index]):.0f}"'
+
     for j, col in enumerate(cols):
         out.append(
             f'<text x="{grid_left + cell * j + cell / 2:.1f}" y="{header_height - 9}" '
-            f'text-anchor="middle" class="heat-head heat-col" data-c="{j}">'
-            f"{escape(col)}</text>"
+            f'text-anchor="middle" class="heat-head heat-col" data-c="{j}"'
+            f"{win_attr(j)}>{escape(col)}</text>"
         )
 
     for i, row in enumerate(rows_text):
         y = header_height + cell * i
         out.append(
             f'<text x="{grid_left - 10}" y="{y + cell / 2 + 4:.1f}" text-anchor="end" '
-            f'class="heat-head heat-row" data-r="{i}">{escape(row)}</text>'
+            f'class="heat-head heat-row" data-r="{i}"{win_attr(i)}>{escape(row)}</text>'
         )
         row_values = matrix[i] if i < len(matrix) else ()
         for j in range(n):

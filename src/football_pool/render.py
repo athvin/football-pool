@@ -269,13 +269,16 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
     finish = p.finish_probs.reindex(order)
     h2h = p.head_to_head.reindex(index=order, columns=order)
     density = p.distribution.density.reindex(order)
+    # One indexed copy, rather than re-indexing the frame per entrant inside
+    # the comprehensions below.
+    by_name = p.entrants.set_index("name")
 
     return {
         "places": [int(c) for c in finish.columns],
         "finish_rows": [
             {
                 "name": name,
-                "slug": ctx.projections.entrants.set_index("name").loc[name, "slug"],
+                "slug": by_name.loc[name, "slug"],
                 "bar": svg.finish_bar(finish.loc[name].tolist()),
                 "probs": [float(v) for v in finish.loc[name]],
             }
@@ -293,6 +296,9 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             [[None if pd.isna(v) else float(v) for v in h2h.loc[n]] for n in order],
             [short[n] for n in order],
             order,
+            # Outright odds ride along so the hover readout can say what a
+            # pairwise number means for the pool, not just for the pair.
+            [float(by_name.loc[n, "p_first"]) * 100 for n in order],
         ),
         "order": order,
         # The two headline answers, which are not the same question and do not

@@ -578,3 +578,40 @@ def test_the_heatmap_headings_stay_distinguishable():
     )
     heads = [t.text for t in el.findall(".//text[@class='heat-head heat-col']")]
     assert len(set(heads)) == 2
+
+
+def test_heatmap_carries_outright_odds_on_the_axis_labels():
+    """So the hover readout can say what a pairwise number is worth.
+
+    On the labels rather than on the cells: there are 2n of those and n² of
+    these, and the client only ever needs the pair it is pointing at.
+    """
+    el = parse(
+        svg.heatmap(
+            [[None, 0.62], [0.38, None]],
+            ["Alice", "Bob"],
+            ["Alice", "Bob"],
+            [30.4, 19.6],
+        )
+    )
+    rows = el.findall(".//text[@class='heat-head heat-row']")
+    cols = el.findall(".//text[@class='heat-head heat-col']")
+
+    assert [r.get("data-win") for r in rows] == ["30", "20"]
+    assert [c.get("data-win") for c in cols] == ["30", "20"]
+    # And nothing was hung off the cells themselves.
+    assert all(b.get("data-win") is None for b in el.findall(".//rect[@class='heat-box']"))
+
+
+def test_heatmap_without_odds_says_nothing_about_them():
+    """A caller with no projection must not produce empty attributes."""
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"]))
+    heads = el.findall(".//text[@class='heat-head heat-row']")
+    assert all(h.get("data-win") is None for h in heads)
+
+
+def test_heatmap_short_odds_do_not_fail_the_build():
+    """The same forgiveness `full_labels` gets, for the same reason."""
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"], None, [30.0]))
+    heads = el.findall(".//text[@class='heat-head heat-row']")
+    assert [h.get("data-win") for h in heads] == ["30", None]

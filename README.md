@@ -304,7 +304,10 @@ one is on the screen. The caption is one sentence broken across the two edges �
 *each entry* down the side, *…finishes above these* along the top — so reading a
 cell is reading the sentence. Pointing at one lights up its row and its column
 and writes the pair out underneath in full names, because tracing two fingers
-across a grid is not a thing anyone should have to do on a phone.
+across a grid is not a thing anyone should have to do on a phone. The readout
+carries both entrants' outright odds alongside the pairwise figure: one number
+on its own misleads, because beating somebody 62% of the time reads very
+differently when neither of you is likely to win the thing.
 
 **Winning and making money are two different questions**, and the page now says
 so before anything else. Chance of winning is first place and nothing else;
@@ -352,12 +355,13 @@ their job and never knows which theme is on. The alphas are tuned per theme
 rather than shared, because chalk on a night field and ink on a day field do not
 read at the same strength.
 
-The broadcast first-down line drives from your own goal line to the far end zone
-as the page scrolls, with the yard it is standing on written in the sideline —
-own 34, midfield, opp 12, touchdown. It is a separate element from the canvas so
-moving it is one transform and never a repaint of the field underneath. With
-scripting off, the stylesheet's mown turf carries the page on its own; with
-`prefers-reduced-motion`, the line does not run at all.
+The field does not move. It is anchored to the viewport rather than the
+document, so scrolling never shifts it and it is drawn once per resize.
+A broadcast first-down line that tracked the scroll was tried and taken out
+again: it is a nice idea for about ten seconds and an irritation for the rest
+of the time, because the eye keeps going to the one thing on the page that
+moves. With scripting off, the stylesheet's mown turf carries the page on its
+own.
 
 Panels and cards settle into place as you reach them. The hidden state is added
 by the client and removed on first sight, so nothing is ever invisible without

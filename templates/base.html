@@ -35,15 +35,12 @@
 
 <a class="skip" href="#main">Skip to content</a>
 
-{# The field itself. Painted by the client, so both are empty and harmless
-   without scripting — the stylesheet's turf carries the page on its own. The
-   wordmarks are passed in rather than baked into the JavaScript so the copy
-   stays where the rest of the copy is. #}
+{# The field itself. Painted by the client, so it is empty and harmless without
+   scripting — the stylesheet's turf carries the page on its own. The wordmarks
+   are passed in rather than baked into the JavaScript so the copy stays where
+   the rest of the copy is. #}
 <canvas class="gridiron" aria-hidden="true"
         data-near="Family Pool" data-far="{{ season.year }}"></canvas>
-<div class="drive" aria-hidden="true">
-  <div class="drive-line"><span class="drive-yard"></span></div>
-</div>
 
 <div class="grain" aria-hidden="true"></div>
 
