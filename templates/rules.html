@@ -133,4 +133,34 @@
   </p>
 </div>
 
+{# The same definitions the little info buttons carry around the rest of the
+   site, laid out in full. They are worth having in one readable place — and
+   this is also where they still exist when the buttons cannot open, because
+   the popovers are placed by the client and the definitions are not. #}
+<h2 class="section-title" id="glossary">What the words mean</h2>
+<p class="page-sub">
+  Every term the site uses that means something specific here. The same
+  definitions sit behind the <span class="info-example" aria-hidden="true">i</span>
+  buttons wherever these words appear.
+</p>
+<div class="table-scroll">
+  <table>
+    <caption>The pool's vocabulary, in one place.</caption>
+    <thead>
+      <tr>
+        <th scope="col" data-sort>Term</th>
+        <th scope="col">What it means</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for key, d in glossary.items() %}
+      <tr id="term-{{ key }}">
+        <th scope="row">{{ d.term }}</th>
+        <td>{{ d.definition }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
 {% endblock %}

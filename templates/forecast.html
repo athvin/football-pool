@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
 
 {% block title %}Forecast · {{ season.year }} Family Pool{% endblock %}
 {% block description %}How the {{ season.year }} pool is likely to end — chance of each finishing place, the range of final scores, and every head-to-head.{% endblock %}
@@ -9,9 +11,10 @@
   <h1 class="page-title">Forecast <span class="model-tag">modelled</span></h1>
   <p class="page-sub">
     {% if projecting %}
-      Every chart here comes from the same {{ '{:,}'.format(sim_count) }} simulated
-      seasons, with every completed game held fixed. These are forecasts, not
-      results — which is why the whole page is cyan.
+      Every chart here comes from the same {{ '{:,}'.format(sim_count) }}
+      {{ term('simulations', 'simulated seasons') }}, with every completed game
+      held fixed. These are forecasts, not results — which is why the whole
+      page is cyan.
     {% else %}
       Nothing to forecast right now.
     {% endif %}
@@ -36,11 +39,50 @@
   </p>
 {% else %}
 
+{# The one thing this page has to say before anything else: there are two
+   different questions here and they have two different answers. Somebody
+   reading a single headline number was, until now, never told which of the two
+   they were looking at. #}
+<div class="two-questions">
+  <div class="question">
+    <p class="question-label">{{ term('p_first', 'Chance of winning') }}</p>
+    <p class="question-body">
+      How often each entry finishes <strong>first</strong>. This is the
+      bragging-rights number, and it ignores money entirely — second place is
+      worth exactly as little to it as last.
+    </p>
+    <p class="question-lede model">
+      {{ forecast.best_odds.name }} · {{ '%.0f%%'|format(forecast.best_odds.p_first * 100) }}
+    </p>
+  </div>
+  <div class="question">
+    <p class="question-label">{{ term('expected_payout', 'Expected payout') }}</p>
+    <p class="question-body">
+      What each entry is <strong>worth in dollars</strong>: every paying place
+      it might finish in, weighted by how often it finishes there. A steady
+      second is worth real money; a long shot that only ever wins or busts is
+      worth less than its odds suggest.
+    </p>
+    <p class="question-lede model">
+      {{ forecast.best_money.name }} · {{ '$%.0f'|format(forecast.best_money.expected_payout) }}
+    </p>
+  </div>
+</div>
+{% if forecast.best_odds.slug != forecast.best_money.slug %}
+<p class="page-sub callout">
+  Note that these disagree right now: <strong>{{ forecast.best_odds.name }}</strong>
+  is likeliest to win, but <strong>{{ forecast.best_money.name }}</strong> is the
+  more valuable entry — they finish in the money more often, which is what
+  actually gets paid.
+</p>
+{% endif %}
+
 <h2 class="section-title">Where everyone finishes</h2>
 <p class="page-sub">
   Each bar is one entry's chances across every finishing place, strongest colour
   for first. The bars are all the same length because the chances add to one —
   so you are comparing the width of the segments, not the length of the bar.
+  Ordered by chance of winning, best first.
 </p>
 
 <div class="forecast-rows">
@@ -69,38 +111,58 @@
   {{ forecast.ridge|safe }}
 </div>
 
-<h2 class="section-title">Head to head</h2>
+<h2 class="section-title">{{ term('head_to_head', 'Head to head') }}</h2>
 <p class="page-sub">
-  How often the entry on the left finishes above the entry along the top,
-  ignoring everybody else. Reading across a row tells you who you are favoured
-  against; every pair of opposite cells adds to 100%.
+  Every pair in the pool, as a straight two-horse race with everybody else
+  ignored. Read a <strong>row</strong> to see who that person is favoured
+  against; read a <strong>column</strong> to see who is favoured against them.
+  Every pair of opposite cells adds to 100%.
 </p>
-<div class="table-scroll">
-  {{ forecast.heatmap|safe }}
+{# The axes are named in the markup as well as drawn in the chart, and the
+   readout below is filled in as you hover a cell — because "62%" in a grid of
+   names tells you a number without ever telling you whose number it is. #}
+<div class="heat-wrap">
+  <div class="table-scroll">
+    {{ forecast.heatmap|safe }}
+  </div>
+  <p class="heat-readout" data-heat-readout aria-live="polite">
+    Point at any cell to read it as a sentence.
+  </p>
 </div>
 
-<h2 class="section-title">The money</h2>
+<h2 class="section-title">Winning, and making money</h2>
+<p class="page-sub">
+  The same forecast, priced. <strong>Chance of winning</strong> is first place
+  and nothing else; <strong>expected payout</strong> is what the entry is worth
+  once second and third are counted too. Sorted by expected payout — click any
+  heading to sort by that instead.
+</p>
 <div class="table-scroll">
   <table>
-    <caption>Chance of finishing first, chance of cashing, and the likely final range.</caption>
+    <caption>
+      Every entry's odds and what they are worth. Expected profit is the payout
+      less the ${{ '%.0f'|format(season.entry_fee) }} entry, and across the
+      whole pool it necessarily adds to zero.
+    </caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
-        <th scope="col" class="num">P(1st)</th>
-        <th scope="col" class="num">P(cash)</th>
-        <th scope="col" class="num">Expected $</th>
-        <th scope="col">Projected final score</th>
+        <th scope="col" data-sort>Entrant</th>
+        <th scope="col" class="num" data-sort>{{ term('p_first', 'Chance of winning') }}</th>
+        <th scope="col" class="num" data-sort>{{ term('p_cash', 'Chance of cashing') }}</th>
+        <th scope="col" class="num" data-sort aria-sort="descending">{{ term('expected_payout', 'Expected payout') }}</th>
+        <th scope="col" class="num" data-sort>{{ term('expected_net', 'Expected profit') }}</th>
+        <th scope="col">{{ term('projected_score', 'Projected final score') }}</th>
       </tr>
     </thead>
     <tbody>
       {% for r in rows|sort(attribute='projection.expected_payout', reverse=true) %}
       {% set p = r.projection %}
       <tr data-slug="{{ r.slug }}">
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td class="num model">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
-        <td class="num model">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
-        <td class="num model">
-          {{ '$%.0f'|format(p.expected_payout) }}
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num model" data-value="{{ p.p_first }}">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
+        <td class="num model" data-value="{{ p.p_cash }}">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
+        <td class="num model" data-value="{{ p.expected_payout }}">{{ '$%.0f'|format(p.expected_payout) }}</td>
+        <td class="num" data-value="{{ p.expected_net }}">
           <span class="net {{ 'up' if p.expected_net > 0 else 'down' }}">{{ '%+.0f'|format(p.expected_net) }}</span>
         </td>
         <td class="band-cell">

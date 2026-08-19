@@ -21,6 +21,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
+from typing import Sequence
 
 import pandas as pd
 
@@ -237,6 +238,28 @@ def entrant_stake(season: Season, game_type: str, home: str, away: str, teams: s
         # config; the loss keeps the minimum at zero.
         outcomes.append(round(season.tie_multiplier * season.lf_of(team), 2))
     return max(outcomes), min(outcomes)
+
+
+def teams_on_bye(all_teams: Sequence[str], slate: pd.DataFrame) -> list[str]:
+    """Which teams have no game in this slate.
+
+    A bye is the one thing on a schedule that is invisible on the schedule:
+    there is no row to read, so an entrant whose team is off simply finds a
+    quiet week with no explanation for it. This subtracts, which is the only
+    way to see it — everyone in the league who is not playing.
+
+    Deliberately not filtered to the regular season here. The caller knows
+    which round it is holding, and the answer for a playoff week (every team
+    already knocked out, plus the seeds resting) is a true answer to a
+    different question — one no page should ask.
+    """
+    # A slate with no rows may also have no columns, depending on how it was
+    # built. The answer is the same either way and it is not an error: if
+    # nobody is playing, everybody is off.
+    if slate.empty:
+        return sorted(all_teams)
+    playing = set(slate["home_team"]) | set(slate["away_team"])
+    return sorted(t for t in all_teams if t not in playing)
 
 
 def week_window(season: Season, slate: pd.DataFrame, teams: set[str]) -> tuple[float, float]:

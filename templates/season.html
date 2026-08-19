@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
 
 {% block title %}Season · {{ season.year }} Family Pool{% endblock %}
 {% block description %}The whole season in one place — your line against anyone's, points and rank week by week, and where the ground is gained.{% endblock %}
@@ -57,22 +59,27 @@
 <h3 class="section-title">Points scored each week</h3>
 <div class="table-scroll">
   <table>
-    <caption>Points added in each week — not the running total.</caption>
+    <caption>
+      Points added in each week — not the running total. In standings order,
+      leader first; click a week to see who won it.
+    </caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
-        {% for w in weeks %}<th scope="col" class="num">{{ w }}</th>{% endfor %}
-        <th scope="col" class="num">Total</th>
+        <th scope="col" data-sort>Entrant</th>
+        {% for w in weeks %}<th scope="col" class="num" data-sort>{{ w }}</th>{% endfor %}
+        <th scope="col" class="num" data-sort aria-sort="descending">Total</th>
       </tr>
     </thead>
     <tbody>
       {% for r in week_rows %}
       <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        {# The dot stands for a scoreless week, and it must not sort as text
+           above every real score — the sort key says what it means. #}
         {% for v in r.points %}
-          <td class="num">{{ '%.2f'|format(v) if v else '·' }}</td>
+          <td class="num" data-value="{{ v }}">{{ '%.2f'|format(v) if v else '·' }}</td>
         {% endfor %}
-        <td class="num">{{ r.total|points }}</td>
+        <td class="num" data-value="{{ r.total }}">{{ r.total|points }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -82,18 +89,23 @@
 <h3 class="section-title">Rank after each week</h3>
 <div class="table-scroll">
   <table>
-    <caption>Where everyone stood once each week was in the books.</caption>
+    <caption>
+      Where everyone stood once each week was in the books. In today's standings
+      order; sorting a week column puts whoever led that week at the top.
+    </caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
-        {% for w in weeks %}<th scope="col" class="num">{{ w }}</th>{% endfor %}
+        <th scope="col" data-sort>Entrant</th>
+        {# Rank is the one column on the site where small is good, so these say
+           so outright: first place first, not the biggest number first. #}
+        {% for w in weeks %}<th scope="col" class="num" data-sort="ascending">{{ w }}</th>{% endfor %}
         <th scope="col">Trend</th>
       </tr>
     </thead>
     <tbody>
       {% for r in week_rows %}
       <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         {% for rank in r.ranks %}
           <td class="num">{{ rank }}</td>
         {% endfor %}
@@ -145,7 +157,7 @@
 
 {% endif %}
 
-<h2 class="section-title">Leverage</h2>
+<h2 class="section-title">{{ term('leverage', 'Leverage') }}</h2>
 <p class="page-sub">
   A team half the pool owns barely moves the standings when it wins — everyone
   rises together. Points only separate you from the field when they come from
@@ -153,26 +165,26 @@
 </p>
 <div class="table-scroll">
   <table>
-    <caption>Exclusive leveling factor held by each entry.</caption>
+    <caption>Exclusive leveling factor held by each entry, most first.</caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
+        <th scope="col" data-sort>Entrant</th>
         <th scope="col">Teams nobody else has</th>
-        <th scope="col" class="num">Leverage</th>
+        <th scope="col" class="num" data-sort aria-sort="descending">{{ term('leverage', 'Leverage') }}</th>
         <th scope="col">Shared with the field</th>
       </tr>
     </thead>
     <tbody>
       {% for r in leverage %}
       <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         <td>
           <span class="row-teams">
             {% for t in r.unique_teams %}<span class="team-chip scored" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
             {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
           </span>
         </td>
-        <td class="num">{{ '%.2f'|format(r.leverage) }}</td>
+        <td class="num" data-value="{{ r.leverage }}">{{ '%.2f'|format(r.leverage) }}</td>
         <td>
           <span class="row-teams">
             {% for t in r.shared_teams %}<span class="team-chip dim" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
@@ -188,24 +200,28 @@
 <h2 class="section-title">Who is carrying whom</h2>
 <div class="table-scroll">
   <table>
-    <caption>Each entry's best and worst performer, measured against its own three team-mates.</caption>
+    <caption>
+      Each entry's best and worst performer, measured against its own three
+      team-mates. Sorted by share, so the entry leaning hardest on one team is
+      at the top — which is what the question is.
+    </caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
+        <th scope="col" data-sort>Entrant</th>
         <th scope="col">Carrying them</th>
-        <th scope="col" class="num">Share</th>
+        <th scope="col" class="num" data-sort aria-sort="descending">Share</th>
         <th scope="col">Dead weight</th>
-        <th scope="col" class="num">Points</th>
+        <th scope="col" class="num" data-sort>Points</th>
       </tr>
     </thead>
     <tbody>
       {% for r in picks %}
       <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         <td><span class="team-chip scored" style="{{ r.best_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.best_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
-        <td class="num">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
+        <td class="num" data-value="{{ r.best_share }}">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
         <td><span class="team-chip dim" style="{{ r.worst_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.worst_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.worst_team }}</span></td>
-        <td class="num">{{ r.worst_points|points }}</td>
+        <td class="num" data-value="{{ r.worst_points }}">{{ r.worst_points|points }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -216,11 +232,17 @@
 <h2 class="section-title">Gaps</h2>
 <div class="table-scroll">
   <table>
-    <caption>Who each entrant is chasing, and who is chasing them.</caption>
+    <caption>
+      Who each entrant is chasing, and who is chasing them. In standings order,
+      so the gap column reads down the page as the field strings out.
+    </caption>
     <thead>
       <tr>
-        <th scope="col">Entrant</th>
-        <th scope="col" class="num">Behind the leader</th>
+        <th scope="col" data-sort>Entrant</th>
+        {# Small is good here, exactly as with rank: the leader is zero behind
+           the leader, and opening this column biggest-first would put last
+           place on top. #}
+        <th scope="col" class="num" data-sort="ascending" aria-sort="ascending">Behind the leader</th>
         <th scope="col">Chasing</th>
         <th scope="col">Being chased by</th>
       </tr>
@@ -228,8 +250,8 @@
     <tbody>
       {% for r in rivals %}
       <tr>
-        <th scope="row"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td class="num">{{ '—' if not r.gap_to_leader else '%.2f'|format(r.gap_to_leader) }}</td>
+        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <td class="num" data-value="{{ r.gap_to_leader }}">{{ '—' if not r.gap_to_leader else '%.2f'|format(r.gap_to_leader) }}</td>
         <td>{{ r.chasing ~ ' by ' ~ '%.2f'|format(r.chasing_gap) if r.chasing else '— leading —' }}</td>
         <td>{{ r.chased_by ~ ' by ' ~ '%.2f'|format(r.chased_gap) if r.chased_by else '— last —' }}</td>
       </tr>

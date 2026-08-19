@@ -41,8 +41,8 @@
 
   /* stadium at night */
   --field: #070b0e;
-  /* mown turf: two grass tones a whisker apart, banded every 40px so the
-     mowing stripes land exactly on the yard-line rhythm below */
+  /* mown turf: two grass tones a whisker apart, banded every five yards so the
+     mowing stripes land exactly on the yard-line rhythm */
   --turf-a: #070b0e;
   --turf-b: #0a1014;
   --surface: #111a21;
@@ -67,6 +67,19 @@
   --radius: 10px;
   --gutter: clamp(1rem, 4vw, 2.5rem);
   --shadow: 0 1px 0 rgb(255 255 255 / 4%) inset, 0 8px 30px rgb(0 0 0 / 45%);
+
+  /* The gridiron. Every mark the field is painted with is a token, because the
+     canvas reads these back through getComputedStyle: the drawing code names
+     colours by their job and never knows which theme is on. Alphas are tuned
+     per theme rather than shared — chalk on a night field and ink on a day
+     field do not read at the same strength. */
+  --paint-chalk: rgb(232 237 240 / 7%);
+  --paint-chalk-strong: rgb(232 237 240 / 15%);
+  --paint-number: rgb(232 237 240 / 9%);
+  --paint-hash: rgb(232 237 240 / 5.5%);
+  --paint-endzone: rgb(198 255 61 / 3.5%);
+  --paint-wordmark: rgb(198 255 61 / 9%);
+  --paint-pylon: rgb(255 107 53 / 30%);
 }
 
 /* Day game. Same semantics, repitched for a light surface. Opt-in only. */
@@ -93,6 +106,17 @@
   --series-3: #b26800;
   --series-4: #6b48a8;
   --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 8%);
+
+  /* Day game: the lines are ink on a pale field rather than chalk on a dark
+     one, and dark-on-light reads considerably stronger at the same alpha —
+     hence the lower numbers, not a straight inversion of the night palette. */
+  --paint-chalk: rgb(20 24 27 / 5%);
+  --paint-chalk-strong: rgb(20 24 27 / 11%);
+  --paint-number: rgb(20 24 27 / 7%);
+  --paint-hash: rgb(20 24 27 / 4%);
+  --paint-endzone: rgb(79 122 6 / 5%);
+  --paint-wordmark: rgb(79 122 6 / 13%);
+  --paint-pylon: rgb(196 64 13 / 30%);
 }
 
 /* --- reset ------------------------------------------------------------- */
@@ -110,20 +134,95 @@ body {
   line-height: 1.5;
   color: var(--chalk);
   background-color: var(--field);
-  /* Yard lines: a hash mark every 40px, barely there, plus a floodlight wash
-     from the top of the field. */
+  /* Mown turf and a floodlight wash from the near end of the field. This is
+     the floor the canvas paints on top of, and it is also the whole background
+     when scripting is off — hence stripes that already run across the field
+     the way the drawn one does, rather than a pattern the gridiron would
+     contradict. Fixed, so it is anchored to the viewport and not to a page
+     whose length changes from one section to the next. */
   background-image:
     linear-gradient(180deg, rgb(198 255 61 / 4%), transparent 55%),
-    repeating-linear-gradient(90deg,
-      transparent 0 39px, rgb(232 237 240 / 3.5%) 39px 40px),
-    repeating-linear-gradient(90deg,
-      var(--turf-a) 0 40px, var(--turf-b) 40px 80px);
+    repeating-linear-gradient(180deg,
+      var(--turf-a) 0 4.166vh, var(--turf-b) 4.166vh 8.333vh);
   background-attachment: fixed;
   -webkit-font-smoothing: antialiased;
 }
 
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; }
+
+/* --- the gridiron -------------------------------------------------------
+   One end zone at the top of the screen, the other at the bottom, and the
+   hundred yards between them drawn to scale — a canvas rather than an SVG or
+   a stack of gradients because the yard numbers have to rotate, the hash
+   marks number in the hundreds, and the whole thing is repainted only when
+   the viewport or the theme actually changes.
+
+   It sits under everything (`.wrap` is z-index 1) and behind the grain, and
+   it is inert to the pointer, so nothing here can ever get between a reader
+   and the scoreboard. */
+.gridiron {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* The broadcast first-down line, driving from your own goal line to the far
+   end zone as the page scrolls. It is a separate element from the canvas on
+   purpose: moving it is a transform on one node, so a scroll never repaints
+   the field underneath it. */
+.drive {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.drive-line {
+  position: absolute;
+  top: 0;
+  left: min(5.5vw, 26px);
+  right: min(5.5vw, 26px);
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in srgb, var(--live) 55%, transparent) 12%,
+    color-mix(in srgb, var(--live) 55%, transparent) 88%,
+    transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--live) 30%, transparent);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  will-change: transform;
+}
+.drive.is-live .drive-line { opacity: 0.75; }
+.drive.is-live.is-moving .drive-yard { opacity: 1; }
+
+/* The yard the line is standing on, in the sideline strip. There is no strip
+   to speak of on a phone, so the chip is desktop-only — the line itself
+   carries the idea perfectly well without it. */
+/* Below the line rather than above it: at the top of a page the line sits on
+   the near goal line, and a label above that lands underneath the masthead.
+   It stays hidden until the drive has actually left that goal line, because
+   even below the line it would sit in the viewer bar and be cut in half. */
+.drive-yard {
+  position: absolute;
+  right: 0;
+  top: 7px;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--live) 70%, transparent);
+}
 
 /* A fine grain overlay so the flat dark never looks like plastic. */
 .grain {
@@ -475,6 +574,53 @@ a.team-chip:hover { transform: translateY(-1px); filter: brightness(1.12); }
 }
 .badge.out { color: var(--heat); }
 .badge.money { color: var(--live); }
+
+/* --- byes ---------------------------------------------------------------
+   The one thing a schedule cannot show you, because a bye has no game to
+   render. A team that is off scores nobody anything that week, which is the
+   usual reason somebody's week looks thin for no visible reason.
+
+   Struck through rather than merely dimmed: dim already means "has not scored
+   yet" everywhere else on the site, and a bye is a different statement. */
+.byes {
+  margin: 0.85rem 0 0.25rem;
+  padding: 0.7rem 0.9rem;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+}
+
+.byes-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+
+.bye-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.9rem;
+  margin-top: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+/* Chip and owners side by side, not nested. The strikethrough belongs to the
+   team that is not playing; the people who hold it have not been crossed out. */
+.bye-team { display: inline-flex; align-items: center; gap: 0.35rem; }
+.bye-team .owners { gap: 0.2rem; }
+
+/* Struck through rather than merely dimmed: dim already means "has not scored
+   yet" everywhere else on the site, and a bye is a different statement. */
+.team-chip.bye { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* A team nobody in the pool holds is on the list for completeness and nothing
+   else — it cannot cost anyone a point. */
+.bye-team.is-spare { opacity: 0.45; }
+
+.bye-note { display: inline-flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; }
 
 /* --- generic tables ---------------------------------------------------- */
 /* `overflow-x: auto` forces the computed `overflow-y` to `auto` as well, which
@@ -844,6 +990,88 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 }
 .heat-cell.is-strong { fill: var(--chalk); font-weight: 600; }
 
+/* The axis captions. One sentence broken across the two edges of the grid —
+   without them a square of names against the same names has two opposite
+   readings and no way to tell which one is on the screen. */
+.heat-axis {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  fill: var(--chalk-dim);
+  opacity: 0.75;
+}
+
+/* Pointing at a cell lights the pair it belongs to. The row and the column are
+   the answer to "whose number is this", and the cell itself gets an outline so
+   the eye lands somewhere definite. */
+.heat-box { transition: opacity 0.12s ease; }
+.heat-head.is-lit { fill: var(--model); opacity: 1; }
+.heat-box.is-picked {
+  stroke: var(--model);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+
+svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
+
+/* The hovered pair, written out. This is the part that actually removes the
+   ambiguity for anyone who is not going to trace two fingers across a grid. */
+.heat-wrap { margin-top: 0.5rem; }
+
+.heat-readout {
+  margin-top: 0.6rem;
+  min-height: 1.4em;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  color: var(--model);
+}
+
+/* --- two questions, one forecast ----------------------------------------
+   Chance of winning and expected payout are different questions with
+   different answers, and the page used to show one number and leave the
+   reader to decide which it was. Side by side, each with its own leader. */
+.two-questions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.question {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--model);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+}
+
+.question-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+
+.question-body { font-size: 0.84rem; color: var(--chalk-dim); margin-top: 0.35rem; }
+.question-body strong { color: var(--chalk); }
+
+.question-lede {
+  font-family: var(--display);
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-top: 0.5rem;
+}
+
+/* When the two questions disagree, say so. */
+.callout {
+  border-left: 3px solid var(--heat);
+  padding: 0.5rem 0 0.5rem 0.85rem;
+  margin-top: 0.75rem;
+}
+
 /* --- schedule ----------------------------------------------------------- */
 /* One week is visible at a time, and which one is chosen by CSS rather than by
    script. `:target` means every week is a real URL, the back button works, and
@@ -1169,7 +1397,15 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
    see. It has to read as chrome rather than as content, or it competes with
    the standings for the top of the page — hence the muted surface, the small
    type, and the right alignment that tucks it under the nav. */
+/* Positioned so its own background survives the field. The gridiron is a
+   fixed, positioned canvas at z-index 0, and a positioned element paints above
+   the backgrounds of every unpositioned block in the same stacking context —
+   so without this the strip's tint and its rule are drawn and then painted
+   straight over. The content inside was never at risk: `.wrap` is already
+   z-index 1. */
 .viewer-bar {
+  position: relative;
+  z-index: 1;
   background: color-mix(in srgb, var(--surface) 55%, transparent);
   border-bottom: 1px solid var(--rule);
 }
@@ -1177,10 +1413,57 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 .viewer-inner {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 1.25rem;
   flex-wrap: wrap;
   padding-block: 0.45rem;
+}
+
+/* --- how old is this? ---------------------------------------------------
+   Two stamps at the top of every page. The age beside the first one is what
+   people actually read: "8:51 PM" answers nothing on its own, and "2h ago"
+   answers the entire question. It is filled in by the client because only the
+   client knows what time it is now. */
+.freshness {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+  margin-inline-end: auto;
+}
+
+/* The stamp wraps between its label and its time; the time itself never
+   breaks. Holding the whole item on one line is what it used to do, and on a
+   390px phone that one line was wider than the phone — which scrolls the
+   entire document sideways, leaderboard included. */
+.fresh-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--chalk-dim);
+}
+
+.fresh-item time, .fresh-value { color: var(--chalk); white-space: nowrap; }
+
+.fresh-age {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.1rem 0.36rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--live) 35%, var(--rule));
+  color: var(--live);
+}
+
+/* Past a day the data is old enough that the badge should stop agreeing with
+   itself. Same shape, the site's one colour for trouble. */
+.fresh-age.is-stale {
+  color: var(--heat);
+  border-color: color-mix(in srgb, var(--heat) 45%, var(--rule));
 }
 
 /* Label beside the control, not above it, so the bar stays one line tall. */
@@ -1225,6 +1508,143 @@ th[data-sort]::after { content: ' ↕'; opacity: 0.35; }
 th[data-sort][aria-sort='ascending']::after { content: ' ↑'; opacity: 1; color: var(--live); }
 th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; color: var(--live); }
 
+/* --- definitions --------------------------------------------------------
+   Half the words on this site mean something specific here and something
+   vaguer everywhere else. The button beside them opens the full definition.
+
+   The popover is `position: fixed` and placed by the client rather than
+   absolutely positioned against the button, because several of these live
+   inside a table — and a table is a clipping context, so an absolutely
+   positioned tooltip would be sliced off at the edge of its own cell. */
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.term { position: relative; display: inline; }
+
+/* Child selectors here for the same specificity reason as `.term > .def`. */
+.term > .info {
+  display: inline-grid;
+  place-items: center;
+  width: 15px; height: 15px;
+  margin-inline-start: 0.28em;
+  padding: 0;
+  vertical-align: baseline;
+  translate: 0 1px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--chalk-dim);
+  cursor: help;
+  transition: color 0.14s, border-color 0.14s, background-color 0.14s;
+}
+
+.term > .info > .info-mark {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
+  font-style: italic;
+}
+
+.term > .info:hover, .term.is-open > .info {
+  color: var(--field);
+  background: var(--model);
+  border-color: var(--model);
+}
+.term > .info:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+
+/* The tap target is bigger than the dot it draws — 15px is a fine target for
+   a mouse and a poor one for a thumb. */
+.term > .info::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+}
+
+/* Closed with `display: none`, not merely hidden. A hidden-but-laid-out box is
+   still 300px wide somewhere in the document, and a `fixed` element inside any
+   transformed ancestor positions against that ancestor rather than the
+   viewport — which the reveal animation makes true of every block not yet
+   scrolled to. On a 390px phone that pushed the page out to 502px wide and
+   scrolled the whole scoreboard sideways. Taken out of layout it cannot.
+
+   Written as a child selector purely for specificity. These definitions get
+   dropped inside whatever markup already labels the thing they explain, and
+   some of that markup styles its children by type — `.legend span` is the one
+   that bit: at (0,1,1) it outranked a bare `.def` at (0,1,0) and un-hid every
+   definition in a legend, which put a tooltip in the top-left corner of the
+   schedule page eighteen times over. `.term > .def` is (0,2,0) and wins. */
+.term > .def {
+  position: fixed;
+  display: none;
+  z-index: 60;
+  top: 0;
+  left: 0;
+  width: min(300px, calc(100vw - 2rem));
+  padding: 0.65rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--model) 35%, var(--rule));
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-family: var(--body);
+  font-size: 0.78rem;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+  text-transform: none;
+  text-align: left;
+  color: var(--chalk-dim);
+  opacity: 1;
+  pointer-events: none;
+}
+
+.term.is-open > .def {
+  display: block;
+  animation: def-in 0.14s ease both;
+}
+
+@keyframes def-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.def-term {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--model);
+  margin-bottom: 0.25rem;
+}
+
+.def-body { display: block; }
+
+/* The same dot, shown inline in a sentence on the rules page so "these
+   buttons" has something to point at. */
+.info-example {
+  display: inline-grid;
+  place-items: center;
+  width: 15px; height: 15px;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 9px;
+  font-style: italic;
+  color: var(--chalk-dim);
+  vertical-align: middle;
+}
+
 /* --- skip link --------------------------------------------------------- */
 .skip {
   position: absolute;
@@ -1242,7 +1662,15 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
 .skip:focus { left: 0; }
 
 /* --- footer ------------------------------------------------------------ */
-.footer { margin-top: auto; padding: 1.5rem 0 2.5rem; border-top: 1px solid var(--rule); }
+/* Positioned for the same reason as `.viewer-bar`: its rule is a border on an
+   unpositioned block, and the field would otherwise be painted over it. */
+.footer {
+  position: relative;
+  z-index: 1;
+  margin-top: auto;
+  padding: 1.5rem 0 2.5rem;
+  border-top: 1px solid var(--rule);
+}
 
 .footer-inner {
   display: flex;
@@ -1268,6 +1696,36 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
 @keyframes pop {
   from { opacity: 0; transform: scale(0.8); }
   to { opacity: 1; transform: none; }
+}
+
+/* --- arriving ------------------------------------------------------------
+   Blocks settle into place as you reach them. The hidden state is added by
+   the client and taken off again on first sight, so with scripting off none
+   of this exists and nothing is ever invisible. Short and once: a page you
+   scroll back up should not replay itself at you. */
+.will-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+}
+
+.state-cell, .stat, .card, .chart-card, .table-scroll, .forecast-row {
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* A bar that grows out of its own baseline as it arrives. Scaling the whole
+   graphic sidesteps having to know anything about what is inside it, which
+   is the point — these are server-rendered SVG and their geometry is not the
+   client's business. */
+.forecast-bar svg, .outlook, .band-cell svg, .meter {
+  transform-origin: left center;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.will-reveal .forecast-bar svg,
+.will-reveal .outlook,
+.will-reveal .band-cell svg,
+.will-reveal .meter {
+  transform: scaleX(0.02);
 }
 
 /* Clicking a row morphs it into the detail page hero. Needs no framework —
@@ -1371,6 +1829,17 @@ html:active-view-transition .row { animation: none; }
   .row-bars .outlook { width: 100%; }
   .team-chip { font-size: 0.6rem; padding: 0.1rem 0.28rem; }
 
+  /* The stamps take the full width and the controls sit under them. Small
+     type, because this is chrome and the scoreboard is what people came for —
+     but still above the fold, which is the whole point of it being here. */
+  .freshness {
+    width: 100%;
+    gap: 0.25rem 0.9rem;
+    margin-inline-end: 0;
+  }
+  .fresh-item { font-size: 0.62rem; }
+  .fresh-age { font-size: 0.54rem; }
+
   /* Two controls will not fit on one 390px line beside their labels, so each
      takes half the width with its label stacked above. Still one bar, still
      above the fold. */
@@ -1385,6 +1854,12 @@ html:active-view-transition .row { animation: none; }
   }
   .viewer-inner select { width: 100%; }
 
+  /* Three cells into an auto-fit grid leaves a fourth slot showing the grid's
+     own background — an empty grey box beside the leader. Fixing the column
+     count makes the wrap knowable, and then the last cell can simply take the
+     rest of the row. */
+  .state { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .state-cell:last-child { grid-column: 1 / -1; }
   .state-value { font-size: 1.3rem; }
   /* No inner scroll region on a phone: a nested scrollport inside a page that
      already scrolls is a trap for a thumb, so the table just runs full length
@@ -1511,6 +1986,8 @@ html:not([data-detail='on']) .board .row {
 }
 
 @media print {
-  .masthead, .footer, .grain { display: none; }
+  .masthead, .footer, .grain, .gridiron, .drive { display: none; }
   body { background: none; color: #000; }
+  /* Whatever the reveal observer had not got to yet must still print. */
+  .will-reveal { opacity: 1; transform: none; }
 }

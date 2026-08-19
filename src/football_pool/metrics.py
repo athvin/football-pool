@@ -81,6 +81,12 @@ def pick_report(season: Season, team_points: pd.DataFrame) -> pd.DataFrame:
     "Worst" is measured against the other teams in the same entry, not against
     the league — the interesting question is which of *your* four is carrying
     you and which is sitting on its hands.
+
+    Ordered by how lopsided the entry is, most first. The table's whole subject
+    is who is being carried, so the entry leaning hardest on one team belongs
+    at the top of it; the picks-file order this used to come out in said
+    nothing at all. Ties fall back to the name so a rebuild of unchanged data
+    produces an unchanged page.
     """
     rows = []
     for e in season.entrants:
@@ -99,7 +105,11 @@ def pick_report(season: Season, team_points: pd.DataFrame) -> pd.DataFrame:
                 "worst_points": round(points[worst], 2),
             }
         )
-    return pd.DataFrame(rows)
+    return (
+        pd.DataFrame(rows)
+        .sort_values(["best_share", "name"], ascending=[False, True])
+        .reset_index(drop=True)
+    )
 
 
 def rivals(outlook: pd.DataFrame) -> pd.DataFrame:

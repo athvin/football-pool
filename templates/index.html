@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
 
 {% block title %}{{ season.year }} Family Pool · {{ state.phase }}{% endblock %}
 
@@ -22,7 +24,7 @@
     <p class="state-value">{{ state.phase }}</p>
   </div>
   <div class="state-cell">
-    <p class="state-label">In the pot</p>
+    <p class="state-label">In the pot{{ info('pot') }}</p>
     <p class="state-value">${{ '%.0f'|format(state.pot) }}<span class="unit"> · {{ state.entrants }} in</span></p>
   </div>
   <div class="state-cell">
@@ -48,9 +50,9 @@
     </span>
   </p>
   <div class="legend" data-detail-only>
-    <span><i class="key-banked"></i> in the bag</span>
-    <span><i class="key-guaranteed"></i> locked in</span>
-    <span><i class="key-ceiling"></i> best case</span>
+    <span><i class="key-banked"></i> {{ term('banked', 'in the bag') }}</span>
+    <span><i class="key-guaranteed"></i> {{ term('locked_in', 'locked in') }}</span>
+    <span><i class="key-ceiling"></i> {{ term('ceiling', 'best case') }}</span>
   </div>
 </div>
 

@@ -455,16 +455,126 @@ def test_heatmap_degrades_when_the_matrix_does_not_match_the_labels():
     """A shape mismatch draws blanks rather than failing the whole build."""
     el = parse(svg.heatmap([[None, 0.5]], ["A", "B", "C"]))
     assert el is not None
-    assert len(el.findall(".//text[@class='heat-head']")) == 6  # 3 rows + 3 cols
+    assert len(_heads(el)) == 6  # 3 rows + 3 cols
 
 
 def test_heatmap_labels_both_axes():
     el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"]))
-    heads = [t.text for t in el.findall(".//text[@class='heat-head']")]
+    heads = [t.text for t in _heads(el)]
     # Each name appears twice: once as a column header, once as a row header.
     assert heads.count("Alice") == 2 and heads.count("Bob") == 2
     assert len(heads) == 4
 
 
+def _heads(el):
+    """Row and column name labels, which carry their axis in the class."""
+    return el.findall(".//text[@class='heat-head heat-col']") + el.findall(
+        ".//text[@class='heat-head heat-row']"
+    )
+
+
+def test_heatmap_says_which_way_round_it_reads():
+    """The complaint this answers: a square of names against the same names
+    looks symmetrical, is not, and used to carry no caption at all — so every
+    cell had two opposite meanings and the reader had to guess which."""
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"]))
+    axes = " ".join(t.text for t in el.findall(".//text[@class='heat-axis']"))
+
+    # One sentence, split across the two edges of the grid.
+    assert "Each entry" in axes
+    assert "finishes above these" in axes
+    # And the same thing again for anyone who cannot see the chart at all.
+    assert "Each row is one entrant" in el.get("aria-label")
+
+
+def test_heatmap_cells_carry_the_pair_they_belong_to():
+    """So the client can write the hovered cell out as a sentence."""
+    el = parse(svg.heatmap([[None, 0.62], [0.38, None]], ["Alice", "Bob"]))
+    boxes = el.findall(".//rect[@class='heat-box']")
+
+    assert {(b.get("data-row"), b.get("data-col"), b.get("data-p")) for b in boxes} == {
+        ("Alice", "Bob", "62"),
+        ("Bob", "Alice", "38"),
+    }
+    # Indices too, which is what the row-and-column highlight matches on.
+    assert {(b.get("data-r"), b.get("data-c")) for b in boxes} == {("0", "1"), ("1", "0")}
+
+
+def test_heatmap_hover_text_uses_the_full_name_not_the_drawn_one():
+    """Column headers are truncated to fit; the readout must not be."""
+    el = parse(
+        svg.heatmap(
+            [[None, 0.6], [0.4, None]],
+            ["Shannon", "Bob"],
+            ["Shannon (plus Si & Rachel)", "Bob"],
+        )
+    )
+    boxes = el.findall(".//rect[@class='heat-box']")
+    rows = {b.get("data-row") for b in boxes}
+
+    assert "Shannon (plus Si & Rachel)" in rows
+    # The drawn label stays short, because a full name is three columns wide.
+    assert [t.text for t in el.findall(".//text[@class='heat-head heat-col']")] == [
+        "Shannon",
+        "Bob",
+    ]
+
+
+def test_heatmap_titles_read_as_a_sentence():
+    el = parse(svg.heatmap([[None, 0.62], [0.38, None]], ["Alice", "Bob"]))
+    titles = [t.text for t in el.findall(".//title")]
+    assert "Alice finishes above Bob 62% of the time" in titles
+
+
+def test_heatmap_full_names_may_run_short_without_failing_the_build():
+    """A caller bug should not cost the family their forecast page."""
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"], ["Alice"]))
+    boxes = el.findall(".//rect[@class='heat-box']")
+    assert {b.get("data-col") for b in boxes} == {"Alice", "Bob"}
+
+
 def test_heatmap_survives_an_empty_field():
     assert parse(svg.heatmap([], [])) is not None
+
+
+# -- label fitting ----------------------------------------------------------
+def test_fit_labels_leaves_short_names_untouched():
+    assert svg.fit_labels(["Alice", "Bob"], 8) == ["Alice", "Bob"]
+
+
+def test_fit_labels_keeps_the_tail_when_a_cut_would_collide():
+    """The real case: two entries whose names differ only at the end.
+
+    Cut at eight, "Zac + Sammy #1" and "Zac + Sammy #2" both become
+    "Zac + Sa" — two columns with the same heading, in a chart whose only job
+    is telling you which pair a number belongs to.
+    """
+    out = svg.fit_labels(["Zac + Sammy #1", "Zac + Sammy #2", "Eric"], 8)
+
+    assert len(set(out)) == 3
+    assert out[0].endswith("#1")
+    assert out[1].endswith("#2")
+    assert out[2] == "Eric"
+    assert all(len(label) <= 8 for label in out)
+
+
+def test_fit_labels_does_not_disturb_names_that_were_already_distinct():
+    """A long name that clashes with nothing keeps its plain truncation."""
+    out = svg.fit_labels(["Shannon (plus Si & Rachel)", "Eric"], 8)
+    assert out == ["Shannon ", "Eric"]
+
+
+def test_fit_labels_gives_up_gracefully_on_genuinely_identical_names():
+    """Nothing can distinguish two people entered under the same name."""
+    assert svg.fit_labels(["Chris", "Chris"], 8) == ["Chris", "Chris"]
+
+
+def test_the_heatmap_headings_stay_distinguishable():
+    el = parse(
+        svg.heatmap(
+            [[None, 0.5], [0.5, None]],
+            ["Zac + Sammy #1", "Zac + Sammy #2"],
+        )
+    )
+    heads = [t.text for t in el.findall(".//text[@class='heat-head heat-col']")]
+    assert len(set(heads)) == 2

@@ -1,11 +1,13 @@
 {# The forecast teaser shared by the in-season and preseason layouts of the
    standings page. A summary, not the whole forecast: the full distributional
    picture lives on /forecast/ so the standings page stays a scoreboard. #}
-<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
+<h2 class="section-title">Most likely to win <span class="model-tag">modelled</span></h2>
 <p class="page-sub">
   From {{ '{:,}'.format(sim_count) }} simulated seasons, conditioned on every
   game already played. Each bar is that entry's chance of every finishing place,
-  strongest colour first.
+  strongest colour first, and the figure beside it is the chance of finishing
+  <strong>first</strong> — not of making money, which is a different question
+  and lives on the forecast page.
 </p>
 
 <div class="forecast-rows">

@@ -14,6 +14,7 @@ import hashlib
 import json
 import re
 import shutil
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -21,9 +22,21 @@ import pytest
 
 from football_pool.history import weekly_frame
 from football_pool.nflverse import GameData, parse_games
-from football_pool.render import ASSET_DIR, build_context, make_environment, render_site
+from football_pool.render import (
+    ASSET_DIR,
+    _entrant_rows,
+    _forecast,
+    _schedule,
+    _team_rows,
+    build_context,
+    make_environment,
+    render_site,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+# A fixed instant, so nothing in here depends on when the suite is run.
+NOW = datetime(2026, 2, 10, 12, 0, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -242,10 +255,45 @@ def test_freshness_stamps_are_machine_readable(pool, game_data, tmp_path):
     """Rendered as UTC in a datetime attribute so JS can localise them."""
     render_site(pool, game_data, tmp_path)
     html = (tmp_path / "index.html").read_text()
-    stamps = re.findall(r'<time datetime="([^"]+)" data-ts>', html)
+    # `data-ts` may be followed by `data-age` on the data-through stamp, which
+    # is what asks the client for the "2h ago" badge beside it.
+    stamps = re.findall(r'<time datetime="([^"]+)" data-ts[ >]', html)
     assert len(stamps) == 2  # data-through and site-built
     for iso in stamps:
         datetime.fromisoformat(iso)
+
+
+def test_freshness_is_above_the_fold(pool, game_data, tmp_path):
+    """Both stamps sit at the top of the page, not buried in the footer.
+
+    A scoreboard that is quietly two days stale is worse than one that says so,
+    and nobody scrolls to the bottom of a leaderboard to check.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+
+    assert html.index("Data through") < html.index('<main')
+    assert html.index("Site built") < html.index('<main')
+    # The data stamp asks for an age badge; the build stamp does not need one.
+    assert re.search(r'data-ts data-age>', html)
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("network", "live from nflverse"),
+        ("cache", "a cached copy"),
+        ("fallback", "the committed snapshot"),
+        # An unknown source is printed as-is rather than swallowed: a new
+        # fetch outcome should show up on the page, not vanish from it.
+        ("something-new", "something-new"),
+    ],
+)
+def test_the_source_is_written_in_words(pool, games_2025, tmp_path, source, expected):
+    """"fallback" means nothing to anyone who has not read the fetcher."""
+    data = GameData(games_2025, 2025, NOW, None, source)
+    render_site(pool, data, tmp_path)
+    assert expected in (tmp_path / "index.html").read_text()
 
 
 def test_timezone_picker_defaults_to_eastern(pool, game_data, tmp_path):
@@ -297,7 +345,9 @@ def test_weeks_page_has_a_column_per_played_week(pool, mid_season, tmp_path):
     render_site(pool, mid_season, tmp_path)
     html = (tmp_path / "season" / "index.html").read_text()
     header = re.search(r"<thead>.*?</thead>", html, re.S).group(0)
-    assert len(re.findall(r'class="num">\d+</th>', header)) == 11
+    # Matched on the heading's text rather than on its attributes, which now
+    # also carry the sort direction the column opens in.
+    assert len(re.findall(r"<th[^>]*>(\d+)</th>", header)) == 11
 
 
 # -- the json sidecar -------------------------------------------------------
@@ -416,18 +466,20 @@ def test_projections_appear_when_available(pool, mid_season, tmp_path):
     """
     render_site(pool, mid_season, tmp_path, simulations=200)
     index = (tmp_path / "index.html").read_text()
-    assert "Projected finish" in index
+    # The teaser says which of the two questions its percentage answers, which
+    # a bare "projected finish" never did.
+    assert "Most likely to win" in index
     assert "modelled" in index
 
     forecast = (tmp_path / "forecast" / "index.html").read_text()
-    assert "P(1st)" in forecast
-    assert "P(cash)" in forecast
+    assert "Chance of winning" in forecast
+    assert "Chance of cashing" in forecast
 
 
 def test_projections_are_absent_once_the_season_ends(pool, game_data, tmp_path):
     """Nothing left to simulate, so the panels are dropped rather than faked."""
     render_site(pool, game_data, tmp_path)
-    assert "Projected finish" not in (tmp_path / "index.html").read_text()
+    assert "Most likely to win" not in (tmp_path / "index.html").read_text()
 
 
 def test_an_entrant_missing_from_the_model_is_tolerated(pool, mid_season, monkeypatch):
@@ -745,14 +797,29 @@ def test_the_controls_appear_exactly_once(season, game_data, tmp_path):
     assert html.count("data-tz-select") == 1
 
 
-def test_the_footer_keeps_the_freshness_stamps(season, game_data, tmp_path):
-    """Moving the controls out must not take the timestamps with them."""
+def test_the_stamps_are_at_the_top_and_only_at_the_top(season, game_data, tmp_path):
+    """They used to sit in the footer, behind a full page of leaderboard.
+
+    How old the numbers are is the one caveat that changes how you read
+    everything above it, so it belongs before the numbers rather than after
+    them — and printed once, because two copies of a timestamp is an invitation
+    to have them disagree.
+    """
+    render_site(season, game_data, tmp_path)
+    html = (tmp_path / "index.html").read_text()
+    head, footer = html.split("<footer")
+
+    assert "Data through" in head.split("<main")[0]
+    assert "Site built" in head.split("<main")[0]
+    assert "Data through" not in footer
+    assert len(re.findall(r"<time datetime=", html)) == 2
+
+
+def test_the_footer_says_how_the_results_were_fetched(season, game_data, tmp_path):
+    """What is left down there is provenance, which is reference, not caveat."""
     render_site(season, game_data, tmp_path)
     footer = (tmp_path / "index.html").read_text().split("<footer")[1]
-
-    assert "Data through" in footer
-    assert "Site built" in footer
-    assert len(re.findall(r"<time datetime=", footer)) == 2
+    assert "live from nflverse" in footer
 
 
 # -- the forecast page --------------------------------------------------------
@@ -1052,3 +1119,197 @@ def test_the_schedule_shows_no_model_numbers_when_the_model_is_off(
     # The factual half of the page is unaffected — that is the whole point of
     # keeping the two tiers separate.
     assert 'class="stake"' in html
+
+
+# -- byes -------------------------------------------------------------------
+def test_the_schedule_names_who_is_on_a_bye(pool, game_data, tmp_path):
+    """A bye has no game to render, so subtracting is the only way to show it."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert "On bye" in html
+    assert "team-chip bye" in html
+
+
+def test_a_bye_carries_whoever_holds_the_team(pool, games_2025):
+    ctx = build_context(pool, GameData(games_2025, 2025, NOW, None, "cache"))
+    weeks = _schedule(ctx)["weeks"]
+
+    owned = [b for w in weeks for b in w["byes"] if b["owners"]]
+    assert owned, "somebody in the pool must have a team on a bye at some point"
+    # Owners first, so an entrant scanning a week sees their own team is off.
+    for week in weeks:
+        flags = [bool(b["owners"]) for b in week["byes"]]
+        assert flags == sorted(flags, reverse=True)
+
+
+def test_the_playoffs_have_no_byes_worth_naming(pool, games_2025):
+    """In January "not playing" is two dozen eliminated teams, not a bye."""
+    ctx = build_context(pool, GameData(games_2025, 2025, NOW, None, "cache"))
+    for week in _schedule(ctx)["weeks"]:
+        if not week["label"].startswith("Week"):
+            assert week["byes"] == []
+
+
+def test_every_team_gets_exactly_one_bye_across_a_real_season(pool, games_2025):
+    """The invariant that makes this the right way to compute a bye at all.
+
+    Byes are derived by subtraction — everyone in the league not playing this
+    week — so if the arithmetic is right, adding the regular season up returns
+    each of the 32 teams once and only once.
+    """
+    ctx = build_context(pool, GameData(games_2025, 2025, NOW, None, "cache"))
+    weeks = [w for w in _schedule(ctx)["weeks"] if w["label"].startswith("Week")]
+
+    off = Counter(b["team"] for w in weeks for b in w["byes"])
+    assert set(off) == set(pool.teams)
+    assert set(off.values()) == {1}
+    # And week 1 is the week nobody is off, every year.
+    assert weeks[0]["byes"] == []
+
+
+def test_an_entrant_is_told_which_of_their_teams_is_off_next_week(pool, games_2025):
+    """Half a season in, so there is a next week and byes are still running."""
+    part = games_2025.copy()
+    part.loc[part["week"] > 7, ["played", "home_won", "away_won", "is_tie"]] = False
+    ctx = build_context(pool, GameData(part, 2025, NOW, None, "cache"))
+    rows = _entrant_rows(ctx)
+
+    assert all(r["bye_week"] == 8 for r in rows)
+    # Only ever their own teams, never the rest of the league.
+    for row in rows:
+        assert set(row["byes"]) <= set(row["teams"])
+
+
+def test_a_finished_season_has_no_next_week_to_report(pool, game_data):
+    ctx = build_context(pool, game_data)
+    rows = _entrant_rows(ctx)
+    assert all(r["bye_week"] is None and r["byes"] == [] for r in rows)
+
+
+# -- the forecast says which question it is answering ------------------------
+def test_the_forecast_separates_winning_from_making_money(pool, mid_season, tmp_path):
+    """Two questions with two answers, both named rather than left to guess."""
+    render_site(pool, mid_season, tmp_path)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    assert "Chance of winning" in html
+    assert "Expected payout" in html
+    assert "Expected profit" in html
+    # And the old ambiguous headings are gone.
+    assert "P(1st)" not in html
+    assert "Expected $" not in html
+
+
+def test_the_forecast_names_a_leader_for_each_question(pool, mid_season):
+    ctx = build_context(pool, mid_season)
+    forecast = _forecast(ctx)
+
+    for headline in (forecast["best_odds"], forecast["best_money"]):
+        assert headline["name"]
+        assert headline["slug"]
+        assert 0.0 <= headline["p_first"] <= 1.0
+        assert headline["expected_payout"] >= 0.0
+
+    # Each is genuinely the best on its own column, which is the whole claim.
+    entrants = ctx.projections.entrants
+    assert forecast["best_odds"]["p_first"] == pytest.approx(entrants["p_first"].max())
+    assert forecast["best_money"]["expected_payout"] == pytest.approx(
+        entrants["expected_payout"].max()
+    )
+
+
+# -- table ordering ----------------------------------------------------------
+def test_the_teams_table_falls_back_to_leveling_factor_before_any_games(pool, games_2025):
+    """Every team has scored zero in August, and zero is not an order."""
+    empty = games_2025.copy()
+    empty[["played", "home_won", "away_won", "is_tie"]] = False
+    ctx = build_context(pool, GameData(empty, 2025, NOW, None, "cache"))
+    rows = _team_rows(ctx)
+
+    assert all(r["points"] == 0 for r in rows)
+    lfs = [r["lf"] for r in rows]
+    assert lfs == sorted(lfs, reverse=True)
+
+
+def test_the_teams_table_leads_with_points_once_there_are_any(pool, games_2025):
+    ctx = build_context(pool, GameData(games_2025, 2025, NOW, None, "cache"))
+    points = [r["points"] for r in _team_rows(ctx)]
+    assert points == sorted(points, reverse=True)
+
+
+def test_the_teams_table_order_is_stable_across_rebuilds(pool, games_2025):
+    """A rebuild of unchanged data must produce an unchanged page."""
+    empty = games_2025.copy()
+    empty[["played", "home_won", "away_won", "is_tie"]] = False
+    data = GameData(empty, 2025, NOW, None, "cache")
+    first = [r["team"] for r in _team_rows(build_context(pool, data))]
+    second = [r["team"] for r in _team_rows(build_context(pool, data))]
+    assert first == second
+
+
+def test_a_sorted_table_says_so_in_aria_sort(pool, game_data, tmp_path):
+    """The heading has to agree with the rows underneath it.
+
+    Otherwise the first click on that column "sorts" it to the order it is
+    already in, and looks broken.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for page in ("season/index.html", "teams/index.html"):
+        html = (tmp_path / page).read_text()
+        assert 'aria-sort=' in html
+
+
+def test_rank_columns_open_first_place_first(pool, game_data, tmp_path):
+    """The one kind of number where biggest-first is exactly wrong."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "season" / "index.html").read_text()
+    assert 'data-sort="ascending"' in html
+
+
+# -- definitions on the page -------------------------------------------------
+def test_the_jargon_carries_its_definition_where_it_is_used(pool, game_data, tmp_path):
+    """An info button next to a word, with the whole definition behind it."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert 'class="info"' in html
+    assert 'class="def"' in html
+    # The definition itself, not merely a reference to one.
+    assert "The most the whole pool could bank in this week" in html
+
+
+def test_the_definition_is_the_button_s_accessible_name(pool, game_data, tmp_path):
+    """So a screen reader reads it outright and has nothing to open.
+
+    The popover is placed by the client; the accessible name is not, which
+    makes it the version that always works.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+    assert re.search(r'class="visually-hidden">On the table: ', html)
+
+
+def test_no_definition_button_sits_inside_a_link(pool, game_data, tmp_path):
+    """A button inside an anchor is invalid, and taps land on the wrong one.
+
+    The leaderboard rows and the forecast rows are both whole-row links, so
+    this is a real trap rather than a theoretical one.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for page in tmp_path.rglob("*.html"):
+        html = page.read_text()
+        for link in re.findall(r"<a\b[^>]*>(.*?)</a>", html, re.S):
+            assert 'class="info"' not in link, page.name
+
+
+def test_the_rules_page_carries_the_whole_glossary(pool, game_data, tmp_path):
+    """Where the definitions still are when the popovers cannot open."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "rules" / "index.html").read_text()
+
+    assert "What the words mean" in html
+    for term in ("Leveling factor", "On the table", "Expected payout", "Bye"):
+        assert term in html
