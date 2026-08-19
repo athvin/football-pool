@@ -1,0 +1,32 @@
+{# The site's vocabulary, explained where it is used.
+
+   Two macros. `term` prints a label with an info button beside it; `info`
+   prints the button on its own, for places where the label is already written
+   into a sentence. Both pull from the same `glossary` dict, so a word is
+   defined once for the whole site.
+
+   The definition is written twice on purpose. Once inside the button, hidden
+   visually, which makes it the button's accessible name — a screen reader
+   reads "On the table: the most the whole pool could bank..." and is done, with
+   nothing to open. Once in a `.def` element, which is what a sighted reader
+   hovers or taps. Neither depends on the other, and the second one is inert
+   until the client positions it. #}
+
+{% macro info(key) -%}
+{% set d = glossary[key] -%}
+<span class="term">
+  <button class="info" type="button" aria-expanded="false">
+    <span class="info-mark" aria-hidden="true">i</span>
+    <span class="visually-hidden">{{ d.term }}: {{ d.definition }}</span>
+  </button>
+  <span class="def" role="tooltip" aria-hidden="true">
+    <b class="def-term">{{ d.term }}</b>
+    <span class="def-body">{{ d.definition }}</span>
+  </span>
+</span>
+{%- endmacro %}
+
+{% macro term(key, label=None) -%}
+{% set d = glossary[key] -%}
+{{ label if label is not none else d.term }}{{ info(key) }}
+{%- endmacro %}

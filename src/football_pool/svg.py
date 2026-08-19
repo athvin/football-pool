@@ -554,12 +554,35 @@ def ridgeline(
     return "".join(out)
 
 
+def fit_labels(labels: Sequence[str], cap: int) -> list[str]:
+    """Shorten labels to ``cap`` characters without making two of them equal.
+
+    A column of a head-to-head grid is about eight characters wide, and a plain
+    truncation at eight turns "Zac + Sammy #1" and "Zac + Sammy #2" into two
+    columns both headed "Zac + Sa" — in a chart whose entire job is telling you
+    which pair a number belongs to. Where that happens the tail is kept instead
+    of the middle, because the tail is where the thing that tells them apart
+    lives. Labels that were already distinct are left exactly as they were, so
+    the common case never grows an ellipsis it does not need.
+    """
+    plain = [label[:cap] for label in labels]
+    clashes = {short for short in plain if plain.count(short) > 1}
+    return [
+        label[: max(cap - 3, 1)] + "…" + label[-2:]
+        if short in clashes and len(label) > cap
+        else short
+        for label, short in zip(labels, plain)
+    ]
+
+
 def heatmap(
     matrix: Sequence[Sequence[float | None]],
     labels: Sequence[str],
+    full_labels: Sequence[str] | None = None,
     cell: int = 62,
     label_width: int = 132,
-    header_height: int = 26,
+    header_height: int = 46,
+    axis_width: int = 22,
 ) -> str:
     """Pairwise probabilities, with the number printed in every cell.
 
@@ -569,50 +592,92 @@ def heatmap(
 
     ``None`` renders as an empty cell, which is what the diagonal is: nobody
     races themselves.
+
+    The two axes are labelled, and that is not decoration. A grid of names
+    against the same names is symmetrical to look at and emphatically not
+    symmetrical to read: without a caption saying which way round it goes,
+    every cell has two opposite meanings and the reader has to guess. The
+    caption is written as one sentence broken across the two axes — "each
+    entry" down the side, "finishes above these" along the top — so reading a
+    cell is reading the sentence.
+
+    ``full_labels`` carries the untruncated names for the client's hover
+    readout; the drawn labels stay short because "Shannon (plus Si & Rachel)"
+    is not a column header.
     """
     n = len(labels)
     if n == 0:
         return '<svg class="heat" width="1" height="1" aria-hidden="true"></svg>'
 
-    width = label_width + cell * n
+    names = list(full_labels) if full_labels is not None else list(labels)
+    # A short `full_labels` is a caller bug, not a reason to fail a build: fall
+    # back to the drawn label for anything missing.
+    names += list(labels[len(names):])
+
+    # The drawn labels, cut to what a header can hold but never cut to the
+    # point where two of them read the same. See fit_labels.
+    cols = fit_labels(labels, 8)
+    rows_text = fit_labels(labels, 18)
+
+    grid_left = axis_width + label_width
+    width = grid_left + cell * n
     height = header_height + cell * n
     out = [
         f'<svg class="heat" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img" '
-        f'aria-label="Chance each entrant finishes above each other entrant" '
+        f'aria-label="How often each entrant finishes above each other entrant. '
+        f'Each row is one entrant; each column is the rival they are measured '
+        f'against." '
         f'preserveAspectRatio="xMidYMid meet">'
     ]
 
-    for j, col in enumerate(labels):
+    # The sentence, split across the axes. Down the left, turned to run with
+    # the rows it labels; along the top, over the columns it labels.
+    out.append(
+        f'<text class="heat-axis" transform="translate(11 {header_height + cell * n / 2:.1f}) '
+        f'rotate(-90)" text-anchor="middle">Each entry &#8595;</text>'
+    )
+    out.append(
+        f'<text class="heat-axis" x="{grid_left + cell * n / 2:.1f}" y="15" '
+        f'text-anchor="middle">&#8230; finishes above these &#8595;</text>'
+    )
+
+    for j, col in enumerate(cols):
         out.append(
-            f'<text x="{label_width + cell * j + cell / 2:.1f}" y="{header_height - 9}" '
-            f'text-anchor="middle" class="heat-head">{escape(col[:8])}</text>'
+            f'<text x="{grid_left + cell * j + cell / 2:.1f}" y="{header_height - 9}" '
+            f'text-anchor="middle" class="heat-head heat-col" data-c="{j}">'
+            f"{escape(col)}</text>"
         )
 
-    for i, row in enumerate(labels):
+    for i, row in enumerate(rows_text):
         y = header_height + cell * i
         out.append(
-            f'<text x="{label_width - 10}" y="{y + cell / 2 + 4:.1f}" text-anchor="end" '
-            f'class="heat-head">{escape(row[:18])}</text>'
+            f'<text x="{grid_left - 10}" y="{y + cell / 2 + 4:.1f}" text-anchor="end" '
+            f'class="heat-head heat-row" data-r="{i}">{escape(row)}</text>'
         )
         row_values = matrix[i] if i < len(matrix) else ()
         for j in range(n):
-            x = label_width + cell * j
+            x = grid_left + cell * j
             # A matrix that does not match the labels draws blanks rather than
             # raising: the grid is generated data, and a shape mismatch should
             # show up as a visibly empty cell, not as a failed build.
             value = row_values[j] if j < len(row_values) else None
             if value is None:
                 out.append(
-                    f'<rect x="{x + 1}" y="{y + 1}" width="{cell - 2}" height="{cell - 2}" '
+                    f'<rect class="heat-blank" x="{x + 1}" y="{y + 1}" '
+                    f'width="{cell - 2}" height="{cell - 2}" '
                     f'rx="4" fill="var(--surface-2)" opacity="0.4"/>'
                 )
                 continue
             v = float(value)
             out.append(
-                f'<rect x="{x + 1}" y="{y + 1}" width="{cell - 2}" height="{cell - 2}" '
-                f'rx="4" fill="{MODEL}" opacity="{0.08 + 0.72 * v:.3f}">'
-                f"<title>{escape(row)} finishes above {escape(labels[j])} "
+                f'<rect class="heat-box" x="{x + 1}" y="{y + 1}" '
+                f'width="{cell - 2}" height="{cell - 2}" rx="4" '
+                f'fill="{MODEL}" opacity="{0.08 + 0.72 * v:.3f}" '
+                f'data-r="{i}" data-c="{j}" data-p="{v * 100:.0f}" '
+                f'data-row="{escape(names[i], quote=True)}" '
+                f'data-col="{escape(names[j], quote=True)}">'
+                f"<title>{escape(names[i])} finishes above {escape(names[j])} "
                 f"{v * 100:.0f}% of the time</title></rect>"
                 f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" '
                 f'text-anchor="middle" class="heat-cell'

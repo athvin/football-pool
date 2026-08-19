@@ -138,3 +138,24 @@ def test_pool_summary_describes_the_field(field, games_2025):
     assert summary["most_owned"] == "BAL"
     assert "SEA" in summary["teams_unowned"]
     assert summary["spread"] >= 0
+
+
+def test_pick_report_leads_with_the_most_lopsided_entry(field, games_2025):
+    """The table's subject is who is being carried, so sort by that.
+
+    It used to come out in picks-file order, which said nothing at all — the
+    first row was whoever happened to be typed first in the YAML.
+    """
+    tp = score_teams(field, games_2025)
+    shares = [r["best_share"] for r in pick_report(field, tp).to_dict("records")]
+    assert shares == sorted(shares, reverse=True)
+
+
+def test_pick_report_breaks_ties_by_name_so_a_rebuild_is_stable(field, games_2025):
+    """Every share is identical before a game is played."""
+    empty = games_2025.copy()
+    empty[["played", "home_won", "away_won", "is_tie"]] = False
+    report = pick_report(field, score_teams(field, empty))
+
+    names = report["name"].tolist()
+    assert names == sorted(names)

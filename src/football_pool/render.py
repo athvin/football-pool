@@ -35,6 +35,7 @@ from typing import Any
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from . import glossary as glossary_mod
 from . import history as history_mod
 from . import metrics
 from . import schedule as schedule_mod
@@ -238,6 +239,22 @@ def _short_names(names: list[str]) -> dict[str, str]:
     return {n: (f if counts[f] == 1 else n) for n, f in zip(names, first)}
 
 
+def _headline(entrants: pd.DataFrame, column: str) -> dict[str, Any]:
+    """Whoever leads on one projection column, with both headline numbers.
+
+    Ties are broken by whoever the frame lists first, which is the model's own
+    order — arbitrary, but stable across rebuilds of unchanged data, which is
+    what matters for a page that regenerates twice a day.
+    """
+    best = entrants.loc[entrants[column].idxmax()]
+    return {
+        "name": str(best["name"]),
+        "slug": str(best["slug"]),
+        "p_first": float(best["p_first"]),
+        "expected_payout": float(best["expected_payout"]),
+    }
+
+
 def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
     """The three distribution charts, or ``None`` when nothing is projected."""
     p = ctx.projections
@@ -269,12 +286,21 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             [(short[n], density.loc[n].tolist()) for n in order],
         ),
         # NaN on the diagonal becomes None so the template and the chart both
-        # read it as "no cell" rather than trying to format a float.
+        # read it as "no cell" rather than trying to format a float. Short
+        # names are drawn; the full ones ride along for the hover readout,
+        # where there is room to say who is actually being compared.
         "heatmap": svg.heatmap(
             [[None if pd.isna(v) else float(v) for v in h2h.loc[n]] for n in order],
             [short[n] for n in order],
+            order,
         ),
         "order": order,
+        # The two headline answers, which are not the same question and do not
+        # always have the same answer. Named separately so the page can say so
+        # out loud instead of leaving a reader to work out which one the big
+        # number at the top of a bar actually is.
+        "best_odds": _headline(p.entrants, "p_first"),
+        "best_money": _headline(p.entrants, "expected_payout"),
         # What the ratings were fitted to. The page says so plainly rather than
         # describing one method and silently running the other.
         "basis": p.basis,
@@ -321,9 +347,26 @@ def _projection_for(ctx: SiteContext, name: str) -> dict[str, Any] | None:
     }
 
 
+def _next_week_byes(ctx: SiteContext) -> tuple[int | None, set[str]]:
+    """``(week, teams off)`` for the next regular-season week, or ``(None, set())``.
+
+    The same week ``potential.next_week_window`` prices — the first regular
+    week with a game still to play — because the entrant page shows the two
+    side by side, and a "nothing next week" that quietly meant a different
+    week from the bye list would be worse than saying nothing at all.
+    """
+    remaining = ctx.games[(~ctx.games["played"]) & (ctx.games["game_type"] == "REG")]
+    if remaining.empty:
+        return None, set()
+    week = int(remaining["week"].min())
+    slate = ctx.games[(ctx.games["week"] == week) & (ctx.games["game_type"] == "REG")]
+    return week, set(schedule_mod.teams_on_bye(ctx.season.teams, slate))
+
+
 def _entrant_rows(ctx: SiteContext) -> list[dict[str, Any]]:
     """Leaderboard rows, already sorted, with their graphics rendered."""
     scale_max = float(ctx.outlook["ceiling"].max()) if not ctx.outlook.empty else 1.0
+    bye_week, on_bye = _next_week_byes(ctx)
     rows = []
 
     for i, row in enumerate(ctx.outlook.itertuples()):
@@ -350,6 +393,12 @@ def _entrant_rows(ctx: SiteContext) -> list[dict[str, Any]]:
                 "eliminated": bool(row.eliminated),
                 "cash_eliminated": bool(row.cash_eliminated),
                 "rank_delta": int(delta),
+                # Which of this entry's four teams are off next week, and which
+                # week that is. A bye is the usual reason a "next week" number
+                # looks disappointing, and it is the one thing the schedule
+                # cannot show you, because a bye has no game to render.
+                "bye_week": bye_week,
+                "byes": [t for t in row.teams if t in on_bye],
                 "series": series,
                 "contributions": contributions,
                 "cards": [_team_card(ctx, t) for t in row.teams],
@@ -449,7 +498,14 @@ def _team_rows(ctx: SiteContext) -> list[dict[str, Any]]:
                 "ownership": len(owners[team]) / n,
             }
         )
-    return sorted(rows, key=lambda r: -r["points"])
+    # Points first, and then the leveling factor. The tie-break is what makes
+    # this table readable in August: before a single kickoff every team has
+    # scored exactly zero, and sorting on that alone left thirty-two rows in
+    # whatever order the league file happened to list them. Falling through to
+    # the leveling factor puts the most valuable teams at the top, which is the
+    # only ranking that exists in the preseason. The name settles the rest so a
+    # rebuild of unchanged data is an unchanged page.
+    return sorted(rows, key=lambda r: (-r["points"], -r["lf"], r["team"]))
 
 
 def _week_rows(ctx: SiteContext, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -605,10 +661,31 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
             )
         ceiling = max((o["max"] for o in outlooks), default=0.0) or 1.0
 
+        # Only the regular season has byes worth naming. In January "not
+        # playing this week" describes two dozen eliminated teams, which is a
+        # true sentence about something nobody is asking.
+        byes = (
+            [
+                {
+                    "team": t,
+                    "owners": [
+                        {"name": short[n], "slug": slugs[n]} for n in owners.get(t, ())
+                    ],
+                }
+                for t in schedule_mod.teams_on_bye(ctx.season.teams, slate)
+            ]
+            if window.game_type == "REG"
+            else []
+        )
+        # Teams somebody holds first: an entrant scanning the week wants to
+        # know their own team is off, not that the Jets are.
+        byes.sort(key=lambda b: (not b["owners"], b["team"]))
+
         weeks.append(
             {
                 "week": window.week,
                 "label": window.label,
+                "byes": byes,
                 "opens": window.opens.isoformat(timespec="seconds"),
                 "opens_text": _eastern(window.opens),
                 "closes": window.closes.isoformat(timespec="seconds"),
@@ -640,6 +717,17 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
     }
 
 
+# How each fetch outcome reads to somebody who does not know the pipeline.
+# "cache" and "fallback" both mean the build could not reach upstream, and the
+# difference between them — a copy from an earlier run versus the snapshot
+# committed to the repo — is exactly the difference between hours and months.
+SOURCE_TEXT = {
+    "network": "live from nflverse",
+    "cache": "a cached copy — upstream was unreachable",
+    "fallback": "the committed snapshot — upstream was unreachable",
+}
+
+
 def _freshness(ctx: SiteContext) -> dict[str, Any]:
     """Two timestamps, because a fresh build of stale data is still stale."""
     return {
@@ -650,6 +738,7 @@ def _freshness(ctx: SiteContext) -> dict[str, Any]:
             else None
         ),
         "source": ctx.data.source,
+        "source_text": SOURCE_TEXT.get(ctx.data.source, ctx.data.source),
     }
 
 
@@ -681,6 +770,10 @@ def render_site(
         "projecting": ctx.projections is not None,
         "sim_count": ctx.projections.simulations if ctx.projections else 0,
         "forecast": _forecast(ctx),
+        # Definitions carry this season's own entry fee, pot and payout places,
+        # so the explanation of a word can never drift from the rules file that
+        # sets it. See glossary.py.
+        "glossary": glossary_mod.terms(season),
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)

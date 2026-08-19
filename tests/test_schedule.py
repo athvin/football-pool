@@ -22,6 +22,7 @@ from football_pool.schedule import (
     game_swing,
     kickoff,
     side_points,
+    teams_on_bye,
     week_label,
     week_window,
     week_windows,
@@ -313,3 +314,39 @@ def test_week_window_agrees_with_next_week_window_on_the_next_week(make_season, 
     rem = games[(~games["played"]) & (games["game_type"] == "REG")]
     slate = rem[rem["week"] == int(rem["week"].min())]
     assert week_window(season, slate, teams) == next_week_window(season, games, teams)
+
+
+# -- byes -------------------------------------------------------------------
+def test_a_team_with_no_game_this_week_is_on_a_bye(season):
+    slate = mkgames([
+        {"home": "KC", "away": "SEA", "week": 5},
+        {"home": "DAL", "away": "NE", "week": 5},
+    ])
+    byes = teams_on_bye(season.teams, slate)
+
+    # Everybody who did not appear, and nobody who did.
+    assert "BUF" in byes
+    for played in ("KC", "SEA", "DAL", "NE"):
+        assert played not in byes
+    assert len(byes) == len(season.teams) - 4
+
+
+def test_byes_come_back_in_a_stable_order(season):
+    """A rebuild of unchanged data has to produce an unchanged page."""
+    slate = mkgames([{"home": "KC", "away": "SEA", "week": 5}])
+    assert teams_on_bye(season.teams, slate) == sorted(teams_on_bye(season.teams, slate))
+
+
+def test_a_week_where_everybody_plays_has_no_byes(season):
+    pairs = list(zip(season.teams[::2], season.teams[1::2]))
+    slate = mkgames([{"home": h, "away": a, "week": 9} for h, a in pairs])
+    assert teams_on_bye(season.teams, slate) == []
+
+
+def test_an_empty_slate_puts_the_whole_league_on_a_bye(season):
+    """Not a special case worth inventing: no games means nobody is playing.
+
+    The caller decides whether that is a question worth asking — the render
+    only asks it of regular-season weeks, where the answer is the real bye.
+    """
+    assert teams_on_bye(season.teams, mkgames([])) == sorted(season.teams)

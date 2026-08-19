@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
 
 {% block title %}Teams · {{ season.year }} Family Pool{% endblock %}
 {% block description %}Every team's leveling factor, record, points generated, and who in the pool owns them.{% endblock %}
@@ -8,7 +10,14 @@
 <div class="page-head">
   <h1 class="page-title">Teams</h1>
   <p class="page-sub">
-    Sorted by points generated — click any column heading to sort by it instead.
+    {% if state.week %}
+      Sorted by points generated, most first — click any column heading to sort
+      by it instead.
+    {% else %}
+      Nothing has been played yet, so every team has generated zero. Until then
+      this is sorted by leveling factor, biggest first: what a win by each team
+      would be worth. Click any column heading to sort by it instead.
+    {% endif %}
     "Owned by" shows who in the pool is holding them; a team nobody else has is
     where you gain ground on the field.
   </p>
@@ -21,10 +30,15 @@
     <caption>All 32 teams for {{ season.year }}.</caption>
     <thead>
       <tr>
+        {# aria-sort states the order the rows actually arrive in, so the
+           heading agrees with the table underneath it and the first click on
+           that column reverses rather than re-sorting to what it already is. #}
         <th scope="col" data-sort>Team</th>
-        <th scope="col" class="num" data-sort>LF</th>
+        <th scope="col" class="num" data-sort
+            {% if not state.week %}aria-sort="descending"{% endif %}>{{ term('lf', 'LF') }}</th>
         <th scope="col" data-sort>Record</th>
-        <th scope="col" class="num" data-sort>Points</th>
+        <th scope="col" class="num" data-sort
+            {% if state.week %}aria-sort="descending"{% endif %}>Points</th>
         <th scope="col" data-sort>Seed</th>
         <th scope="col" data-sort>Owned by</th>
       </tr>

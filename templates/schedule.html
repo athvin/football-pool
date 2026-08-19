@@ -1,4 +1,6 @@
 {% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
 
 {% block title %}Schedule · {{ season.year }} Family Pool{% endblock %}
 {% block description %}The {{ season.year }} NFL schedule week by week, with what every game is worth to the pool and who is holding each side.{% endblock %}
@@ -50,21 +52,47 @@
         <p class="stat-note">{% if w.played %}{{ w.played }} played{% else %}none played yet{% endif %}</p>
       </div>
       <div class="stat">
-        <p class="stat-label">Pool has a side</p>
+        <p class="stat-label">Pool has a side{{ info('pool_side') }}</p>
         <p class="stat-value">{{ w.pool_games }}</p>
         <p class="stat-note">of {{ w.count }}</p>
       </div>
       <div class="stat">
-        <p class="stat-label">On the table</p>
+        <p class="stat-label">On the table{{ info('on_the_table') }}</p>
         <p class="stat-value live">{{ w.on_the_table|points }}</p>
         <p class="stat-note">field maximum</p>
       </div>
       <div class="stat">
-        <p class="stat-label">Locked in</p>
+        <p class="stat-label">Locked in{{ info('locked_in') }}</p>
         <p class="stat-value">{{ w.locked_in|points }}</p>
         <p class="stat-note">unavoidable</p>
       </div>
     </div>
+
+    {# A team on its bye cannot score anyone anything, which is the single most
+       common reason a week is quiet for somebody — and it is invisible on a
+       list of games, because the whole point of a bye is that there is no game
+       to look at. #}
+    {% if w.byes %}
+    <div class="byes">
+      <p class="byes-label">{{ term('bye', 'On bye') }}</p>
+      <ul class="bye-list">
+        {# Owners sit beside the chip rather than inside it. Inside, they wore
+           the club's colours and the chip's strikethrough, which made a list
+           of people who own a team look like a list of people who had been
+           crossed out. #}
+        {% for b in w.byes %}
+        <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
+          <span class="team-chip bye" style="{{ b.team|chip_style }}"><img
+                class="chip-logo" src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
+                width="14" height="14">{{ b.team }}</span>
+          {% if b.owners %}
+          <span class="owners">{% for o in b.owners %}<span class="owner" data-slug="{{ o.slug }}">{{ o.name }}</span>{% endfor %}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
 
     {% if w.biggest and w.biggest.swing > 0 %}
     <p class="biggest">
@@ -74,7 +102,7 @@
         at
         <span class="team-chip scored" style="{{ w.biggest.home.team|chip_style }}">{{ w.biggest.home.team }}</span>
       </span>
-      <span class="biggest-swing">swing {{ w.biggest.swing|points }}</span>
+      <span class="biggest-swing">{{ term('swing', 'swing') }} {{ w.biggest.swing|points }}</span>
     </p>
     {% endif %}
 
@@ -123,7 +151,7 @@
       {% endfor %}
     </div>
     <p class="legend">
-      <span class="key-guaranteed"></span><span>Hatched is guaranteed — two of your teams playing each other</span>
+      <span class="key-guaranteed"></span><span>Hatched is {{ term('locked_in', 'guaranteed') }} — two of your teams playing each other</span>
       <span class="key-upside"></span><span>Outline is everything reachable</span>
       <span>·</span>
       <a href="{{ '/season/'|url }}">What the pool actually banked</a>

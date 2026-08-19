@@ -11,22 +11,38 @@ import {
   COMPARE_KEY,
   DEFAULT_THEME,
   DEFAULT_TZ,
+  END_ZONE_YARDS,
+  FIELD_YARDS,
   ME_KEY,
   PICK_COLORS,
+  REVEAL_SELECTOR,
+  STALE_AFTER_HOURS,
   THEME_KEY,
   TZ_KEY,
   cellValue,
   compareValues,
   countUpValue,
+  drawField,
+  driveLabel,
   easeOutCubic,
+  fieldGeometry,
+  fieldPalette,
+  firstSortDirection,
   formatTimestamp,
+  headToHeadSentence,
   init,
+  isStale,
   isValidTimeZone,
+  markerNumber,
   nextTheme,
+  relativeAge,
   safeStorage,
+  scrollProgress,
   sortTable,
   spreadLabels,
+  tooltipPosition,
   weekForInstant,
+  yardToY,
 } from '../../assets/site.js';
 
 const ISO = '2026-02-09T14:30:00+00:00';
@@ -253,8 +269,13 @@ function fakeWindow({
   prefersDark = true,
   store = new Map(),
   now = NOW,
+  innerWidth = 1280,
+  innerHeight = 900,
+  scrollY = 0,
+  observers = [],
 } = {}) {
   const frames = [];
+  const listeners = new Map();
   return {
     localStorage: {
       getItem: (k) => store.get(k) ?? null,
@@ -267,9 +288,44 @@ function fakeWindow({
     Date: { now: () => now },
     requestAnimationFrame: (fn) => frames.push(fn),
     setTimeout: (fn) => fn(),
-    addEventListener: () => {},
+    addEventListener: (type, fn) => {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(fn);
+    },
+    innerWidth,
+    innerHeight,
+    scrollY,
+    devicePixelRatio: 2,
+    // Enough of the real thing for the field to read its paint tokens: the
+    // canvas asks the document for named colours and never for a computed box.
+    getComputedStyle: () => ({ getPropertyValue: (name) => `var-for(${name})` }),
+    // Records the callback so a test can play the part of the theme toggle
+    // rewriting the attribute the field watches.
+    MutationObserver: class {
+      constructor(callback) {
+        this.callback = callback;
+        observers.push(this);
+      }
+
+      observe() {}
+    },
+    // Collected rather than run, so a test can decide when an element is
+    // considered to have arrived.
+    IntersectionObserver: class {
+      constructor(callback) {
+        this.callback = callback;
+        this.targets = [];
+        observers.push(this);
+      }
+
+      observe(el) { this.targets.push(el); }
+
+      unobserve(el) { this.targets = this.targets.filter((t) => t !== el); }
+    },
     _frames: frames,
     _store: store,
+    _observers: observers,
+    _fire: (type) => (listeners.get(type) ?? []).forEach((fn) => fn()),
   };
 }
 
@@ -815,5 +871,807 @@ describe('kickoff stamps', () => {
     expect(formatTimestamp(ISO, 'Mars/Olympus')).toBe(ISO);
     expect(formatTimestamp(ISO, 'Mars/Olympus')).toBe(ISO);
     expect(formatTimestamp(ISO, 'UTC')).toContain('UTC');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The gridiron
+// ---------------------------------------------------------------------------
+
+/**
+ * A 2D context that records instead of drawing.
+ *
+ * The field's drawing code takes a context rather than fetching one, precisely
+ * so it can be handed this — every decision it makes about where a goal line
+ * lands or which numbers get painted is then an assertion, with no rendering
+ * engine anywhere in the test.
+ */
+function recordingContext() {
+  const calls = [];
+  const state = { fillStyle: '', strokeStyle: '', lineWidth: 0, font: '' };
+  const record = (name) => (...args) => calls.push({
+    name,
+    args,
+    fill: state.fillStyle,
+    stroke: state.strokeStyle,
+    width: state.lineWidth,
+    font: state.font,
+  });
+  return {
+    calls,
+    get fillStyle() { return state.fillStyle; },
+    set fillStyle(v) { state.fillStyle = v; },
+    get strokeStyle() { return state.strokeStyle; },
+    set strokeStyle(v) { state.strokeStyle = v; },
+    get lineWidth() { return state.lineWidth; },
+    set lineWidth(v) { state.lineWidth = v; },
+    get font() { return state.font; },
+    set font(v) { state.font = v; },
+    textBaseline: '',
+    textAlign: '',
+    clearRect: record('clearRect'),
+    fillRect: record('fillRect'),
+    strokeRect: record('strokeRect'),
+    beginPath: record('beginPath'),
+    moveTo: record('moveTo'),
+    lineTo: record('lineTo'),
+    stroke: record('stroke'),
+    fillText: record('fillText'),
+    save: record('save'),
+    restore: record('restore'),
+    translate: record('translate'),
+    rotate: record('rotate'),
+    setTransform: record('setTransform'),
+  };
+}
+
+const PAINT = {
+  turfA: '#turf-a',
+  turfB: '#turf-b',
+  chalk: '#chalk',
+  chalkStrong: '#chalk-strong',
+  number: '#number',
+  hash: '#hash',
+  endZone: '#end-zone',
+  wordmark: '#wordmark',
+  pylon: '#pylon',
+  display: 'Display',
+};
+
+describe('field geometry', () => {
+  test('the field is 120 yards of it, end zone to end zone', () => {
+    expect(FIELD_YARDS).toBe(120);
+    expect(END_ZONE_YARDS).toBe(10);
+
+    const geom = fieldGeometry(400, 840);
+    expect(geom.yard).toBeCloseTo(7);
+    // Both goal lines are on screen, which is the whole promise.
+    expect(yardToY(geom, END_ZONE_YARDS)).toBeCloseTo(70);
+    expect(yardToY(geom, FIELD_YARDS - END_ZONE_YARDS)).toBeCloseTo(770);
+    expect(yardToY(geom, FIELD_YARDS)).toBeCloseTo(840);
+  });
+
+  test('the sidelines are inset proportionally, then capped', () => {
+    // A phone gets a proportional margin; a wide desktop would otherwise push
+    // the sidelines absurdly far in and squash the field.
+    expect(fieldGeometry(400, 840).inset).toBeCloseTo(22);
+    expect(fieldGeometry(1600, 900).inset).toBe(26);
+  });
+
+  test('yard numbers count towards the nearer goal line, as a field paints them', () => {
+    expect(markerNumber(20)).toBe(10);
+    expect(markerNumber(60)).toBe(50); // midfield
+    expect(markerNumber(100)).toBe(10);
+    // Symmetrical about the fifty, which is the property that makes them right.
+    expect(markerNumber(30)).toBe(markerNumber(90));
+  });
+});
+
+describe('drawField', () => {
+  const geom = fieldGeometry(1000, 1200);
+  let ctx;
+
+  beforeEach(() => {
+    ctx = recordingContext();
+    drawField(ctx, geom, PAINT, { near: 'Family Pool', far: '2026' });
+  });
+
+  const called = (name) => ctx.calls.filter((c) => c.name === name);
+
+  test('both goal lines are drawn, and drawn more strongly than a yard line', () => {
+    const strong = called('moveTo').filter((c) => c.stroke === PAINT.chalkStrong);
+    const ys = strong.map((c) => c.args[1]);
+    expect(ys).toContain(yardToY(geom, 10));
+    expect(ys).toContain(yardToY(geom, 110));
+    expect(strong.every((c) => c.width > 1)).toBe(true);
+  });
+
+  test('yard lines land every five yards, and never inside an end zone', () => {
+    const chalk = called('moveTo')
+      .filter((c) => c.stroke === PAINT.chalk)
+      .map((c) => c.args[1] / geom.yard);
+    expect(chalk.length).toBeGreaterThan(0);
+    for (const yards of chalk) {
+      expect(Math.round(yards) % 5).toBe(0);
+      expect(yards).toBeGreaterThan(END_ZONE_YARDS);
+      expect(yards).toBeLessThan(FIELD_YARDS - END_ZONE_YARDS);
+    }
+  });
+
+  test('the numbers are painted in pairs, turned to face their own sideline', () => {
+    const numbers = called('fillText').filter((c) => c.fill === PAINT.number);
+    // 10 through 50 and back down again, twice — once per sideline.
+    expect(numbers).toHaveLength(9 * 2);
+    expect(numbers.map((c) => c.args[0])).toContain('50');
+
+    const angles = called('rotate').map((c) => c.args[0]);
+    expect(angles).toContain(Math.PI / 2);
+    expect(angles).toContain(-Math.PI / 2);
+  });
+
+  test('each end zone carries its own wordmark', () => {
+    const marks = called('fillText')
+      .filter((c) => c.fill === PAINT.wordmark)
+      .map((c) => c.args[0]);
+    expect(marks).toEqual(['FAMILY POOL', '2026']);
+  });
+
+  test('an end zone with nothing to say is left empty rather than blank-painted', () => {
+    const bare = recordingContext();
+    drawField(bare, geom, PAINT, {});
+    expect(bare.calls.filter((c) => c.fill === PAINT.wordmark)).toHaveLength(0);
+  });
+
+  test('hash marks are skipped when a yard is too few pixels to show one', () => {
+    const roomy = recordingContext();
+    drawField(roomy, fieldGeometry(1000, 1200), PAINT);
+    expect(roomy.calls.some((c) => c.stroke === PAINT.hash)).toBe(true);
+
+    // A short viewport puts the yards about four pixels apart, where four rows
+    // of ticks per yard is noise rather than texture.
+    const cramped = recordingContext();
+    drawField(cramped, fieldGeometry(1000, 480), PAINT);
+    expect(cramped.calls.some((c) => c.stroke === PAINT.hash)).toBe(false);
+  });
+
+  test('eight pylons, one per end-zone corner', () => {
+    expect(called('fillRect').filter((c) => c.fill === PAINT.pylon)).toHaveLength(8);
+  });
+
+  test('the turf is striped every five yards, alternating', () => {
+    const bands = called('fillRect').filter(
+      (c) => c.fill === PAINT.turfA || c.fill === PAINT.turfB,
+    );
+    expect(bands).toHaveLength(FIELD_YARDS / 5);
+    expect(bands[0].fill).toBe(PAINT.turfA);
+    expect(bands[1].fill).toBe(PAINT.turfB);
+  });
+
+  test('the canvas is cleared first, so a repaint is not painted over the last one', () => {
+    expect(ctx.calls[0].name).toBe('clearRect');
+  });
+});
+
+describe('fieldPalette', () => {
+  test('every colour is read from the document, so the theme owns all of them', () => {
+    const paint = fieldPalette({ getPropertyValue: (name) => ` ${name} ` });
+    expect(paint.chalk).toBe('--paint-chalk');
+    expect(paint.endZone).toBe('--paint-endzone');
+    expect(paint.pylon).toBe('--paint-pylon');
+  });
+
+  test('a stylesheet that has not loaded yet still yields a drawable field', () => {
+    const paint = fieldPalette({ getPropertyValue: () => '' });
+    expect(paint.turfA).toBeTruthy();
+    expect(paint.display).toBeTruthy();
+  });
+});
+
+describe('the drive marker', () => {
+  test('scroll maps onto the field, and is clamped at both ends', () => {
+    expect(scrollProgress(0, 1000)).toBe(0);
+    expect(scrollProgress(500, 1000)).toBe(0.5);
+    expect(scrollProgress(1200, 1000)).toBe(1);
+    expect(scrollProgress(-50, 1000)).toBe(0);
+  });
+
+  test('a page with nowhere to scroll reports no progress rather than dividing by zero', () => {
+    expect(scrollProgress(0, 0)).toBe(0);
+    expect(scrollProgress(10, -40)).toBe(0);
+  });
+
+  test('the spot reads the way a commentator would say it', () => {
+    expect(driveLabel(0)).toBe('Own goal line');
+    expect(driveLabel(25)).toBe('Own 25');
+    expect(driveLabel(50)).toBe('Midfield');
+    expect(driveLabel(88)).toBe('Opp 12');
+    expect(driveLabel(100)).toBe('Touchdown');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// How old is this?
+// ---------------------------------------------------------------------------
+describe('relativeAge', () => {
+  const at = (iso) => Date.parse(iso);
+  const BUILT = '2026-09-20T12:00:00Z';
+
+  test('coarse on purpose — a twice-daily scoreboard does not need minutes', () => {
+    expect(relativeAge(BUILT, at('2026-09-20T12:00:30Z'))).toBe('just now');
+    expect(relativeAge(BUILT, at('2026-09-20T12:40:00Z'))).toBe('40m ago');
+    expect(relativeAge(BUILT, at('2026-09-20T21:42:00Z'))).toBe('9h ago');
+    expect(relativeAge(BUILT, at('2026-09-23T12:00:00Z'))).toBe('3d ago');
+  });
+
+  test('hours run to two days before rolling over, so "36h ago" stays sayable', () => {
+    expect(relativeAge(BUILT, at('2026-09-21T23:00:00Z'))).toBe('35h ago');
+    expect(relativeAge(BUILT, at('2026-09-22T13:00:00Z'))).toBe('2d ago');
+  });
+
+  test('a stamp from the future is a clock disagreement, not the reader\'s problem', () => {
+    expect(relativeAge(BUILT, at('2026-09-20T11:00:00Z'))).toBe('just now');
+  });
+
+  test('an unreadable stamp has no age at all', () => {
+    expect(relativeAge('not a date', Date.now())).toBeNull();
+  });
+});
+
+describe('isStale', () => {
+  const BUILT = '2026-09-20T12:00:00Z';
+
+  test('a day is the line', () => {
+    expect(STALE_AFTER_HOURS).toBe(24);
+    expect(isStale(BUILT, Date.parse('2026-09-21T06:00:00Z'))).toBe(false);
+    expect(isStale(BUILT, Date.parse('2026-09-21T18:00:00Z'))).toBe(true);
+  });
+
+  test('an unreadable stamp is not accused of being stale', () => {
+    expect(isStale('nonsense', Date.now())).toBe(false);
+  });
+});
+
+describe('the freshness strip', () => {
+  const freshMarkup = (iso) => {
+    document.body.innerHTML = `
+      <div class="viewer-bar">
+        <p class="freshness">
+          <span class="fresh-item"><time datetime="${iso}" data-ts data-age>raw</time></span>
+          <span class="fresh-item"><time datetime="${iso}" data-ts>raw</time></span>
+        </p>
+        <select data-tz-select><option value="America/New_York">Eastern</option></select>
+      </div>`;
+  };
+
+  test('the data stamp gets an age badge and the build stamp does not', () => {
+    freshMarkup('2026-09-20T12:00:00+00:00');
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T17:00:00Z') }));
+
+    const badges = document.querySelectorAll('.fresh-age');
+    expect(badges).toHaveLength(1);
+    expect(badges[0].textContent).toBe('5h ago');
+    expect(badges[0].classList.contains('is-stale')).toBe(false);
+  });
+
+  test('old data is flagged, because a quietly stale scoreboard is the worst kind', () => {
+    freshMarkup('2026-09-18T12:00:00+00:00');
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T17:00:00Z') }));
+
+    const badge = document.querySelector('.fresh-age');
+    expect(badge.textContent).toBe('2d ago');
+    expect(badge.classList.contains('is-stale')).toBe(true);
+  });
+
+  test('the badge survives a change of time zone rather than being wiped by it', () => {
+    freshMarkup('2026-09-20T12:00:00+00:00');
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T17:00:00Z') }));
+
+    const select = document.querySelector('[data-tz-select]');
+    select.value = 'America/New_York';
+    select.dispatchEvent(new window.Event('change'));
+
+    // Exactly one: repainting must not leave two badges stacked up either.
+    expect(document.querySelectorAll('.fresh-age')).toHaveLength(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Definitions
+// ---------------------------------------------------------------------------
+describe('tooltipPosition', () => {
+  const VIEWPORT = { width: 400, height: 800 };
+  const SIZE = { width: 300, height: 120 };
+  const anchorAt = (top, left) => ({ top, left, bottom: top + 15, width: 15 });
+
+  test('below the button when there is room', () => {
+    const spot = tooltipPosition(anchorAt(100, 200), SIZE, VIEWPORT);
+    expect(spot.flipped).toBe(false);
+    expect(spot.top).toBe(123);
+  });
+
+  test('above it when there is not', () => {
+    const spot = tooltipPosition(anchorAt(700, 200), SIZE, VIEWPORT);
+    expect(spot.flipped).toBe(true);
+    expect(spot.top).toBe(700 - 8 - 120);
+  });
+
+  test('a definition that fits neither way is pinned inside the viewport', () => {
+    const tall = { width: 300, height: 700 };
+    const spot = tooltipPosition(anchorAt(600, 200), tall, VIEWPORT);
+    expect(spot.flipped).toBe(false);
+    expect(spot.top).toBe(92); // 800 - 700 - 8, still fully on screen
+  });
+
+  test('slid sideways so it never hangs off an edge — the phone case', () => {
+    // A tooltip nearly as wide as the screen, anchored hard right.
+    expect(tooltipPosition(anchorAt(100, 390), SIZE, VIEWPORT).left).toBe(92);
+    expect(tooltipPosition(anchorAt(100, 2), SIZE, VIEWPORT).left).toBe(8);
+  });
+
+  test('centred on the button when the room is there', () => {
+    const wide = { width: 1200, height: 900 };
+    const spot = tooltipPosition(anchorAt(100, 600), SIZE, wide);
+    expect(spot.left).toBe(600 + 7.5 - 150);
+  });
+});
+
+describe('the definition popovers', () => {
+  const glossaryMarkup = () => {
+    document.body.innerHTML = `
+      <main>
+        <p class="stat-label">On the table<span class="term">
+          <button class="info" type="button" aria-expanded="false">
+            <span class="visually-hidden">On the table: the most the pool could bank.</span>
+          </button>
+          <span class="def" role="tooltip"><b class="def-term">On the table</b></span>
+        </span></p>
+        <p class="stat-label">Locked in<span class="term">
+          <button class="info" type="button" aria-expanded="false"></button>
+          <span class="def" role="tooltip"></span>
+        </span></p>
+      </main>`;
+    // jsdom lays nothing out, so every box would otherwise be zero-sized.
+    for (const el of document.querySelectorAll('.info, .def')) {
+      el.getBoundingClientRect = () => ({
+        top: 100, left: 200, bottom: 115, width: 15, height: 15,
+      });
+    }
+  };
+
+  const terms = () => Array.from(document.querySelectorAll('.term'));
+
+  beforeEach(() => {
+    glossaryMarkup();
+    init(document, fakeWindow());
+  });
+
+  test('hovering opens the definition and places it in the viewport', () => {
+    const [first] = terms();
+    first.dispatchEvent(new window.Event('pointerenter'));
+
+    expect(first.classList.contains('is-open')).toBe(true);
+    expect(first.querySelector('.info').getAttribute('aria-expanded')).toBe('true');
+    expect(first.querySelector('.def').style.top).toBeTruthy();
+  });
+
+  test('a tap toggles it, which is the case a CSS-only tooltip cannot serve', () => {
+    const [first] = terms();
+    const button = first.querySelector('.info');
+
+    button.dispatchEvent(new window.Event('click'));
+    expect(first.classList.contains('is-open')).toBe(true);
+
+    button.dispatchEvent(new window.Event('click'));
+    expect(first.classList.contains('is-open')).toBe(false);
+  });
+
+  test('only one is ever open — two overlapping definitions explain nothing', () => {
+    const [first, second] = terms();
+    first.dispatchEvent(new window.Event('pointerenter'));
+    second.dispatchEvent(new window.Event('pointerenter'));
+
+    expect(first.classList.contains('is-open')).toBe(false);
+    expect(second.classList.contains('is-open')).toBe(true);
+  });
+
+  test('escape closes it', () => {
+    const [first] = terms();
+    first.dispatchEvent(new window.Event('pointerenter'));
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(first.classList.contains('is-open')).toBe(false);
+  });
+
+  test('the definition is the button\'s accessible name, so it needs no opening', () => {
+    const hidden = document.querySelector('.info .visually-hidden');
+    expect(hidden.textContent).toContain('On the table:');
+  });
+
+  test('a page with no definitions on it does not throw', () => {
+    document.body.innerHTML = '<main><p>nothing here</p></main>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Head to head
+// ---------------------------------------------------------------------------
+describe('the head-to-head grid', () => {
+  const heatMarkup = () => {
+    document.body.innerHTML = `
+      <main>
+        <svg class="heat">
+          <text class="heat-head heat-col" data-c="0">Brian</text>
+          <text class="heat-head heat-col" data-c="1">Eric</text>
+          <text class="heat-head heat-row" data-r="0">Brian</text>
+          <text class="heat-head heat-row" data-r="1">Eric</text>
+          <rect class="heat-box" data-r="0" data-c="1" data-p="62"
+                data-row="Brian Moore" data-col="Eric Riggs"></rect>
+          <rect class="heat-box" data-r="1" data-c="0" data-p="38"
+                data-row="Eric Riggs" data-col="Brian Moore"></rect>
+        </svg>
+        <p class="heat-readout" data-heat-readout>Point at any cell.</p>
+      </main>`;
+  };
+
+  beforeEach(() => {
+    heatMarkup();
+    init(document, fakeWindow());
+  });
+
+  test('a cell reads as a sentence, which is what a bare 62% never did', () => {
+    expect(headToHeadSentence('Brian', 'Eric', '62'))
+      .toBe('Brian finishes above Eric in 62% of simulated seasons.');
+  });
+
+  test('pointing at a cell writes the pair out in full names', () => {
+    document.querySelector('[data-r="0"][data-c="1"]')
+      .dispatchEvent(new window.Event('pointerenter'));
+
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Brian Moore finishes above Eric Riggs in 62% of simulated seasons.');
+  });
+
+  test('the row and the column light up, and only they do', () => {
+    document.querySelector('[data-r="0"][data-c="1"]')
+      .dispatchEvent(new window.Event('pointerenter'));
+
+    const lit = Array.from(document.querySelectorAll('.is-lit'));
+    expect(lit.map((el) => el.textContent).filter(Boolean).sort())
+      .toEqual(['Brian', 'Eric']);
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(1);
+  });
+
+  test('leaving the chart puts the prompt back', () => {
+    const chart = document.querySelector('svg.heat');
+    chart.querySelector('.heat-box').dispatchEvent(new window.Event('pointerenter'));
+    chart.dispatchEvent(new window.Event('pointerleave'));
+
+    expect(document.querySelectorAll('.is-lit')).toHaveLength(0);
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+  });
+
+  test('a page with no grid on it does not throw', () => {
+    document.body.innerHTML = '<main><p>nothing here</p></main>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sorting
+// ---------------------------------------------------------------------------
+describe('firstSortDirection', () => {
+  const heading = (html) => {
+    document.body.innerHTML = `<table><thead><tr>${html}</tr></thead></table>`;
+    return document.querySelector('th');
+  };
+
+  test('numbers open biggest-first and names open A-Z', () => {
+    expect(firstSortDirection(heading('<th class="num" data-sort>Points</th>'))).toBe(-1);
+    expect(firstSortDirection(heading('<th data-sort>Entrant</th>'))).toBe(1);
+  });
+
+  test('a column where small is good says so, and is believed', () => {
+    // Rank and "behind the leader" are numbers where first place is the
+    // smallest value, so the num heuristic is exactly wrong for them.
+    expect(firstSortDirection(heading('<th class="num" data-sort="ascending">Rank</th>'))).toBe(1);
+    expect(firstSortDirection(heading('<th data-sort="descending">Share</th>'))).toBe(-1);
+  });
+});
+
+describe('a table the server already sorted', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <table>
+        <thead><tr>
+          <th data-sort>Entrant</th>
+          <th class="num" data-sort aria-sort="descending">Expected payout</th>
+        </tr></thead>
+        <tbody>
+          <tr><th>Brian</th><td class="num" data-value="40">$40</td></tr>
+          <tr><th>Eric</th><td class="num" data-value="12">$12</td></tr>
+        </tbody>
+      </table>`;
+    init(document, fakeWindow());
+  });
+
+  const names = () =>
+    Array.from(document.querySelectorAll('tbody tr th')).map((el) => el.textContent);
+
+  test('the first click reverses it rather than re-sorting to what is on screen', () => {
+    document.querySelectorAll('th')[1].dispatchEvent(new window.Event('click'));
+
+    expect(names()).toEqual(['Eric', 'Brian']);
+    expect(document.querySelectorAll('th')[1].getAttribute('aria-sort')).toBe('ascending');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Arriving
+// ---------------------------------------------------------------------------
+describe('reveal on scroll', () => {
+  const revealMarkup = () => {
+    document.body.innerHTML = `
+      <main>
+        <div class="stat">one</div>
+        <div class="card">two</div>
+        <p>not a block</p>
+      </main>`;
+  };
+
+  beforeEach(revealMarkup);
+
+  test('the hidden state is added by the client, never by the stylesheet', () => {
+    // With scripting off nothing is hidden, which is why this is safe at all.
+    expect(document.querySelectorAll('.will-reveal')).toHaveLength(0);
+
+    init(document, fakeWindow());
+    expect(document.querySelectorAll('.will-reveal')).toHaveLength(2);
+    expect(REVEAL_SELECTOR).toContain('.stat');
+    // Headings and copy are deliberately not in it — see the export.
+    expect(REVEAL_SELECTOR).not.toContain('.section-title');
+  });
+
+  test('a block that arrives is revealed once and then let go of', () => {
+    const win = fakeWindow();
+    init(document, win);
+
+    const [observer] = win._observers;
+    const stat = document.querySelector('.stat');
+    observer.callback([{ target: stat, isIntersecting: true }]);
+
+    expect(stat.classList.contains('will-reveal')).toBe(false);
+    expect(observer.targets).not.toContain(stat);
+  });
+
+  test('a block still off screen stays hidden and stays watched', () => {
+    const win = fakeWindow();
+    init(document, win);
+
+    const [observer] = win._observers;
+    const card = document.querySelector('.card');
+    observer.callback([{ target: card, isIntersecting: false }]);
+
+    expect(card.classList.contains('will-reveal')).toBe(true);
+    expect(observer.targets).toContain(card);
+  });
+
+  test('nothing is hidden when the reader has asked for less motion', () => {
+    init(document, fakeWindow({ reduceMotion: true }));
+    expect(document.querySelectorAll('.will-reveal')).toHaveLength(0);
+  });
+
+  test('a browser with no observer leaves the page exactly as it was', () => {
+    const win = fakeWindow();
+    win.IntersectionObserver = undefined;
+    init(document, win);
+    expect(document.querySelectorAll('.will-reveal')).toHaveLength(0);
+  });
+
+  test('a block already on screen is left visible — there is nothing to arrive', () => {
+    // This module is deferred, so on a slow connection the first screen can be
+    // painted before it runs. Hiding what the reader is already looking at
+    // would be a flicker rather than an entrance.
+    const stat = document.querySelector('.stat');
+    const card = document.querySelector('.card');
+    stat.getBoundingClientRect = () => ({ top: 120, width: 300, height: 90 });
+    card.getBoundingClientRect = () => ({ top: 1400, width: 300, height: 90 });
+
+    init(document, fakeWindow({ innerHeight: 900 }));
+
+    expect(stat.classList.contains('will-reveal')).toBe(false);
+    expect(card.classList.contains('will-reveal')).toBe(true);
+  });
+
+  test('a block the page is already hiding is never hidden a second time', () => {
+    // The schedule shows one week and hides the rest in CSS. Hiding those
+    // again would leave a week you switch to blank until the observer got
+    // round to it — or for good, if it never did.
+    const card = document.querySelector('.card');
+    card.checkVisibility = () => false;
+    document.querySelector('.stat').checkVisibility = () => true;
+
+    init(document, fakeWindow());
+
+    expect(card.classList.contains('will-reveal')).toBe(false);
+    expect(document.querySelector('.stat').classList.contains('will-reveal')).toBe(true);
+  });
+});
+
+describe('the field on a page that cannot draw', () => {
+  test('no 2D context means no field, and no error either', () => {
+    document.body.innerHTML = '<canvas class="gridiron" data-near="Family Pool"></canvas>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+
+  test('the drive marker sits out when the reader has asked for less motion', () => {
+    document.body.innerHTML =
+      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+    init(document, fakeWindow({ reduceMotion: true }));
+
+    expect(document.querySelector('.drive-line').style.transform).toBe('');
+  });
+
+  test('the marker starts on the goal line and reports the page has nowhere to go', () => {
+    document.body.innerHTML =
+      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+    init(document, fakeWindow({ innerHeight: 900 }));
+
+    // jsdom lays nothing out, so scrollHeight is zero: no scroll, no drive.
+    expect(document.querySelector('.drive').classList.contains('is-live')).toBe(false);
+    expect(document.querySelector('.drive-yard').textContent).toBe('Own goal line');
+    expect(document.querySelector('.drive-line').style.transform)
+      .toBe('translate3d(0, 75.0px, 0)');
+  });
+
+  test('the yard chip waits until the drive has left its own goal line', () => {
+    // On the goal line the marker sits under the masthead, which would put
+    // the label in the viewer bar and cut it in half.
+    document.body.innerHTML =
+      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: 4000, configurable: true,
+    });
+
+    const win = fakeWindow({ innerHeight: 900, scrollY: 0 });
+    init(document, win);
+    const drive = document.querySelector('.drive');
+    expect(drive.classList.contains('is-live')).toBe(true);
+    expect(drive.classList.contains('is-moving')).toBe(false);
+
+    win.scrollY = 1550; // half way down a 3100px scroll
+    win._fire('scroll');
+    win._frames.pop()();
+
+    expect(drive.classList.contains('is-moving')).toBe(true);
+    expect(document.querySelector('.drive-yard').textContent).toBe('Midfield');
+  });
+});
+
+describe('the field on a page that can draw', () => {
+  /** Put a canvas on the page whose context records rather than renders. */
+  const paintable = () => {
+    document.body.innerHTML =
+      '<canvas class="gridiron" data-near="Family Pool" data-far="2026"></canvas>';
+    const canvas = document.querySelector('canvas');
+    const ctx = recordingContext();
+    canvas.getContext = () => ctx;
+    return { canvas, ctx };
+  };
+
+  test('the bitmap is sized for the device, so the chalk lines are not fuzzy', () => {
+    const { canvas } = paintable();
+    init(document, fakeWindow({ innerWidth: 400, innerHeight: 850 }));
+
+    // Twice the CSS size at devicePixelRatio 2, with the context scaled to
+    // match so the drawing code still works in CSS pixels.
+    expect(canvas.width).toBe(800);
+    expect(canvas.height).toBe(1700);
+  });
+
+  test('the whole field is painted on first sight', () => {
+    const { ctx } = paintable();
+    init(document, fakeWindow());
+
+    expect(ctx.calls.some((c) => c.name === 'clearRect')).toBe(true);
+    const words = ctx.calls.filter((c) => c.name === 'fillText').map((c) => c.args[0]);
+    expect(words).toContain('FAMILY POOL');
+    expect(words).toContain('2026');
+  });
+
+  test('switching the theme repaints it, because every colour hangs off that', () => {
+    const { ctx } = paintable();
+    const win = fakeWindow();
+    init(document, win);
+
+    const first = ctx.calls.length;
+    const watcher = win._observers.find((o) => typeof o.observe === 'function' && !o.targets);
+    watcher.callback();
+
+    expect(ctx.calls.length).toBeGreaterThan(first);
+  });
+
+  test('a resize wider repaints; an address bar sliding away does not', () => {
+    const { ctx } = paintable();
+    const win = fakeWindow({ innerWidth: 400, innerHeight: 850 });
+    init(document, win);
+
+    const painted = ctx.calls.length;
+
+    // The phone case: the browser chrome hides and the viewport grows by 60px.
+    // Repainting the entire field for that would flicker on every scroll.
+    win.innerHeight = 910;
+    win._fire('resize');
+    expect(ctx.calls.length).toBe(painted);
+
+    // A genuine change of width always counts.
+    win.innerWidth = 900;
+    win._fire('resize');
+    expect(ctx.calls.length).toBeGreaterThan(painted);
+  });
+
+  test('a real change of height counts too — a rotated phone, a resized window', () => {
+    const { ctx } = paintable();
+    const win = fakeWindow({ innerWidth: 400, innerHeight: 850 });
+    init(document, win);
+
+    const painted = ctx.calls.length;
+    win.innerHeight = 400;
+    win._fire('resize');
+    expect(ctx.calls.length).toBeGreaterThan(painted);
+  });
+});
+
+describe('a definition button inside a sortable heading', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <main>
+        <table>
+          <thead><tr>
+            <th data-sort>Entrant</th>
+            <th class="num" data-sort>Expected payout<span class="term">
+              <button class="info" type="button" aria-expanded="false"></button>
+              <span class="def"></span>
+            </span></th>
+          </tr></thead>
+          <tbody>
+            <tr><th>Brian</th><td class="num" data-value="40">$40</td></tr>
+            <tr><th>Eric</th><td class="num" data-value="12">$12</td></tr>
+          </tbody>
+        </table>
+      </main>`;
+    for (const el of document.querySelectorAll('.info, .def')) {
+      el.getBoundingClientRect = () => ({
+        top: 10, left: 20, bottom: 25, width: 15, height: 15,
+      });
+    }
+    init(document, fakeWindow());
+  });
+
+  const names = () =>
+    Array.from(document.querySelectorAll('tbody tr th')).map((el) => el.textContent);
+
+  test('asking what a column means does not reorder the table underneath', () => {
+    const before = names();
+    document.querySelector('.info')
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+    expect(document.querySelector('.term').classList.contains('is-open')).toBe(true);
+    expect(names()).toEqual(before);
+    expect(document.querySelectorAll('th')[1].getAttribute('aria-sort')).toBeNull();
+  });
+
+  test('the heading itself still sorts', () => {
+    document.querySelectorAll('th')[1]
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(names()).toEqual(['Brian', 'Eric']);
+  });
+
+  test('activating the button by keyboard does not sort either', () => {
+    document.querySelector('.info').dispatchEvent(
+      new window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true }),
+    );
+    expect(document.querySelectorAll('th')[1].getAttribute('aria-sort')).toBeNull();
   });
 });

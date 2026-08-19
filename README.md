@@ -124,6 +124,7 @@ src/football_pool/
   potential.py        next week, ceilings, floors, elimination
   history.py          week-by-week points and ranks
   project.py          Monte Carlo → per-entrant odds and distributions
+  glossary.py         what the site's words mean, built from the season's rules
   svg.py              inline charts, generated at build time
   render.py           Jinja2 → public/
 templates/, assets/   the site itself
@@ -296,7 +297,22 @@ the bins are never per-entrant.
 **Head to head** gives P(row finishes above column) for every pair, with ties
 splitting evenly so opposite cells always add to 100%. The number is printed in
 every cell and colour is only reinforcement, so it reads in greyscale and with
-any colour vision.
+any colour vision. Both axes are captioned, and that is not decoration: a grid
+of names against the same names looks symmetrical and is not, so without a
+caption every cell has two opposite readings and nothing on the page says which
+one is on the screen. The caption is one sentence broken across the two edges —
+*each entry* down the side, *…finishes above these* along the top — so reading a
+cell is reading the sentence. Pointing at one lights up its row and its column
+and writes the pair out underneath in full names, because tracing two fingers
+across a grid is not a thing anyone should have to do on a phone.
+
+**Winning and making money are two different questions**, and the page now says
+so before anything else. Chance of winning is first place and nothing else;
+expected payout counts every paying place, weighted by how often you finish
+there. They routinely disagree — a steady second is worth real money and no
+bragging rights at all — and when the two leaders differ the page names both and
+says why. Expected profit is the payout less the entry fee, and across the whole
+pool it necessarily sums to zero: the pot is exactly what everyone paid in.
 
 The Season page carries two kinds of chart, because they answer two different
 questions.
@@ -317,6 +333,71 @@ with JavaScript off the charts still show the full field.
 
 The site is dark by default and does not follow your operating system — light is
 an opt-in from the toggle in the header, remembered per browser.
+
+## The field
+
+The background is a football field, one end zone at the top of the screen and
+the other at the bottom, drawn to scale with yard lines, hash marks, painted
+numbers and both wordmarks. It is a `<canvas>` rather than an SVG or a stack of
+gradients because the numbers have to rotate to face their own sideline and the
+hash marks number in the hundreds — and because it is repainted only when the
+viewport or the theme actually changes, never on scroll.
+
+It runs away from the reader rather than across, which is the one orientation
+that holds up on both a phone and a desktop: a portrait viewport is very nearly
+the proportion of a real field seen from behind the goalposts. Every colour it
+paints with is a CSS custom property (`--paint-chalk`, `--paint-endzone`, and
+so on) read back through `getComputedStyle`, so the drawing code names marks by
+their job and never knows which theme is on. The alphas are tuned per theme
+rather than shared, because chalk on a night field and ink on a day field do not
+read at the same strength.
+
+The broadcast first-down line drives from your own goal line to the far end zone
+as the page scrolls, with the yard it is standing on written in the sideline —
+own 34, midfield, opp 12, touchdown. It is a separate element from the canvas so
+moving it is one transform and never a repaint of the field underneath. With
+scripting off, the stylesheet's mown turf carries the page on its own; with
+`prefers-reduced-motion`, the line does not run at all.
+
+Panels and cards settle into place as you reach them. The hidden state is added
+by the client and removed on first sight, so nothing is ever invisible without
+JavaScript — and anything already on screen when the script runs is left alone,
+because that would be a flicker rather than an entrance. Headings and body copy
+are deliberately never animated: a title that assembles itself while its own
+paragraph is already there makes a section look out of order.
+
+## Saying what the words mean
+
+Half the vocabulary on this site means something specific here and something
+vaguer everywhere else. *On the table* is not "points available", *locked in* is
+not "guaranteed to you", and *expected $* is emphatically not what anybody is
+going to be paid. Every one of those now carries an **i** beside it that opens
+the full definition on hover, on focus, or on a tap.
+
+The definitions live in `glossary.py`, once, and the templates reference them by
+key — so a term cannot be explained one way on the schedule page and another way
+on the forecast. They are generated from a `Season` rather than written as fixed
+prose, because the numbers that make them concrete are configurable: a
+definition that says "the top three" when `rules.yaml` pays two would be worse
+than no definition. `/rules/` renders the whole glossary as a table, which is
+also where the definitions still are for anyone the popovers cannot reach.
+
+Each definition is written twice on purpose. Once inside the button as
+visually-hidden text, which makes it the button's accessible name — a screen
+reader reads "On the table: the most the whole pool could bank…" and has nothing
+to open. Once as the popover a sighted reader hovers. The popover is
+`position: fixed` and placed by the client, because several of these live inside
+tables and a table is a clipping context.
+
+## Byes
+
+A bye is the one thing a schedule cannot show you: there is no row to render, so
+an entrant whose team is off just finds a quiet week with no explanation for it.
+Each regular-season week therefore names the teams that are not playing —
+owners first, and struck through rather than merely dimmed, because dim already
+means "has not scored yet" everywhere else on the site. An entrant's own page
+names whichever of their four are off next week, right beside the next-week
+ceiling that the bye is the reason for.
 
 ## Two things the numbers account for
 

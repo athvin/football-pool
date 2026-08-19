@@ -35,6 +35,16 @@
 
 <a class="skip" href="#main">Skip to content</a>
 
+{# The field itself. Painted by the client, so both are empty and harmless
+   without scripting — the stylesheet's turf carries the page on its own. The
+   wordmarks are passed in rather than baked into the JavaScript so the copy
+   stays where the rest of the copy is. #}
+<canvas class="gridiron" aria-hidden="true"
+        data-near="Family Pool" data-far="{{ season.year }}"></canvas>
+<div class="drive" aria-hidden="true">
+  <div class="drive-line"><span class="drive-yard"></span></div>
+</div>
+
 <div class="grain" aria-hidden="true"></div>
 
 <header class="masthead">
@@ -68,9 +78,29 @@
    what you are looking at — which row is yours, and what clock the timestamps
    are in — so they have to be findable before you have read the page, not
    after. Deliberately not sticky: the masthead already claims that space, and
-   on a phone a third pinned row costs more than it gives. #}
+   on a phone a third pinned row costs more than it gives.
+
+   The freshness stamps share the strip. They used to live in the footer, which
+   put the single most important caveat on the whole site — how old are these
+   numbers — behind a full page of scrolling. A scoreboard that is quietly two
+   days stale is worse than one that says so. #}
 <div class="viewer-bar">
   <div class="wrap viewer-inner">
+    <p class="freshness">
+      <span class="fresh-item">
+        <span class="viewer-label">Data through</span>
+        {% if fresh.data_at %}
+          <time datetime="{{ fresh.data_at }}" data-ts data-age>{{ fresh.data_at }}</time>
+        {% else %}
+          <span class="fresh-value">unknown</span>
+        {% endif %}
+      </span>
+      <span class="fresh-item">
+        <span class="viewer-label">Site built</span>
+        <time datetime="{{ fresh.built_at }}" data-ts>{{ fresh.built_at }}</time>
+      </span>
+    </p>
+
     {% if rows %}
     <label class="me-picker">
       <span class="viewer-label">Who are you?</span>
@@ -105,18 +135,12 @@
 
 <footer class="footer">
   <div class="wrap footer-inner">
+    {# The stamps themselves moved to the top of the page. What is left here is
+       where the numbers came from, which is reference rather than caveat. #}
     <div class="stamps">
       <p class="stamp">
-        <span class="stamp-label">Data through</span>
-        {% if fresh.data_at %}
-          <time datetime="{{ fresh.data_at }}" data-ts>{{ fresh.data_at }}</time>
-        {% else %}
-          <span class="stamp-value">unknown</span>
-        {% endif %}
-      </p>
-      <p class="stamp">
-        <span class="stamp-label">Site built</span>
-        <time datetime="{{ fresh.built_at }}" data-ts>{{ fresh.built_at }}</time>
+        <span class="stamp-label">Results read</span>
+        <span class="stamp-value">{{ fresh.source_text }}</span>
       </p>
     </div>
 
