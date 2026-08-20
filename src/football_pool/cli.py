@@ -30,7 +30,11 @@ def _load(args) -> tuple:
     """Load season config and games together — the common prologue."""
     from .nflverse import fetch_games, validate_teams
 
-    season = load_season(args.season)
+    # One positional argument unless a pool was actually named: asking for the
+    # root pool by name and getting it by default are the same request, and
+    # keeping the call shape means nothing that stubs load_season has to care.
+    slug = getattr(args, "pool", None)
+    season = load_season(args.season, pool=slug) if slug else load_season(args.season)
     gd = fetch_games(
         season.year,
         cache_path=games_cache(season.year),
@@ -65,7 +69,7 @@ def cmd_standings(args) -> int:
     st["money"] = money_if_season_ended(season, st)
 
     week = gd.current_week
-    header = f"{season.year} pool"
+    header = f"{season.year} {season.pool.name}"
     header += f" — through week {week}" if week else " — preseason, no games played"
     print(f"\n{header}")
     print(f"{len(season.entrants)} entrants · pot ${season.pot:,.0f}\n")
@@ -122,8 +126,26 @@ def cmd_check_lf(args) -> int:
     return 0
 
 
+def _sibling_pools(season) -> tuple:
+    """Every other pool sharing this season, in registry order.
+
+    Empty for a season that declares one pool — which is every archived year,
+    and every season a test builds — so the single-pool path stays exactly the
+    path it was on before.
+    """
+    if len(season.pools) <= 1 or season.config_root is None:
+        return ()
+    from .season import load_pools
+
+    return tuple(
+        s
+        for s in load_pools(season.year, root=season.config_root)
+        if s.pool.slug != season.pool.slug
+    )
+
+
 def cmd_build(args) -> int:
-    from .render import render_site
+    from .render import render_pools
 
     season, gd = _load(args)
 
@@ -160,10 +182,20 @@ def cmd_build(args) -> int:
     # A project site lives at https://<user>.github.io/<repo>/, so every URL
     # needs that prefix. CI passes it in; locally the default of "" is right
     # because a preview server serves from the root.
-    written = render_site(season, gd, out, base=args.base)
+    #
+    # --pool renders that pool into its real subpath, so a partial build is
+    # always a subset of the real site rather than a differently-shaped one.
+    seasons = (season,) if getattr(args, "pool", None) else (season, *_sibling_pools(season))
+    written = render_pools(seasons, gd, out, base=args.base)
 
     pages = sum(1 for p in written if p.suffix == ".html")
     print(f"built {pages} pages for {season.year} -> {out}")
+    if len(seasons) > 1:
+        for s in seasons:
+            print(
+                f"  {s.pool.name}: {len(s.entrants)} entries, pot ${s.pot:,.0f}"
+                f" -> /{s.pool.path}"
+            )
     if gd.current_week:
         print(f"through week {gd.current_week} ({gd.source})")
     else:
@@ -200,8 +232,15 @@ def main(argv: list[str] | None = None) -> int:
         p.set_defaults(fn=fn)
         return p
 
+    # --pool goes on the two commands that are about one pool's people and
+    # money. check-lf is entirely about leveling factors, which are shared by
+    # every pool in the season, and fetch never loads a season at all.
     add("fetch", "refresh the cached games file", cmd_fetch)
-    add("standings", "print the current leaderboard", cmd_standings)
+
+    standings = add("standings", "print the current leaderboard", cmd_standings)
+    standings.add_argument(
+        "--pool", default=None, help="which pool to print (default: the one at the site root)"
+    )
 
     check = add(
         "check-lf", "check the leveling factors against last season's records", cmd_check_lf
@@ -216,6 +255,9 @@ def main(argv: list[str] | None = None) -> int:
         "--base",
         default="",
         help="deployment path prefix, e.g. /football-pool (default: site root)",
+    )
+    build.add_argument(
+        "--pool", default=None, help="build only this pool (default: every pool in the season)"
     )
 
     args = ap.parse_args(argv)

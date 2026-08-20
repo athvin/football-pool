@@ -1,5 +1,29 @@
 # =============================================================================
-# ENTRANTS AND THEIR PICKS — 2026
+# THE FAMILY POOL — 2026
+# =============================================================================
+# One pool: who is in it, what it costs, and who picked what. How points are
+# scored is ../rules.yaml, shared with every other pool playing this season —
+# nothing in this file can change the math.
+#
+# The filename is the pool's slug, and the slug is its URL. Renaming this file
+# moves the pool's whole address space, so don't.
+# =============================================================================
+
+name: Family Pool
+
+# Served at the site root rather than at /family/. Exactly one pool per season
+# sets this. Moving it is a one-way door: every link anyone has ever pasted
+# into the group chat points here.
+root: true
+
+# Money. The pot is never written down — it is always len(entrants) * entry_fee,
+# so it stays correct as picks trickle in.
+entry_fee: 10.0
+payout_split: [0.50, 0.30, 0.20] # 1st / 2nd / 3rd share of the pot
+picks_per_entrant: 4
+
+# =============================================================================
+# ENTRANTS AND THEIR PICKS
 # =============================================================================
 # Everyone picks exactly 4 teams for the whole season.
 #

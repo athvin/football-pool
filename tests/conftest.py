@@ -20,6 +20,15 @@ from football_pool.season import REPO_ROOT, load_season
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+REAL_2026 = REPO_ROOT / "seasons" / "2026"
+
+# Keys that live in pools/<slug>.yaml rather than rules.yaml. write_season
+# routes overrides by key so a test can say `rules_overrides={"entry_fee": 25}`
+# without caring which file the loader keeps it in — that is the loader's
+# business, and it has already moved once.
+POOL_KEYS = frozenset({"name", "root", "entry_fee", "payout_split", "picks_per_entrant"})
+
+
 def write_season(
     root: Path,
     year: int,
@@ -27,28 +36,39 @@ def write_season(
     *,
     rules_overrides: dict | None = None,
     forecast: bool = True,
+    pools: dict[str, dict] | None = None,
 ) -> Path:
     """Create ``root/seasons/<year>/`` from the repo's real rules plus picks.
 
     The forecast file is copied too, so projection tests exercise the same
     market inputs the real site uses. Pass ``forecast=False`` to build a season
     with projections switched off.
+
+    ``entrants`` becomes the root pool, ``family``. Pass ``pools`` — a
+    ``{slug: {...}}`` mapping, each value a pool file's contents — to add more.
     """
     sdir = root / "seasons" / str(year)
-    sdir.mkdir(parents=True, exist_ok=True)
+    (sdir / "pools").mkdir(parents=True, exist_ok=True)
 
     if forecast:
-        shutil.copy(REPO_ROOT / "seasons" / "2026" / "forecast.yaml", sdir / "forecast.yaml")
+        shutil.copy(REAL_2026 / "forecast.yaml", sdir / "forecast.yaml")
 
-    rules = yaml.safe_load((REPO_ROOT / "seasons" / "2026" / "rules.yaml").read_text())
+    rules = yaml.safe_load((REAL_2026 / "rules.yaml").read_text())
+    family = yaml.safe_load((REAL_2026 / "pools" / "family.yaml").read_text())
+    family["entrants"] = entrants
     rules["season"] = year
+
     for k, v in (rules_overrides or {}).items():
-        if isinstance(v, dict) and isinstance(rules.get(k), dict):
-            rules[k] = {**rules[k], **v}
+        target = family if k in POOL_KEYS else rules
+        if isinstance(v, dict) and isinstance(target.get(k), dict):
+            target[k] = {**target[k], **v}
         else:
-            rules[k] = v
+            target[k] = v
+
     (sdir / "rules.yaml").write_text(yaml.safe_dump(rules))
-    (sdir / "picks.yaml").write_text(yaml.safe_dump({"entrants": entrants}))
+    (sdir / "pools" / "family.yaml").write_text(yaml.safe_dump(family))
+    for slug, cfg in (pools or {}).items():
+        (sdir / "pools" / f"{slug}.yaml").write_text(yaml.safe_dump(cfg))
     (root / "config.yaml").write_text(yaml.safe_dump({"active_season": year}))
     return sdir
 
@@ -75,6 +95,39 @@ def make_season(tmp_path):
 @pytest.fixture
 def season(make_season):
     return make_season()
+
+
+@pytest.fixture
+def two_pools(tmp_path):
+    """One 2025 season, two pools — the shape the real site now has.
+
+    Deliberately different in every way a pool is allowed to differ: name,
+    entry fee, payout ladder and field size. A test that only passes because
+    the two pools happen to be identical fails against this.
+    """
+    from football_pool.season import load_pools
+
+    write_season(
+        tmp_path,
+        2025,
+        [
+            {"name": "Aunt Carol", "teams": ["SEA", "NE", "PHI", "LAR"]},
+            {"name": "Cousin Mike", "teams": ["KC", "CIN", "DAL", "NO"]},
+            {"name": "Brandon", "teams": ["ARI", "NYJ", "TEN", "CLE"]},
+        ],
+        pools={
+            "friends": {
+                "name": "Friends Pool",
+                "entry_fee": 50.0,
+                "payout_split": [0.6, 0.4],
+                "entrants": [
+                    {"name": "Dana", "teams": ["BUF", "SF", "GB", "MIA"]},
+                    {"name": "Priya", "teams": ["LAR", "SEA", "KC", "NE"]},
+                ],
+            }
+        },
+    )
+    return load_pools(2025, root=tmp_path)
 
 
 @pytest.fixture

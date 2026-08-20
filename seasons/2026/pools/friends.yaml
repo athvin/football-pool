@@ -1,0 +1,59 @@
+# =============================================================================
+# THE FRIENDS POOL — 2026
+# =============================================================================
+# One pool: who is in it, what it costs, and who picked what. How points are
+# scored is ../rules.yaml, shared with the family pool — the same leveling
+# factors, the same bonuses, the same divisions. Nothing in this file can
+# change the math; the only differences between the two pools are the people,
+# the price, and the name.
+#
+# The filename is the pool's slug, so this one is served at /friends/.
+# =============================================================================
+
+name: Friends Pool
+
+# No `root: true` — that belongs to the family pool, which is served at the site
+# root because a year of group-chat links point there.
+
+# Money. Same three-place ladder as the family pool, five times the stakes.
+# The pot is never written down: it is always len(entrants) * entry_fee, so it
+# stays correct as people buy in.
+entry_fee: 50.0
+payout_split: [0.50, 0.30, 0.20] # 1st / 2nd / 3rd share of the pot
+picks_per_entrant: 4
+
+# =============================================================================
+# ENTRANTS AND THEIR PICKS
+# =============================================================================
+# Everyone picks exactly 4 teams for the whole season.
+#
+# The build validates this file hard and FAILS LOUDLY on any problem, because a
+# silent typo here would just make someone score zero for a team all year:
+#   - exactly 4 teams per entrant
+#   - every code must be one of the 32 in rules.yaml (KAN is not KC)
+#   - no duplicate team within a single entry
+#   - no duplicate entrant name
+#
+# Team codes (use these exactly):
+#   AFC East   NE  BUF MIA NYJ      NFC East   PHI DAL WAS NYG
+#   AFC North  BAL PIT CIN CLE      NFC North  DET GB  MIN CHI
+#   AFC South  JAX HOU IND TEN      NFC South  CAR TB  ATL NO
+#   AFC West   KC  LAC DEN LV       NFC West   SEA LAR SF  ARI
+#
+# Note: the Rams are LAR here (upstream data calls them LA; we normalize).
+# =============================================================================
+
+entrants:
+  - name: Brian Moore
+    teams: ["KC", "BAL", "DAL", "CIN"]
+
+  # As friends send in their picks and their $50, add them here — nothing else
+  # in the project needs to change. The pot, the payouts, and every
+  # pool-relative metric recompute from however many entrants are in this list.
+  #
+  # Until there are at least four, the three payout places will divide the pot
+  # among fewer people than there are places. That is the arithmetic working,
+  # not a bug, and it sorts itself out as the field fills.
+  #
+  # - name: Aunt Carol
+  #   teams: ["CIN", "WAS", "TEN", "NO"]
