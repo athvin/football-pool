@@ -306,3 +306,58 @@ def test_a_preseason_fallback_publishes_because_nothing_is_late(
     )
 
     assert cli.main(["build", "--out", str(tmp_path / "s")]) == 0
+
+
+# -- more than one pool -------------------------------------------------------
+@pytest.fixture
+def wired_pools(monkeypatch, two_pools):
+    """Point the CLI at a real two-pool season on disk, no network.
+
+    Unlike `wired`, load_season is not stubbed with a lambda: this has to
+    exercise the real _sibling_pools path, which reads the season back off
+    disk to find the pools the first load did not return.
+    """
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    gd = GameData(games, 2025, datetime(2026, 2, 10, tzinfo=timezone.utc),
+                  datetime(2026, 2, 9, tzinfo=timezone.utc), "cache")
+    monkeypatch.setattr("football_pool.nflverse.fetch_games", lambda *a, **k: gd)
+    monkeypatch.setattr(cli, "load_season", lambda year, **kw: (
+        two_pools[0] if not kw.get("pool")
+        else next(s for s in two_pools if s.pool.slug == kw["pool"])
+    ))
+    return two_pools, gd
+
+
+def test_build_renders_every_pool_in_one_invocation(wired_pools, capsys, tmp_path):
+    """daily.yml runs exactly this, which is why it needs no change per pool."""
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out)]) == 0
+
+    assert (out / "index.html").exists()
+    assert (out / "friends" / "index.html").exists()
+    # One copy of the assets for the whole site, at the site root.
+    assert (out / "assets" / "site.css").exists()
+    assert not (out / "friends" / "assets").exists()
+
+    report = capsys.readouterr().out
+    assert "Family Pool: 3 entries, pot $30 -> /" in report
+    assert "Friends Pool: 2 entries, pot $100 -> /friends" in report
+
+
+def test_build_can_render_one_pool_into_its_real_subpath(wired_pools, capsys, tmp_path):
+    """A partial build is a subset of the real site, not a differently-shaped one."""
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out), "--pool", "friends"]) == 0
+
+    assert (out / "friends" / "index.html").exists()
+    assert not (out / "index.html").exists()
+    # One pool named explicitly means no switcher and no per-pool summary.
+    assert "pool-switch" not in (out / "friends" / "index.html").read_text()
+    assert "Friends Pool:" not in capsys.readouterr().out
+
+
+def test_standings_can_name_a_pool(wired_pools, capsys):
+    assert cli.main(["standings", "--pool", "friends"]) == 0
+    out = capsys.readouterr().out
+    assert "Friends Pool" in out
+    assert "2 entrants · pot $100" in out

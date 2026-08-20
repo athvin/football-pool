@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 
-{% block title %}Rules · {{ season.year }} Family Pool{% endblock %}
-{% block description %}How the family pool scores: leveling factors, bonuses, and playoff points.{% endblock %}
+{% block title %}Rules · {{ season.year }} {{ season.pool.name }}{% endblock %}
+{% block description %}How {{ season.pool.name }} scores: leveling factors, bonuses, and playoff points.{% endblock %}
 
 {% block content %}
 

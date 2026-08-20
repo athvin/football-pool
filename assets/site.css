@@ -1466,6 +1466,40 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   border-color: color-mix(in srgb, var(--heat) 45%, var(--rule));
 }
 
+/* --- pool switcher ----------------------------------------------------- */
+/* Only rendered when the season has more than one pool. It sits in the viewer
+   bar rather than the masthead because it answers the same question the other
+   controls do — what am I looking at — and because the masthead's flex row is
+   already full at phone widths. Styled as chips rather than tabs so it doesn't
+   read as a second, competing navigation. */
+.pool-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pool-switch a {
+  padding: 0.25rem 0.55rem;
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-decoration: none;
+  color: var(--chalk-dim);
+  white-space: nowrap;
+  transition: color 0.18s, background-color 0.18s, border-color 0.18s;
+}
+
+.pool-switch a:hover { color: var(--chalk); background: var(--surface); }
+
+.pool-switch a[aria-current='page'] {
+  color: var(--chalk);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--live) 55%, var(--rule));
+}
+
+.pool-switch a:focus-visible { outline: 2px solid var(--live); }
+
 /* Label beside the control, not above it, so the bar stays one line tall. */
 .viewer-inner .me-picker,
 .viewer-inner .tz {

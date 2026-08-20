@@ -2,14 +2,14 @@
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
 
-{% block title %}{{ season.year }} Family Pool · {{ state.phase }}{% endblock %}
+{% block title %}{{ season.year }} {{ season.pool.name }} · {{ state.phase }}{% endblock %}
 
 {% block description %}
 {%- if state.leader -%}
 {{ state.phase }} — {{ state.leader.name }} leads with {{ state.leader.banked|points }} points
 {%- if state.week_leaders %}, {{ state.week_leaders[0][0] }} scored {{ '%.2f'|format(state.week_leaders[0][1]) }} this week{% endif -%}.
 {%- else -%}
-{{ season.year }} family NFL pool standings.
+{{ season.year }} {{ season.pool.name }} NFL standings.
 {%- endif -%}
 {% endblock %}
 

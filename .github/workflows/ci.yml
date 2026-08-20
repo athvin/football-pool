@@ -103,4 +103,37 @@ jobs:
           test -f public-project/rules/index.html
           test -f public-project/schedule/index.html
           test -f public-project/data/standings.json
-          echo 'both base paths render correctly, assets fingerprinted'
+
+          # The second pool is a whole site of its own, one level down...
+          test -f public-project/friends/index.html
+          test -f public-project/friends/rules/index.html
+          test -f public-project/friends/data/standings.json
+
+          # ...but /assets/ belongs to the SITE, not the pool. A pool-relative
+          # asset URL 404s in production and nowhere else, which is precisely
+          # the class of bug this whole step exists to catch.
+          grep -qE 'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"' public-project/friends/index.html
+          grep -qE 'src="/football-pool/assets/site\.js\?v=[0-9a-f]{8}"' public-project/friends/index.html
+          test ! -e public-project/friends/assets
+
+          # Conversely, a page URL must stay inside its pool: site-relative here
+          # would send the friends nav to the family pool's board.
+          grep -q 'href="/football-pool/friends/rules/"' public-project/friends/index.html
+
+          # No root-absolute URL on the nested page escapes the deployment
+          # prefix. `test -z "$(...)"` rather than a negated pipeline: under
+          # pipefail the nothing-found case exits non-zero from the FIRST grep,
+          # which reads backwards.
+          test -z "$(grep -oE '(href|src)="/[^"]*"' public-project/friends/index.html \
+                     | grep -v '="/football-pool/' || true)"
+
+          # The switcher points both ways, and the family pool did not move.
+          grep -q 'href="/football-pool/friends/"' public-project/index.html
+          grep -q 'href="/football-pool/"' public-project/friends/index.html
+          grep -q 'Family Pool' public-project/index.html
+          grep -q 'Friends Pool' public-project/friends/index.html
+
+          # The root build too, where an empty prefix hides a bug differently.
+          grep -qE 'href="/assets/site\.css\?v=[0-9a-f]{8}"' public-root/friends/index.html
+
+          echo 'both pools render at both base paths, assets shared and fingerprinted'

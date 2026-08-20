@@ -1,8 +1,16 @@
-# Family NFL Pool 🏈
+# NFL Pool 🏈
 
-A static scoreboard for our family's leveling-factor pool. A GitHub Action
-refreshes it twice a day, recomputes everyone's totals from real NFL results,
-and publishes the site to GitHub Pages.
+A static scoreboard for our leveling-factor pools. A GitHub Action refreshes it
+twice a day, recomputes everyone's totals from real NFL results, and publishes
+the site to GitHub Pages.
+
+One season can carry more than one pool — different people, different stakes,
+the same football. Today there are two:
+
+| | | |
+|---|---|---|
+| **Family Pool** | $10 | [athvin.github.io/football-pool/](https://athvin.github.io/football-pool/) |
+| **Friends Pool** | $50 | [athvin.github.io/football-pool/friends/](https://athvin.github.io/football-pool/friends/) |
 
 ## How the pool works
 
@@ -23,6 +31,65 @@ a win by a bad team is worth more than a win by a good one.
 
 The `/rules/` page on the site renders from the same file the scoring engine
 reads, so the posted rules and the maths can never drift apart.
+
+## More than one pool
+
+A **season** owns the football; a **pool** owns the people and the money.
+
+| Season-level, shared by every pool | Per-pool |
+|---|---|
+| `rules.yaml` — leveling factors, bonuses, divisions | `name` |
+| `forecast.yaml` — simulation inputs | `entry_fee`, `payout_split` |
+| `data/<year>/games.csv` — the results | `picks_per_entrant` |
+| | `entrants` |
+
+That split is the whole design. There is exactly **one** leveling-factor table
+per year, so two pools cannot quietly disagree about what a win is worth, and
+nothing a pool declares can reach the maths.
+
+```
+seasons/2026/
+  rules.yaml          shared scoring
+  forecast.yaml       shared model inputs
+  pools/
+    family.yaml       name, $10, payout split, 11 entrants, root: true
+    friends.yaml      name, $50, payout split, entrants
+```
+
+**The filename is the slug, and the slug is the URL.** `friends.yaml` is served
+at `/friends/`. Exactly one pool sets `root: true` and is served at the site
+root instead — that is the family pool, and it stays there, because a year of
+group-chat links point at it. Moving it is a one-way door.
+
+There is no manifest listing the pools; the directory *is* the list. A manifest
+can disagree with what is on disk in two directions — listed but missing,
+present but unpublished — and both failures are quiet.
+
+To add a pool mid-season: write `seasons/2026/pools/<slug>.yaml`. Nothing in
+code changes, and the next scheduled build publishes it at `/<slug>/`. Slugs
+must be lowercase `[a-z0-9-]` and may not collide with a page the site already
+writes (`rules`, `teams`, `entrant`, `assets`, `data`, …) — the loader refuses
+those by name, because a pool slugged `teams` would render its board straight
+over the teams page.
+
+Each pool gets a complete site of its own: its own leaderboard, entrant pages,
+schedule, forecast and `data/standings.json`. The one thing they share on disk
+is `/assets/` — a single copy of the stylesheet, the script, the logos and the
+fonts, linked by the same URL from every pool.
+
+One build renders all of them:
+
+```bash
+uv run pool build                      # every pool in the season
+uv run pool build --pool friends       # just one, into its real subpath
+uv run pool standings --pool friends   # that pool's leaderboard
+```
+
+Two consequences worth knowing up front. The results feed is fetched once and
+the staleness guard runs before any rendering, so **stale data blocks every
+pool** — that is deliberate; a half-published site is worse than yesterday's
+good one. And `/404.html` is only served from the site root, so a visitor who
+mistypes a URL under `/friends/` gets a page branded with the root pool's name.
 
 ## Getting started
 
@@ -46,7 +113,7 @@ perfectly on your laptop and 404s every stylesheet in production.
 
 ## Adding people
 
-Edit `seasons/2026/picks.yaml`:
+Edit the pool's own file — `seasons/2026/pools/family.yaml`:
 
 ```yaml
 entrants:
@@ -68,8 +135,10 @@ entrants in this file, so you can add people as their picks arrive.
 
 ## Where the leveling factors come from
 
-The commissioner sets them, and this project never overrides that. But the
-structure is recoverable, which makes a new year quick and a typo catchable:
+The commissioner sets them, and this project never overrides that. They live in
+`rules.yaml` at the season level, so there is one table shared by every pool and
+nothing to keep in sync. But the structure is recoverable, which makes a new
+year quick and a typo catchable:
 
 - Each conference is ranked by prior-season wins, a tie counting as half a win.
 - The factor rises monotonically down that ranking.
@@ -103,9 +172,19 @@ checked for monotonicity and tie-consistency against the prior year, so adding
 
 ```bash
 cp -r seasons/2026 seasons/2027
-# edit rules.yaml (leveling factors), picks.yaml, forecast.yaml
+# edit rules.yaml     leveling factors for the new year
+# edit forecast.yaml  win totals, qualitative Elo
+# edit pools/*.yaml   the new rosters, and the money if it changed
 # set active_season: 2027 in config.yaml
 ```
+
+Two things `cp -r` will happily carry that you may not want. It copies each
+pool file **with last year's roster**, which is the right default — most people
+re-enter — but an unedited roster publishes a stale field and validates
+perfectly clean, so the picks validator cannot catch it for you. And a pool
+that isn't running this year has to be **deleted** from `pools/`, not left in
+place; there is no "off" switch, because a pool nobody publishes is a pool
+nobody notices is broken.
 
 Nothing season-specific lives in code. Past years stay buildable forever with
 `uv run pool build --season 2026`.
@@ -114,7 +193,10 @@ Nothing season-specific lives in code. Past years stay buildable forever with
 
 ```
 config.yaml           which season to build
-seasons/<year>/       rules, picks, and forecast inputs for that year
+seasons/<year>/
+  rules.yaml          scoring: leveling factors, bonuses, divisions — shared
+  forecast.yaml       simulation inputs — shared
+  pools/<slug>.yaml   one pool: its name, its money, its roster
 data/<year>/          committed results — an audit trail and offline fallback
 src/football_pool/
   season.py           loads a season's config into a frozen Season object
@@ -255,6 +337,9 @@ off, and nothing else changes.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads.
 
+Every one of these exists once **per pool**, under that pool's prefix. Only
+`/assets/` and `/404.html` belong to the site as a whole.
+
 The Schedule page exists because a pool schedule is not an NFL schedule. A win
 pays the *winner's own* leveling factor, so the two sides of one game are almost
 never worth the same, and the team you need is not always the one favoured. Each
@@ -322,6 +407,12 @@ forward, each in its own colour, assigned in the order you pick them so nobody
 changes hue as the season moves. Set *who are you?* in the bar at the top of the
 page and the chart opens on your own line every time — that choice also highlights your row on
 every other page. It is stored in your browser and goes nowhere else.
+
+It is also stored **per pool**, because a slug from one roster means nothing in
+the other: being Brian in the family pool does not make you Brian in the friends
+pool, and answering in one must not un-answer the other. Theme and time zone are
+the opposite — they describe you rather than a roster, so they follow you across
+pools on a single shared key.
 
 **The whole field** draws everyone in a single colour with only the top few
 labelled. Thirty distinguishable hues do not exist, and colouring by rank would
@@ -438,6 +529,13 @@ stamp is a hash of the file's *contents*, not the build time, so a rebuild on a
 day when only the scores changed leaves every asset URL — and therefore every
 warm cache — untouched.
 
+With more than one pool, that same `url` filter resolves against two prefixes,
+and the rule is one sentence: **`/assets/` belongs to the site, everything else
+belongs to the pool.** Keep `/assets/` the only exception. A page URL that needs
+to be site-relative and is not under it would be silently pool-scoped and 404 on
+the non-root pool only, in production only — which is why the build check greps
+the *nested* pool's markup as well as the root's.
+
 The ruleset also blocks force-pushes and deletion of `main`. The repository
 admin can bypass it, which is deliberate: with one maintainer, a ruleset nobody
 can override is a lockout waiting to happen the first time CI itself breaks.
@@ -466,6 +564,10 @@ default token does not.
 ## Deploying
 
 One-time setup: **Settings → Pages → Source: GitHub Actions.**
+
+`daily.yml` runs one `pool build`, which emits the whole site — every pool, one
+copy of the assets. Adding a pool therefore needs no workflow change at all,
+because the pool list lives on disk rather than in a flag.
 
 After that `.github/workflows/daily.yml` builds on the football calendar, plus
 on demand from the Actions tab. Every schedule is written on the Eastern clock

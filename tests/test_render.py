@@ -30,6 +30,7 @@ from football_pool.render import (
     _team_rows,
     build_context,
     make_environment,
+    render_pools,
     render_site,
 )
 
@@ -37,6 +38,11 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 # A fixed instant, so nothing in here depends on when the suite is run.
 NOW = datetime(2026, 2, 10, 12, 0, tzinfo=timezone.utc)
+
+# Enough simulation to produce a projection block, not enough to be slow. The
+# multi-pool tests render two whole sites twice over; at forecast.yaml's real
+# 25,000 they would dominate the suite, and none of them assert on the numbers.
+SIMS = 50
 
 
 @pytest.fixture
@@ -59,6 +65,8 @@ def mid_season(games_2025):
     return GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
 
 
+# NB: this `pool` is a Season, and predates there being a PoolInfo of that
+# name. It is the three-way field most tests in here render.
 @pytest.fixture
 def pool(make_season):
     return make_season(
@@ -747,12 +755,12 @@ def test_the_stylesheet_still_finds_its_fonts(season, game_data, tmp_path):
     assert sorted(p.name for p in (tmp_path / "assets" / "fonts").glob("*.woff2"))
 
 
-def test_the_ci_contract_holds(season, game_data, tmp_path):
+def test_the_ci_contract_holds(two_pools, game_data, tmp_path):
     """Mirrors the greps in ci.yml so this breaks in pytest, not a required check."""
     root = tmp_path / "root"
     project = tmp_path / "project"
-    render_site(season, game_data, root, base="")
-    render_site(season, game_data, project, base="/football-pool")
+    render_pools(two_pools, game_data, root, base="", simulations=SIMS)
+    render_pools(two_pools, game_data, project, base="/football-pool", simulations=SIMS)
 
     assert re.search(
         r'href="/assets/site\.css\?v=[0-9a-f]{8}"', (root / "index.html").read_text()
@@ -764,6 +772,26 @@ def test_the_ci_contract_holds(season, game_data, tmp_path):
     assert (project / "rules" / "index.html").exists()
     assert (project / "schedule" / "index.html").exists()
     assert (project / "data" / "standings.json").exists()
+
+    # The second pool is a whole site of its own, one level down...
+    friends = project / "friends"
+    assert (friends / "index.html").exists()
+    assert (friends / "data" / "standings.json").exists()
+    assert (friends / "rules" / "index.html").exists()
+    # ...but its assets come from the site root, and exist only there.
+    assert re.search(
+        r'href="/football-pool/assets/site\.css\?v=[0-9a-f]{8}"',
+        (friends / "index.html").read_text(),
+    )
+    assert not (friends / "assets").exists()
+    # The switcher points both ways, and the root pool did not move.
+    assert 'href="/football-pool/friends/"' in (project / "index.html").read_text()
+    assert 'href="/football-pool/"' in (friends / "index.html").read_text()
+    # And the root build too, where an empty prefix hides a bug differently.
+    assert re.search(
+        r'href="/assets/site\.css\?v=[0-9a-f]{8}"',
+        (root / "friends" / "index.html").read_text(),
+    )
 
 
 # -- viewer preferences sit at the top ----------------------------------------
@@ -1313,3 +1341,121 @@ def test_the_rules_page_carries_the_whole_glossary(pool, game_data, tmp_path):
     assert "What the words mean" in html
     for term in ("Leveling factor", "On the table", "Expected payout", "Bye"):
         assert term in html
+
+
+# -- more than one pool on one site -------------------------------------------
+def test_a_page_url_is_pool_relative_and_an_asset_url_is_not():
+    """The composite case: a deployment prefix AND a pool below the root.
+
+    Each axis on its own is covered above. This is the combination where a bug
+    hides — a pool-scoped asset URL 404s only on the non-root pool, only in
+    production, and a site-scoped page URL sends the friends pool's nav to the
+    family pool's board.
+    """
+    env = make_environment("/football-pool", pool_base="/football-pool/friends")
+    url = env.filters["url"]
+
+    assert url("/rules/") == "/football-pool/friends/rules/"
+    assert url("/") == "/football-pool/friends/"
+    assert url("/data/standings.json") == "/football-pool/friends/data/standings.json"
+    assert url("/assets/site.css").startswith("/football-pool/assets/site.css?v=")
+    assert "/friends/assets/" not in url("/assets/site.css")
+
+
+def test_omitting_pool_base_leaves_the_filter_exactly_as_it_was():
+    """The one-pool call shape must not have changed behaviour."""
+    both = make_environment("/football-pool").filters["url"]
+    explicit = make_environment("/football-pool", pool_base="/football-pool").filters["url"]
+    for path in ("/", "/rules/", "/assets/site.css", "#scoring", "https://x.test/"):
+        assert both(path) == explicit(path)
+
+
+def test_render_pools_puts_the_root_pool_at_the_root(two_pools, game_data, tmp_path):
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    assert (tmp_path / "index.html").exists()
+    assert (tmp_path / "friends" / "index.html").exists()
+    # Not at /family/ — the root pool has no segment at all.
+    assert not (tmp_path / "family").exists()
+
+
+def test_the_assets_are_copied_once_for_the_whole_site(two_pools, game_data, tmp_path):
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    assert (tmp_path / "assets" / "site.css").exists()
+    assert not (tmp_path / "friends" / "assets").exists()
+
+
+def test_no_root_absolute_url_escapes_the_prefix_on_a_nested_pool(
+    two_pools, game_data, tmp_path
+):
+    """The root-pool version of this exists above; the nested pool is where a
+    bad prefix actually hides."""
+    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
+
+    for page in (tmp_path / "friends").rglob("*.html"):
+        for match in re.findall(r'(?:href|src)="(/[^"]*)"', page.read_text()):
+            assert match.startswith("/football-pool/"), f"{page.name}: {match}"
+
+
+def test_each_pool_keeps_its_own_money_and_field(two_pools, game_data, tmp_path):
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    family = json.loads((tmp_path / "data" / "standings.json").read_text())
+    friends = json.loads((tmp_path / "friends" / "data" / "standings.json").read_text())
+
+    assert family["pool"] == {
+        "slug": "family", "name": "Family Pool", "path": "",
+        "entry_fee": 10.0, "pot": 30.0,
+    }
+    assert friends["pool"] == {
+        "slug": "friends", "name": "Friends Pool", "path": "friends",
+        "entry_fee": 50.0, "pot": 100.0,
+    }
+    assert len(family["entrants"]) == 3
+    assert len(friends["entrants"]) == 2
+    # Nobody leaks across: the two rosters share no names.
+    assert not {e["name"] for e in family["entrants"]} & {
+        e["name"] for e in friends["entrants"]
+    }
+
+
+def test_the_switcher_names_every_pool_and_marks_the_current_one(
+    two_pools, game_data, tmp_path
+):
+    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
+
+    home = (tmp_path / "index.html").read_text()
+    away = (tmp_path / "friends" / "index.html").read_text()
+
+    assert 'href="/football-pool/friends/"' in home
+    assert 'href="/football-pool/"' in away
+    # aria-current lands on the page you are actually on, and only there.
+    assert '<a href="/football-pool/" aria-current="page">Family Pool</a>' in home
+    assert '<a href="/football-pool/friends/" aria-current="page">Friends Pool</a>' in away
+
+
+def test_a_single_pool_site_has_no_switcher(pool, game_data, tmp_path):
+    """An archived year, or any season with one pool, renders as it always did."""
+    render_site(pool, game_data, tmp_path)
+    assert "pool-switch" not in (tmp_path / "index.html").read_text()
+
+
+def test_every_page_of_a_nested_pool_carries_its_own_prefix(
+    two_pools, game_data, tmp_path
+):
+    """Not just the front page — the nav on every page has to stay in the pool."""
+    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
+
+    for name in ("index.html", "rules/index.html", "season/index.html"):
+        html = (tmp_path / "friends" / name).read_text()
+        assert 'href="/football-pool/friends/rules/"' in html
+        assert 'href="/football-pool/friends/schedule/"' in html
+
+
+def test_each_pool_scopes_its_identity_storage(two_pools, game_data, tmp_path):
+    """data-pool is what site.js reads to namespace `pool-me`."""
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    assert 'data-pool=""' in (tmp_path / "index.html").read_text()
+    assert 'data-pool="friends"' in (tmp_path / "friends" / "index.html").read_text()
