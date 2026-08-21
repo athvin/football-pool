@@ -16,6 +16,7 @@ import {
   ME_KEY,
   scopedKey,
   PICK_COLORS,
+  RED_ZONE,
   REVEAL_SELECTOR,
   STALE_AFTER_HOURS,
   THEME_KEY,
@@ -29,18 +30,21 @@ import {
   fieldGeometry,
   fieldPalette,
   firstSortDirection,
+  flipShifts,
   formatTimestamp,
-  headToHeadSentence,
+  headToHeadReadout,
   init,
   isStale,
   isValidTimeZone,
   markerNumber,
   nextTheme,
   relativeAge,
+  rowTops,
   safeStorage,
   scrollProgress,
   sortTable,
   spreadLabels,
+  sweepRadius,
   tooltipPosition,
   weekForInstant,
   yardToY,
@@ -1131,28 +1135,6 @@ describe('fieldPalette', () => {
   });
 });
 
-describe('the drive marker', () => {
-  test('scroll maps onto the field, and is clamped at both ends', () => {
-    expect(scrollProgress(0, 1000)).toBe(0);
-    expect(scrollProgress(500, 1000)).toBe(0.5);
-    expect(scrollProgress(1200, 1000)).toBe(1);
-    expect(scrollProgress(-50, 1000)).toBe(0);
-  });
-
-  test('a page with nowhere to scroll reports no progress rather than dividing by zero', () => {
-    expect(scrollProgress(0, 0)).toBe(0);
-    expect(scrollProgress(10, -40)).toBe(0);
-  });
-
-  test('the spot reads the way a commentator would say it', () => {
-    expect(driveLabel(0)).toBe('Own goal line');
-    expect(driveLabel(25)).toBe('Own 25');
-    expect(driveLabel(50)).toBe('Midfield');
-    expect(driveLabel(88)).toBe('Opp 12');
-    expect(driveLabel(100)).toBe('Touchdown');
-  });
-});
-
 // ---------------------------------------------------------------------------
 // How old is this?
 // ---------------------------------------------------------------------------
@@ -1365,10 +1347,10 @@ describe('the head-to-head grid', () => {
     document.body.innerHTML = `
       <main>
         <svg class="heat">
-          <text class="heat-head heat-col" data-c="0">Brian</text>
-          <text class="heat-head heat-col" data-c="1">Eric</text>
-          <text class="heat-head heat-row" data-r="0">Brian</text>
-          <text class="heat-head heat-row" data-r="1">Eric</text>
+          <text class="heat-head heat-col" data-c="0" data-win="30">Brian</text>
+          <text class="heat-head heat-col" data-c="1" data-win="20">Eric</text>
+          <text class="heat-head heat-row" data-r="0" data-win="30">Brian</text>
+          <text class="heat-head heat-row" data-r="1" data-win="20">Eric</text>
           <rect class="heat-box" data-r="0" data-c="1" data-p="62"
                 data-row="Brian Moore" data-col="Eric Riggs"></rect>
           <rect class="heat-box" data-r="1" data-c="0" data-p="38"
@@ -1384,16 +1366,64 @@ describe('the head-to-head grid', () => {
   });
 
   test('a cell reads as a sentence, which is what a bare 62% never did', () => {
-    expect(headToHeadSentence('Brian', 'Eric', '62'))
-      .toBe('Brian finishes above Eric in 62% of simulated seasons.');
+    const out = headToHeadReadout({
+      row: 'Brian', col: 'Eric', percent: '62', reverse: '38',
+      rowWin: '30', colWin: '20',
+    });
+    expect(out.claim).toBe(
+      'Brian finishes above Eric in 62% of simulated seasons, '
+      + 'and below them in the other 38%.',
+    );
+    // One number in isolation misleads: beating somebody 62% of the time reads
+    // very differently when neither of you is likely to win the thing.
+    expect(out.odds).toBe(
+      'Outright, Brian wins the pool 30% of the time and Eric 20%.',
+    );
   });
 
-  test('pointing at a cell writes the pair out in full names', () => {
+  test('the reverse comes from the opposite cell, not from 100 minus this one', () => {
+    // Then the sentence always agrees with the number printed over there,
+    // however either of them was rounded.
+    expect(headToHeadReadout({
+      row: 'A', col: 'B', percent: '62', reverse: '39',
+    }).claim).toContain('the other 39%');
+  });
+
+  test('without the reverse cell it falls back to the complement', () => {
+    expect(headToHeadReadout({ row: 'A', col: 'B', percent: '62' }).claim)
+      .toContain('the other 38%');
+  });
+
+  test('a grid with no outright odds states the claim and invents nothing', () => {
+    const out = headToHeadReadout({ row: 'A', col: 'B', percent: '62', reverse: '38' });
+    expect(out.claim).toBeTruthy();
+    expect(out.odds).toBeNull();
+  });
+
+  test('pointing at a cell writes the pair out in full names, with the odds', () => {
     document.querySelector('[data-r="0"][data-c="1"]')
       .dispatchEvent(new window.Event('pointerenter'));
 
-    expect(document.querySelector('[data-heat-readout]').textContent)
-      .toBe('Brian Moore finishes above Eric Riggs in 62% of simulated seasons.');
+    const readout = document.querySelector('[data-heat-readout]');
+    expect(readout.querySelector('.heat-claim').textContent).toBe(
+      'Brian Moore finishes above Eric Riggs in 62% of simulated seasons, '
+      + 'and below them in the other 38%.',
+    );
+    expect(readout.querySelector('.heat-odds').textContent).toBe(
+      'Outright, Brian Moore wins the pool 30% of the time and Eric Riggs 20%.',
+    );
+  });
+
+  test('moving to another cell replaces the readout rather than appending to it', () => {
+    const cell = (r, c) => document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+    cell(0, 1).dispatchEvent(new window.Event('pointerenter'));
+    cell(1, 0).dispatchEvent(new window.Event('pointerenter'));
+
+    const readout = document.querySelector('[data-heat-readout]');
+    expect(readout.querySelectorAll('.heat-claim')).toHaveLength(1);
+    expect(readout.querySelector('.heat-claim').textContent).toContain(
+      'Eric Riggs finishes above Brian Moore in 38%',
+    );
   });
 
   test('the row and the column light up, and only they do', () => {
@@ -1568,18 +1598,48 @@ describe('the field on a page that cannot draw', () => {
     document.body.innerHTML = '<canvas class="gridiron" data-near="Family Pool"></canvas>';
     expect(() => init(document, fakeWindow())).not.toThrow();
   });
+});
 
-  test('the drive marker sits out when the reader has asked for less motion', () => {
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+describe('the chain crew', () => {
+  const chains = () =>
+    '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+
+  /** A page long enough to have somewhere to drive to. */
+  const scrollable = (height = 4000) => {
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      value: height, configurable: true,
+    });
+  };
+
+  test('the page reports how far down it is, and never further', () => {
+    expect(scrollProgress(0, 1000)).toBe(0);
+    expect(scrollProgress(500, 1000)).toBe(0.5);
+    expect(scrollProgress(1200, 1000)).toBe(1);
+    expect(scrollProgress(-50, 1000)).toBe(0);
+  });
+
+  test('a page with nowhere to scroll is at the start, not divided by zero', () => {
+    expect(scrollProgress(0, 0)).toBe(0);
+    expect(scrollProgress(10, -40)).toBe(0);
+  });
+
+  test('a spot on the field reads the way a commentator says it', () => {
+    expect(driveLabel(0)).toBe('Own goal line');
+    expect(driveLabel(25)).toBe('Own 25');
+    expect(driveLabel(50)).toBe('Midfield');
+    expect(driveLabel(88)).toBe('Opp 12');
+    expect(driveLabel(100)).toBe('Touchdown');
+  });
+
+  test('the marks sit out when the reader has asked for less motion', () => {
+    document.body.innerHTML = chains();
     init(document, fakeWindow({ reduceMotion: true }));
 
     expect(document.querySelector('.drive-line').style.transform).toBe('');
   });
 
-  test('the marker starts on the goal line and reports the page has nowhere to go', () => {
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
+  test('the marks start on the goal line and report a page with nowhere to go', () => {
+    document.body.innerHTML = chains();
     init(document, fakeWindow({ innerHeight: 900 }));
 
     // jsdom lays nothing out, so scrollHeight is zero: no scroll, no drive.
@@ -1589,14 +1649,11 @@ describe('the field on a page that cannot draw', () => {
       .toBe('translate3d(0, 75.0px, 0)');
   });
 
-  test('the yard chip waits until the drive has left its own goal line', () => {
-    // On the goal line the marker sits under the masthead, which would put
-    // the label in the viewer bar and cut it in half.
-    document.body.innerHTML =
-      '<div class="drive"><div class="drive-line"><span class="drive-yard"></span></div></div>';
-    Object.defineProperty(document.documentElement, 'scrollHeight', {
-      value: 4000, configurable: true,
-    });
+  test('the yard label waits until the drive has left its own goal line', () => {
+    // On the goal line the marks sit under the masthead, which would put the
+    // label in the viewer bar and cut it in half.
+    document.body.innerHTML = chains();
+    scrollable();
 
     const win = fakeWindow({ innerHeight: 900, scrollY: 0 });
     init(document, win);
@@ -1610,6 +1667,246 @@ describe('the field on a page that cannot draw', () => {
 
     expect(drive.classList.contains('is-moving')).toBe(true);
     expect(document.querySelector('.drive-yard').textContent).toBe('Midfield');
+  });
+
+  test('inside the twenty the chains change colour, and only there', () => {
+    document.body.innerHTML = chains();
+    scrollable();
+
+    const win = fakeWindow({ innerHeight: 900, scrollY: 0 });
+    init(document, win);
+    const drive = document.querySelector('.drive');
+    expect(drive.classList.contains('is-redzone')).toBe(false);
+
+    // 85 yards down the field: inside the twenty, not yet over the line.
+    win.scrollY = 3100 * (RED_ZONE + 5) / 100;
+    win._fire('scroll');
+    win._frames.pop()();
+
+    expect(drive.classList.contains('is-redzone')).toBe(true);
+    expect(drive.classList.contains('is-td')).toBe(false);
+    expect(document.querySelector('.drive-yard').textContent).toBe('Opp 15');
+  });
+
+  test('the bottom of the page is a touchdown, and scrolling back takes it away', () => {
+    document.body.innerHTML = chains();
+    scrollable();
+
+    const win = fakeWindow({ innerHeight: 900, scrollY: 3100 });
+    init(document, win);
+    const drive = document.querySelector('.drive');
+    expect(drive.classList.contains('is-td')).toBe(true);
+    expect(document.querySelector('.drive-yard').textContent).toBe('Touchdown');
+
+    win.scrollY = 1000;
+    win._fire('scroll');
+    win._frames.pop()();
+    expect(drive.classList.contains('is-td')).toBe(false);
+  });
+
+  test('one frame per flick, however many scroll events arrive', () => {
+    document.body.innerHTML = chains();
+    scrollable();
+    const win = fakeWindow({ innerHeight: 900 });
+    init(document, win);
+    win._frames.length = 0;
+
+    win._fire('scroll');
+    win._fire('scroll');
+    win._fire('scroll');
+    expect(win._frames.length).toBe(1);
+
+    // Once the frame has run, the next flick may ask for another.
+    win._frames.pop()();
+    win._fire('scroll');
+    expect(win._frames.length).toBe(1);
+  });
+
+  test('a page without the markup is not a problem', () => {
+    document.body.innerHTML = '<p>no field here</p>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+describe('the floodlight wipe', () => {
+  /** The distance to the far corner, from a few places on the screen. */
+  test('the circle reaches the furthest corner, wherever it starts', () => {
+    const viewport = { width: 300, height: 400 };
+    expect(sweepRadius({ x: 0, y: 0 }, viewport)).toBe(500);
+    expect(sweepRadius({ x: 300, y: 400 }, viewport)).toBe(500);
+    // Dead centre is the only place where every corner is the same distance.
+    expect(sweepRadius({ x: 150, y: 200 }, viewport)).toBeCloseTo(250, 6);
+  });
+
+  test('a browser with view transitions wipes the new palette in', async () => {
+    markup();
+    const win = fakeWindow();
+    let captured = null;
+    document.startViewTransition = (apply) => {
+      captured = document.documentElement.className;
+      apply();
+      return { finished: Promise.resolve() };
+    };
+
+    try {
+      init(document, win);
+      document.querySelector('[data-theme-toggle]').click();
+
+      // The class has to be on before the old state is captured, or the
+      // stylesheet's wipe never applies to this transition.
+      expect(captured).toContain('is-relighting');
+      expect(document.documentElement.dataset.theme).toBe('light');
+      expect(win._store.get(THEME_KEY)).toBe('light');
+
+      // jsdom puts the button at the origin, so the circle has to cover the
+      // whole 1280 × 900 viewport from its top-left corner.
+      const root = document.documentElement.style;
+      expect(root.getPropertyValue('--sweep-x')).toBe('0.0px');
+      expect(root.getPropertyValue('--sweep-y')).toBe('0.0px');
+      expect(root.getPropertyValue('--sweep-r')).toBe(`${Math.hypot(1280, 900).toFixed(1)}px`);
+
+      // And off again once the wipe has finished, so a page-to-page morph is
+      // never dressed up as a change of theme.
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(document.documentElement.classList.contains('is-relighting')).toBe(false);
+    } finally {
+      delete document.startViewTransition;
+    }
+  });
+
+  test('a transition that is abandoned still tidies up after itself', async () => {
+    markup();
+    document.startViewTransition = (apply) => {
+      apply();
+      return { finished: Promise.reject(new Error('skipped')) };
+    };
+
+    try {
+      init(document, fakeWindow());
+      document.querySelector('[data-theme-toggle]').click();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(document.documentElement.classList.contains('is-relighting')).toBe(false);
+    } finally {
+      delete document.startViewTransition;
+    }
+  });
+
+  test('less motion means the theme simply changes', () => {
+    markup();
+    const started = vi.fn();
+    document.startViewTransition = started;
+
+    try {
+      init(document, fakeWindow({ reduceMotion: true }));
+      document.querySelector('[data-theme-toggle]').click();
+      expect(started).not.toHaveBeenCalled();
+      expect(document.documentElement.dataset.theme).toBe('light');
+      expect(document.documentElement.classList.contains('is-relighting')).toBe(false);
+    } finally {
+      delete document.startViewTransition;
+    }
+  });
+});
+
+describe('rows gliding to their new places', () => {
+  test('only the rows that actually moved, and only by how far', () => {
+    const a = {}; const b = {}; const gone = {};
+    const before = new Map([[a, 0], [b, 40], [gone, 80]]);
+    const after = new Map([[b, 0], [a, 40], [{}, 80]]);
+
+    expect(flipShifts(before, after)).toEqual([{ row: b, dy: 40 }, { row: a, dy: -40 }]);
+  });
+
+  test('sub-pixel drift is not movement', () => {
+    const row = {};
+    expect(flipShifts(new Map([[row, 10]]), new Map([[row, 10.4]]))).toEqual([]);
+  });
+
+  test('a table with no body has no rows to read', () => {
+    document.body.innerHTML = '<table></table>';
+    expect(rowTops(document.querySelector('table')).size).toBe(0);
+  });
+
+  test('sorting sends every row that moved back to where it was', () => {
+    document.body.innerHTML = `
+      <table>
+        <thead><tr><th data-sort>Team</th><th data-sort class="num">Points</th></tr></thead>
+        <tbody>
+          <tr><th data-value="ARI">ARI</th><td data-value="4">4.00</td></tr>
+          <tr><th data-value="KC">KC</th><td data-value="30">30.00</td></tr>
+          <tr><th data-value="DAL">DAL</th><td data-value="12">12.00</td></tr>
+        </tbody>
+      </table>`;
+
+    // jsdom lays nothing out, so each row reports the place it is standing in.
+    const rows = [...document.querySelectorAll('tbody tr')];
+    const plays = [];
+    for (const row of rows) {
+      row.getBoundingClientRect = () => ({
+        top: [...row.parentElement.rows].indexOf(row) * 40,
+      });
+      row.animate = (frames, options) => plays.push({ row, frames, options });
+    }
+
+    init(document, fakeWindow());
+    document.querySelectorAll('th[data-sort]')[1].click();
+
+    // Biggest first, so KC and DAL each come up a place and ARI drops two —
+    // and each one starts from exactly where it was standing.
+    expect([...document.querySelectorAll('tbody th')].map((c) => c.textContent))
+      .toEqual(['KC', 'DAL', 'ARI']);
+    expect(plays.map((p) => p.frames[0].transform))
+      .toEqual(['translateY(40.0px)', 'translateY(40.0px)', 'translateY(-80.0px)']);
+    expect(plays.every((p) => p.frames[1].transform === 'none')).toBe(true);
+    expect(plays[0].options.duration).toBe(420);
+  });
+
+  test('less motion means the rows are simply where they belong', () => {
+    document.body.innerHTML = `
+      <table>
+        <thead><tr><th data-sort class="num">Points</th></tr></thead>
+        <tbody>
+          <tr><td data-value="4">4.00</td></tr>
+          <tr><td data-value="30">30.00</td></tr>
+        </tbody>
+      </table>`;
+    const played = vi.fn();
+    for (const row of document.querySelectorAll('tbody tr')) {
+      row.getBoundingClientRect = () => ({
+        top: [...row.parentElement.rows].indexOf(row) * 40,
+      });
+      row.animate = played;
+    }
+
+    init(document, fakeWindow({ reduceMotion: true }));
+    document.querySelector('th[data-sort]').click();
+
+    expect([...document.querySelectorAll('td')].map((c) => c.textContent))
+      .toEqual(['30.00', '4.00']);
+    expect(played).not.toHaveBeenCalled();
+  });
+
+  test('a browser without the animation API sorts anyway', () => {
+    document.body.innerHTML = `
+      <table>
+        <thead><tr><th data-sort class="num">Points</th></tr></thead>
+        <tbody>
+          <tr><td data-value="4">4.00</td></tr>
+          <tr><td data-value="30">30.00</td></tr>
+        </tbody>
+      </table>`;
+    for (const row of document.querySelectorAll('tbody tr')) {
+      row.getBoundingClientRect = () => ({
+        top: [...row.parentElement.rows].indexOf(row) * 40,
+      });
+    }
+
+    init(document, fakeWindow());
+    expect(() => document.querySelector('th[data-sort]').click()).not.toThrow();
+    expect([...document.querySelectorAll('td')].map((c) => c.textContent))
+      .toEqual(['30.00', '4.00']);
   });
 });
 

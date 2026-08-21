@@ -63,6 +63,14 @@ ASSET_DIR = REPO_ROOT / "assets"
 # the markup readable in a diff.
 ASSET_HASH_CHARS = 8
 
+# The two links out of the site, in the masthead of every page. The first is
+# the arithmetic the forecast is built on, written out in the open; the second
+# is what builds the page it is written on. Constants rather than season
+# config, because neither is a fact about a season — nothing here changes when
+# the year rolls over, and a pool cannot have its own copy of the maths.
+MODEL_URL = "https://gist.github.com/datastx/8670c633fd4e44644bfa99c5d0ba1209"
+REPO_URL = "https://github.com/athvin/football-pool"
+
 
 def _asset_digest(rel: str) -> str:
     """Short content hash of an asset, or ``""`` when there is no such file.
@@ -292,13 +300,16 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
     finish = p.finish_probs.reindex(order)
     h2h = p.head_to_head.reindex(index=order, columns=order)
     density = p.distribution.density.reindex(order)
+    # One indexed copy, rather than re-indexing the frame per entrant inside
+    # the comprehensions below.
+    by_name = p.entrants.set_index("name")
 
     return {
         "places": [int(c) for c in finish.columns],
         "finish_rows": [
             {
                 "name": name,
-                "slug": ctx.projections.entrants.set_index("name").loc[name, "slug"],
+                "slug": by_name.loc[name, "slug"],
                 "bar": svg.finish_bar(finish.loc[name].tolist()),
                 "probs": [float(v) for v in finish.loc[name]],
             }
@@ -316,6 +327,9 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             [[None if pd.isna(v) else float(v) for v in h2h.loc[n]] for n in order],
             [short[n] for n in order],
             order,
+            # Outright odds ride along so the hover readout can say what a
+            # pairwise number means for the pool, not just for the pair.
+            [float(by_name.loc[n, "p_first"]) * 100 for n in order],
         ),
         "order": order,
         # The two headline answers, which are not the same question and do not
@@ -841,6 +855,8 @@ def render_site(
         # so the explanation of a word can never drift from the rules file that
         # sets it. See glossary.py.
         "glossary": glossary_mod.terms(season),
+        "model_url": MODEL_URL,
+        "repo_url": REPO_URL,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)

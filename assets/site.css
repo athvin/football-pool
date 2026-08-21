@@ -170,58 +170,125 @@ a { color: inherit; }
   pointer-events: none;
 }
 
-/* The broadcast first-down line, driving from your own goal line to the far
-   end zone as the page scrolls. It is a separate element from the canvas on
-   purpose: moving it is a transform on one node, so a scroll never repaints
-   the field underneath it. */
+/* --- the chain crew -----------------------------------------------------
+   Where the page has driven to, marked at the yard it reached.
+
+   The first version of this was the broadcast first-down line: one bright rule
+   from sideline to sideline, riding the scroll. Across an empty field that is
+   exactly right, and across a paragraph it is a strike-through — it landed on
+   whatever sentence you happened to be reading and cut it in half. So the
+   middle is gone and the ends stay. The marks stop where the text column
+   begins, which is where the chain crew stands anyway, and the reader gets the
+   yard line without getting a line through the reading.
+
+   Both marks are pseudo-elements of one node: the scroll handler writes a
+   single transform, and the field underneath is never repainted. */
 .drive {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+
+  /* The sideline, as the canvas draws it — see fieldGeometry in site.js. */
+  --sideline: min(5.5vw, 26px);
+  /* How far in a mark may reach: to the edge of the text column and not a
+     pixel further. The column is min(1180px, 100%) with the gutter inside it,
+     so the clear margin is (viewport − column) / 2 + gutter. Percentages here
+     resolve against this element, which is the viewport minus any scrollbar —
+     the same box the column is centred in. Capped, because past a couple of
+     hundred pixels a mark stops reading as a yard marker and starts reading as
+     a rule across the top of the page. */
+  --reach: min(calc(max(0px, (100% - 1180px) / 2) + var(--gutter)), 210px);
+  /* Where a mark starts: on the painted sideline, unless the column gets there
+     first. On a phone the whole margin is the gutter, so the mark shortens to
+     a tick at the very edge of the screen rather than lying across the cards —
+     the point of all this is that nothing crosses anything worth reading. */
+  --chain-start: min(var(--sideline), max(0px, calc(var(--reach) - 10px)));
+  --chain: var(--live);
 }
+
+/* Inside the twenty. Nothing about the page changes, but the chains do what
+   they do on television, and the reader knows the end zone is close. */
+.drive.is-redzone { --chain: var(--heat); }
 
 .drive-line {
   position: absolute;
   top: 0;
-  left: min(5.5vw, 26px);
-  right: min(5.5vw, 26px);
-  height: 2px;
-  border-radius: 2px;
-  background: linear-gradient(90deg,
-    transparent,
-    color-mix(in srgb, var(--live) 55%, transparent) 12%,
-    color-mix(in srgb, var(--live) 55%, transparent) 88%,
-    transparent);
-  box-shadow: 0 0 14px color-mix(in srgb, var(--live) 30%, transparent);
+  left: 0;
+  right: 0;
+  height: 0;
   opacity: 0;
   transition: opacity 0.5s ease;
   will-change: transform;
 }
-.drive.is-live .drive-line { opacity: 0.75; }
+.drive.is-live .drive-line { opacity: 0.85; }
 .drive.is-live.is-moving .drive-yard { opacity: 1; }
 
-/* The yard the line is standing on, in the sideline strip. There is no strip
-   to speak of on a phone, so the chip is desktop-only — the line itself
-   carries the idea perfectly well without it. */
-/* Below the line rather than above it: at the top of a page the line sits on
-   the near goal line, and a label above that lands underneath the masthead.
-   It stays hidden until the drive has actually left that goal line, because
-   even below the line it would sit in the viewer bar and be cut in half. */
+/* One mark per sideline: a short post standing on the yard, and the line
+   running in off it and fading out before it reaches anything worth reading.
+   Painted as a solid colour behind a two-layer mask rather than as a gradient,
+   so entering the red zone can transition the colour — a gradient's stops
+   cannot be animated, and a snap from green to orange looks like a bug. */
+.drive-line::before,
+.drive-line::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  height: 12px;
+  width: max(0px, calc(var(--reach) - var(--chain-start)));
+  background-color: var(--chain);
+  transition: background-color 0.45s ease;
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--chain) 45%, transparent));
+  mask-image: linear-gradient(#000, #000), linear-gradient(90deg, #000, transparent);
+  mask-size: 2px 12px, 100% 2px;
+  mask-repeat: no-repeat;
+}
+
+.drive-line::before { left: var(--chain-start); mask-position: left center, left center; }
+
+.drive-line::after {
+  right: var(--chain-start);
+  mask-position: right center, right center;
+  mask-image: linear-gradient(#000, #000), linear-gradient(270deg, #000, transparent);
+}
+
+/* Reaching the far end zone is the only thing on this page that can be won by
+   scrolling, so it gets a flare. The class is added once, at the bottom of the
+   document, and the animation plays for as long as it is there. */
+.drive.is-td .drive-line::before,
+.drive.is-td .drive-line::after { animation: chain-flare 0.85s ease-out; }
+
+@keyframes chain-flare {
+  0% { opacity: 1; }
+  22% { opacity: 1; filter: drop-shadow(0 0 22px var(--chain)); transform: scaleY(1.9); }
+  100% { opacity: 1; }
+}
+
+/* The yard the chains are on, set in the sideline under the far mark. It stays
+   hidden until the drive has actually left its own goal line: at the top of a
+   page the mark sits under the masthead, which would put the label in the
+   viewer bar and cut it in half. */
 .drive-yard {
   position: absolute;
-  right: 0;
-  top: 7px;
+  right: var(--sideline);
+  top: 9px;
   opacity: 0;
-  transition: opacity 0.35s ease;
+  transition: opacity 0.35s ease, color 0.45s ease;
   font-family: var(--mono);
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: color-mix(in srgb, var(--live) 70%, transparent);
+  color: color-mix(in srgb, var(--chain) 78%, transparent);
+}
+
+/* Only where there is a sideline to write it in. Below about 1240px the margin
+   is the gutter and nothing else, and a label in the gutter is a label on the
+   scoreboard. The marks carry the idea perfectly well on their own. */
+@media (max-width: 1239px) {
+  .drive-yard { display: none; }
 }
 
 /* A fine grain overlay so the flat dark never looks like plastic. */
@@ -313,7 +380,32 @@ a { color: inherit; }
 .tabs a:hover { color: var(--chalk); background: var(--surface); }
 .tabs a[aria-current='page'] { --tab-accent: var(--live); color: var(--chalk); }
 
-.theme-toggle {
+/* The two ways off the site, in the corner a broadcast keeps for its network
+   bug. The model link is cyan on purpose: every projected number on this site
+   is cyan, and this is where those numbers come from. */
+.off-site { display: flex; align-items: center; gap: 0.4rem; }
+
+.model-link {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--model);
+  padding: 0.34rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--model) 32%, var(--rule));
+  border-radius: 8px;
+  transition: color 0.18s, border-color 0.18s, background-color 0.18s, box-shadow 0.18s;
+}
+
+.model-link:hover, .model-link:focus-visible {
+  border-color: var(--model);
+  background: color-mix(in srgb, var(--model) 12%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--model) 22%, transparent);
+}
+
+.theme-toggle, .repo-link {
   display: grid;
   place-items: center;
   width: 34px; height: 34px;
@@ -323,6 +415,15 @@ a { color: inherit; }
   color: var(--chalk-dim);
   cursor: pointer;
   transition: color 0.18s, border-color 0.18s;
+}
+
+/* The mark lifts towards the pointer — a whole 1px, which is all it takes for
+   an icon to feel like a button rather than a picture of one. */
+.repo-link { transition: color 0.18s, border-color 0.18s, transform 0.18s ease; }
+.repo-link:hover, .repo-link:focus-visible {
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--chalk) 30%, var(--rule));
+  transform: translateY(-1px);
 }
 .theme-toggle:hover { color: var(--live); border-color: var(--live); }
 
@@ -434,6 +535,28 @@ a { color: inherit; }
   outline: none;
 }
 .row:hover::before, .row:focus-visible::before { transform: scaleY(1); }
+
+/* A floodlight passing over the row under the pointer. One pass, on the way in
+   only — a sheen that ran continuously would be the brightest moving thing on
+   a page whose entire job is to hold still and be read. It is painted as a
+   background, so it is clipped by the row's own corners and can never leak
+   over the row above. */
+.row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background-image: linear-gradient(100deg,
+    transparent 44%,
+    color-mix(in srgb, var(--accent) 20%, transparent) 50%,
+    transparent 56%);
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  background-position: 100% 0;
+}
+.row:hover::after, .row:focus-visible::after { animation: sheen 0.8s ease-out; }
 
 /* The leader sits under a floodlight. */
 .row.is-leader {
@@ -1072,7 +1195,15 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 /* Pointing at a cell lights the pair it belongs to. The row and the column are
    the answer to "whose number is this", and the cell itself gets an outline so
    the eye lands somewhere definite. */
-.heat-box { transition: opacity 0.12s ease; }
+/* The delay is the deal-in below, and it costs nothing once the grid has
+   arrived: `--i` is only ever non-zero while the wave is crossing, and the
+   hover state it shares this transition with animates opacity, not transform. */
+.heat-box, .heat-blank {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: opacity 0.12s ease,
+              transform 0.4s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 20ms);
+}
 .heat-head.is-lit { fill: var(--model); opacity: 1; }
 .heat-box.is-picked {
   stroke: var(--model);
@@ -1088,11 +1219,16 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
 
 .heat-readout {
   margin-top: 0.6rem;
-  min-height: 1.4em;
+  min-height: 2.9em;
   font-family: var(--mono);
   font-size: 0.76rem;
   color: var(--model);
 }
+
+/* The pair on one line, what it is worth to the pool on the next. Reserved
+   height above, so filling it in does not shove the page down. */
+.heat-claim, .heat-odds { display: block; }
+.heat-odds { color: var(--chalk-dim); margin-top: 0.15rem; }
 
 /* --- two questions, one forecast ----------------------------------------
    Chance of winning and expected payout are different questions with
@@ -1765,6 +1901,12 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
   to { opacity: 1; transform: none; }
 }
 
+@keyframes sheen {
+  from { opacity: 1; background-position: 100% 0; }
+  70% { opacity: 1; }
+  to { opacity: 0; background-position: 0 0; }
+}
+
 /* --- arriving ------------------------------------------------------------
    Blocks settle into place as you reach them. The hidden state is added by
    the client and taken off again on first sight, so with scripting off none
@@ -1775,10 +1917,20 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
   transform: translateY(12px);
 }
 
-.state-cell, .stat, .card, .chart-card, .table-scroll, .forecast-row {
+.state-cell, .stat, .card, .chart-card, .table-scroll, .forecast-row, .heat-wrap {
   transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
               transform 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* The grid deals itself in on the diagonal, every cell holding for as long as
+   it is far from the corner. Row by row would be a hundred cells arriving in
+   reading order, which is long enough to be a wait; a diagonal wave crosses
+   the whole thing in one pass. The numbers are not scaled with the cells —
+   type that grows into place reads as a zoom, and the wave is not about the
+   text. */
+.will-reveal .heat-box, .will-reveal .heat-blank { transform: scale(0.16); }
+.will-reveal .heat-cell { opacity: 0; }
+.heat-cell { transition: opacity 0.4s ease calc(var(--i, 0) * 20ms); }
 
 /* A bar that grows out of its own baseline as it arrives. Scaling the whole
    graphic sidesteps having to know anything about what is inside it, which
@@ -1816,6 +1968,43 @@ th[data-sort][aria-sort='descending']::after { content: ' ↓'; opacity: 1; colo
    animation must not fire underneath it and fight the transition. */
 html:active-view-transition .row { animation: none; }
 
+/* The tab you are on is the same object on every page, so the browser slides
+   it from where it was to where it is instead of fading one underline out
+   under another. Two pages, one bar of light moving between them. */
+.tabs a[aria-current='page'] { view-transition-name: tab-current; }
+
+/* --- the floodlights ----------------------------------------------------
+   Changing the theme is a wipe: a circle of the new palette opening out of
+   the switch that asked for it, which is roughly what a stadium does when the
+   lights come up. The geometry is written onto the root by initTheme, because
+   only the client knows where the button ended up. */
+html.is-relighting::view-transition-old(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+html.is-relighting::view-transition-new(root) {
+  animation: relight 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  mix-blend-mode: normal;
+}
+
+@keyframes relight {
+  from { clip-path: circle(0 at var(--sweep-x) var(--sweep-y)); }
+  to { clip-path: circle(var(--sweep-r) at var(--sweep-x) var(--sweep-y)); }
+}
+
+/* Anything carrying a `view-transition-name` is lifted clean out of the page
+   and animated as its own object — exactly right when a row is becoming a
+   hero, and exactly wrong here, because whatever is lifted out is not inside
+   the circle and would change palette on its own while the wipe went round
+   it. For the length of the wipe there is one object on the screen, and it is
+   the page. The `!important` is not decoration: the row names carry theirs in
+   a style attribute, which nothing weaker can outrank. */
+html.is-relighting .tabs a[aria-current='page'],
+html.is-relighting [style*='view-transition-name'] {
+  view-transition-name: none !important;
+}
+
 /* --- phones ------------------------------------------------------------ */
 /* The leaderboard must never scroll sideways. Below 640px the row folds so
    rank, name and points stay on one line and everything else drops beneath. */
@@ -1850,7 +2039,12 @@ html:active-view-transition .row { animation: none; }
   .forecast-name { grid-area: name; font-size: 1rem; }
   .forecast-odds { grid-area: odds; }
   .forecast-bar { grid-area: bar; }
-  .theme-toggle { margin-inline-start: auto; }
+  /* Tabs have dropped to their own row, so the top row is the brand and the
+     three controls — pushed right as one group, and tightened up, because at
+     390px the brand and the controls are within a few pixels of touching. */
+  .masthead-inner { gap: 0.6rem; }
+  .off-site { margin-inline-start: auto; }
+  .model-link { padding-inline: 0.4rem; letter-spacing: 0.1em; }
 
   /* A game row is five columns of small type; at 390px that is unreadable long
      before it overflows. Stack the two sides instead, which also puts the away

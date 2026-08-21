@@ -157,6 +157,20 @@ export function isValidTimeZone(tz) {
   }
 }
 
+/**
+ * How far a circle centred on `origin` has to grow to cover the viewport.
+ *
+ * The far corner is the one that matters, and which corner that is depends on
+ * where the origin sits — so take the longer distance on each axis and put
+ * them together. Used by the theme wipe, which must clear the screen exactly
+ * once and never leave a crescent of the old palette in a corner.
+ */
+export function sweepRadius(origin, viewport) {
+  const dx = Math.max(origin.x, viewport.width - origin.x);
+  const dy = Math.max(origin.y, viewport.height - origin.y);
+  return Math.hypot(dx, dy);
+}
+
 export function easeOutCubic(t) {
   const clamped = Math.min(Math.max(t, 0), 1);
   return 1 - Math.pow(1 - clamped, 3);
@@ -204,6 +218,9 @@ export function yardToY(geom, yards) {
 export function markerNumber(yards) {
   return 50 - Math.abs(yards - FIELD_YARDS / 2);
 }
+
+/** Inside the opponent's twenty, measured from your own goal line. */
+export const RED_ZONE = 80;
 
 /**
  * How a spot on the field reads out loud: "own 34", "midfield", "opp 12".
@@ -429,6 +446,52 @@ export function sortTable(table, index, direction) {
   return rows;
 }
 
+/** Every row's position on screen right now, keyed by the row itself. */
+export function rowTops(table) {
+  const body = table.tBodies[0];
+  if (!body) return new Map();
+  return new Map(Array.from(body.rows, (row) => [row, row.getBoundingClientRect().top]));
+}
+
+/**
+ * Which rows moved between two readings, and how far.
+ *
+ * A row that was not in the first reading is skipped rather than assumed to
+ * have come from the top of the table, and sub-pixel drift is not movement —
+ * a re-sort that leaves the order alone should animate nothing at all.
+ */
+export function flipShifts(before, after) {
+  const shifts = [];
+  for (const [row, top] of after) {
+    const was = before.get(row);
+    if (was === undefined) continue;
+    const dy = was - top;
+    if (Math.abs(dy) >= 1) shifts.push({ row, dy });
+  }
+  return shifts;
+}
+
+/**
+ * Rows slide to their new places rather than teleporting into them.
+ *
+ * First, Last, Invert, Play: by the time this runs the rows are already where
+ * they belong, so each one is offset back to where it was and let go. The
+ * offset is a transform, so the whole re-order costs one layout read and then
+ * nothing else — the browser is compositing, not reflowing, for the rest of it.
+ *
+ * Sorting a table is the one place on the site where the reader has asked for
+ * a rearrangement, and watching their own row travel to fourth is worth more
+ * than seeing it already there.
+ */
+export function glideRows(table, before) {
+  for (const { row, dy } of flipShifts(before, rowTops(table))) {
+    row.animate?.(
+      [{ transform: `translateY(${dy.toFixed(1)}px)` }, { transform: 'none' }],
+      { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }
+}
+
 /**
  * Where a definition popover goes, given what it is explaining.
  *
@@ -475,13 +538,43 @@ export function safeStorage(store) {
 // ---------------------------------------------------------------------------
 // DOM wiring
 // ---------------------------------------------------------------------------
-function initTheme(doc, storage) {
+function initTheme(doc, storage, win) {
   const button = doc.querySelector('[data-theme-toggle]');
   if (!button) return;
+
+  const root = doc.documentElement;
   button.addEventListener('click', () => {
-    const theme = nextTheme(doc.documentElement.dataset.theme);
-    doc.documentElement.dataset.theme = theme;
-    storage.set(THEME_KEY, theme);
+    const theme = nextTheme(root.dataset.theme);
+    const apply = () => {
+      root.dataset.theme = theme;
+      storage.set(THEME_KEY, theme);
+    };
+
+    // The floodlights come on from the switch that turned them on: the new
+    // palette is wiped in as a circle growing out of the button. All of it is
+    // optional — a browser without View Transitions, or a reader who has asked
+    // for less motion, gets the same theme change without the sweep.
+    if (!doc.startViewTransition
+        || win.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      apply();
+      return;
+    }
+
+    const box = button.getBoundingClientRect();
+    const origin = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const size = { width: win.innerWidth, height: win.innerHeight };
+    root.style.setProperty('--sweep-x', `${origin.x.toFixed(1)}px`);
+    root.style.setProperty('--sweep-y', `${origin.y.toFixed(1)}px`);
+    root.style.setProperty('--sweep-r', `${sweepRadius(origin, size).toFixed(1)}px`);
+
+    // The class is what scopes the wipe to this transition. Moving between
+    // pages is a view transition too, and that one morphs a row into the hero
+    // it becomes — not something to do with a circle.
+    root.classList.add('is-relighting');
+    const done = () => root.classList.remove('is-relighting');
+    // Both arms, not `finally`: a transition that is skipped rejects, and an
+    // unhandled rejection in a theme toggle is not worth anyone's console.
+    doc.startViewTransition(apply).finished.then(done, done);
   });
 }
 
@@ -686,7 +779,9 @@ export function firstSortDirection(th) {
 }
 
 /** Click (or Enter/Space) a marked column heading to sort the table by it. */
-function initSort(doc) {
+function initSort(doc, win) {
+  const still = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   for (const table of doc.querySelectorAll('table')) {
     const heads = Array.from(table.querySelectorAll('th[data-sort]'));
     if (!heads.length) continue;
@@ -706,7 +801,11 @@ function initSort(doc) {
 
         for (const other of heads) other.removeAttribute('aria-sort');
         th.setAttribute('aria-sort', direction === 1 ? 'ascending' : 'descending');
+
+        // Read before, sort, then let every row travel from where it was.
+        const before = still ? null : rowTops(table);
         sortTable(table, index, direction);
+        if (before) glideRows(table, before);
       };
 
       th.addEventListener('click', activate);
@@ -825,9 +924,35 @@ function initSchedule(doc, nowMs) {
   doc.defaultView?.addEventListener('hashchange', markVisible);
 }
 
-/** The hovered head-to-head cell, written out as an English sentence. */
-export function headToHeadSentence(row, col, percent) {
-  return `${row} finishes above ${col} in ${percent}% of simulated seasons.`;
+/**
+ * The hovered head-to-head cell, written out in full.
+ *
+ * Two sentences, because one number in isolation is misleading. The pairwise
+ * figure says who wins a two-horse race that is not the race being run: "beats
+ * him 62% of the time" reads very differently when one of them wins the pool
+ * once in three and the other once in fifty. So the claim comes first and what
+ * it is worth comes second.
+ *
+ * The reverse figure is passed in from the opposite cell rather than derived as
+ * 100 − p, so the sentence always agrees with the number printed in that cell
+ * no matter how either was rounded. Outright odds are optional: without them
+ * the claim stands on its own rather than the readout inventing a number.
+ */
+export function headToHeadReadout({ row, col, percent, reverse, rowWin, colWin }) {
+  const other = reverse === undefined || reverse === null
+    ? 100 - Number(percent)
+    : Number(reverse);
+  const claim =
+    `${row} finishes above ${col} in ${percent}% of simulated seasons, `
+    + `and below them in the other ${other}%.`;
+
+  if (rowWin == null || colWin == null) return { claim, odds: null };
+  return {
+    claim,
+    odds:
+      `Outright, ${row} wins the pool ${rowWin}% of the time `
+      + `and ${col} ${colWin}%.`,
+  };
 }
 
 /**
@@ -857,6 +982,35 @@ function initHeatmap(doc) {
     }
   };
 
+  /** Outright odds live on the axis label, so there are 2n of them, not n². */
+  const winOdds = (axis, index) =>
+    chart.querySelector(`.heat-${axis}[data-${axis[0]}="${index}"]`)?.dataset.win ?? null;
+
+  const say = (cell) => {
+    if (!readout) return;
+    const { r, c } = cell.dataset;
+    const opposite = chart.querySelector(`.heat-box[data-r="${c}"][data-c="${r}"]`);
+    const parts = headToHeadReadout({
+      row: cell.dataset.row,
+      col: cell.dataset.col,
+      percent: cell.dataset.p,
+      reverse: opposite?.dataset.p,
+      rowWin: winOdds('row', r),
+      colWin: winOdds('col', c),
+    });
+
+    readout.textContent = '';
+    const claim = doc.createElement('span');
+    claim.className = 'heat-claim';
+    claim.textContent = parts.claim;
+    readout.append(claim);
+    if (!parts.odds) return;
+    const odds = doc.createElement('span');
+    odds.className = 'heat-odds';
+    odds.textContent = parts.odds;
+    readout.append(odds);
+  };
+
   const clear = () => {
     for (const el of chart.querySelectorAll('.is-lit, .is-picked')) {
       el.classList.remove('is-lit', 'is-picked');
@@ -867,11 +1021,7 @@ function initHeatmap(doc) {
   for (const cell of cells) {
     cell.addEventListener('pointerenter', () => {
       mark(cell.dataset.r, cell.dataset.c);
-      if (readout) {
-        readout.textContent = headToHeadSentence(
-          cell.dataset.row, cell.dataset.col, cell.dataset.p,
-        );
-      }
+      say(cell);
     });
   }
   chart.addEventListener('pointerleave', clear);
@@ -1021,11 +1171,15 @@ function initGridiron(doc, win) {
 }
 
 /**
- * The first-down line, driving downfield as the page scrolls.
+ * The chain crew, moving downfield as the page scrolls.
  *
  * Reading the scroll position inside the animation frame rather than inside
  * the scroll event is the whole trick: the handler does nothing but ask for a
  * frame, so a fast flick queues one repaint instead of forty.
+ *
+ * Everything else here is a class. Which yard the marks are on is a transform,
+ * and what they look like when they get there — ordinary, inside the twenty,
+ * over the line — belongs to the stylesheet.
  */
 function initDrive(doc, win) {
   if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -1049,13 +1203,18 @@ function initDrive(doc, win) {
     const geom = fieldGeometry(win.innerWidth, height);
     line.style.transform = `translate3d(0, ${yardToY(geom, END_ZONE_YARDS + spot).toFixed(1)}px, 0)`;
     if (yard) yard.textContent = driveLabel(spot);
-    // A page with nowhere to scroll would otherwise park a bright line across
+    // A page with nowhere to scroll would otherwise park a bright mark across
     // the top of it and call that a feature.
     drive.classList.toggle('is-live', scrollMax > height * 0.35);
-    // The yard chip waits until the drive has actually left the goal line. At
-    // the top of the page the line sits under the masthead, which puts the
-    // chip in the viewer bar and cuts the label in half.
+    // The yard label waits until the drive has actually left the goal line. At
+    // the top of the page the mark sits under the masthead, which puts the
+    // label in the viewer bar and cuts it in half.
     drive.classList.toggle('is-moving', progress > 0.02);
+    drive.classList.toggle('is-redzone', spot >= RED_ZONE);
+    // Only at the very bottom, and only once per arrival — toggle leaves the
+    // class alone while it is already there, so the flare does not restart on
+    // every frame of a rubber-band scroll.
+    drive.classList.toggle('is-td', progress >= 1);
   };
 
   const request = () => {
@@ -1126,6 +1285,7 @@ export const REVEAL_SELECTOR = [
   '.chart-card',
   '.table-scroll',
   '.forecast-row',
+  '.heat-wrap',
 ].join(', ');
 
 function initReveal(doc, win) {
@@ -1170,7 +1330,7 @@ export function init(doc = document, win = window) {
   // Which pool this page belongs to — '' at the site root. Only the two keys
   // that name entrants are scoped by it; see scopedKey.
   const scope = doc.documentElement.dataset.pool || '';
-  initTheme(doc, storage);
+  initTheme(doc, storage, win);
   initDetail(doc, storage);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
@@ -1182,7 +1342,7 @@ export function init(doc = document, win = window) {
   initTimeZone(doc, storage, nowMs);
   initSchedule(doc, nowMs);
   initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));
-  initSort(doc);
+  initSort(doc, win);
   initOdometer(doc, win);
   initHeatmap(doc);
   initGlossary(doc, win);
