@@ -43,6 +43,7 @@ from typing import Any, Sequence
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from . import bracket as bracket_mod
 from . import glossary as glossary_mod
 from . import history as history_mod
 from . import metrics
@@ -766,6 +767,86 @@ def _team_page(ctx: SiteContext, team: str) -> dict[str, Any]:
     }
 
 
+def _bracket(ctx: SiteContext) -> dict[str, Any]:
+    """The January bracket, priced.
+
+    :mod:`bracket` builds the football and knows nothing about pools; the
+    pricing is added here, because what a playoff win is worth is a fact about
+    the rules file and a fact about who is holding the team. Every side
+    therefore carries what winning that game pays and who in this pool collects
+    it — which is the only reason a pool site should draw a bracket at all
+    rather than linking to one.
+    """
+    season = ctx.season
+    owners = {t: o.owners for t, o in metrics.ownership(season).items()}
+    slugs = {e.name: e.slug for e in season.entrants}
+    short = _short_names([e.name for e in season.entrants])
+
+    def price(side: Any, round_code: str, *, is_home: bool) -> dict[str, Any]:
+        """One side, with what a win there pays and who it pays."""
+        held = owners.get(side.team, ()) if side.team else ()
+        return {
+            "team": side.team,
+            "seed": side.seed,
+            "label": side.label,
+            "score": side.score,
+            "won": side.won,
+            # The wild-card round pays the *upset*, so the host is playing for
+            # nothing at all — a genuinely interesting thing for a bracket to
+            # say, and the reason this is per side rather than per game.
+            "stake": (
+                schedule_mod.side_points(season, round_code, side.team, is_home=is_home)
+                if side.team
+                else None
+            ),
+            "owners": [{"name": short[n], "slug": slugs[n]} for n in held],
+        }
+
+    rounds = []
+    for round_ in bracket_mod.build(season, ctx.games, ctx.seeds):
+        rounds.append(
+            {
+                "round": round_["round"],
+                "label": round_["label"],
+                "games": [
+                    {
+                        "round": tie.round,
+                        "conference": tie.conference,
+                        "played": tie.played,
+                        "known": tie.known,
+                        "game_id": tie.game_id,
+                        "home": price(tie.home, tie.round, is_home=True),
+                        "away": price(tie.away, tie.round, is_home=False),
+                    }
+                    for tie in round_["games"]
+                ],
+            }
+        )
+
+    resting = [
+        {
+            **b,
+            "owners": [
+                {"name": short[n], "slug": slugs[n]} for n in owners.get(b["team"], ())
+            ]
+            if b["team"]
+            else [],
+        }
+        for b in bracket_mod.byes(season, ctx.seeds)
+    ]
+
+    return {
+        "rounds": rounds,
+        "byes": resting,
+        # Whether the field is settled or still a projection. The whole bracket
+        # is one or the other and the page has to say which, because a
+        # projected wild-card matchup drawn like a fixture is a lie told in
+        # good faith.
+        "final": ctx.seeds_final,
+        "seeded": bool(ctx.seeds),
+    }
+
+
 def _schedule(ctx: SiteContext) -> dict[str, Any]:
     """Every week of the slate, and which one to open on.
 
@@ -989,7 +1070,13 @@ def render_site(
         written.append(target)
 
     write("index.html", "index.html", page="standings")
-    write("schedule/index.html", "schedule.html", page="schedule", schedule=_schedule(ctx))
+    write(
+        "schedule/index.html",
+        "schedule.html",
+        page="schedule",
+        schedule=_schedule(ctx),
+        bracket=_bracket(ctx),
+    )
     write("forecast/index.html", "forecast.html", page="forecast")
     write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
     write("teams/index.html", "teams.html", page="teams")

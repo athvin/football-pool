@@ -1430,6 +1430,100 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   border-color: var(--live);
 }
 
+/* --- the bracket ---------------------------------------------------------
+   A week section like any other, so the switcher, `:target` and the back
+   button all work on it for free. Four rounds as four columns that narrow as
+   the field does, and a stack on a phone — the one layout thirteen games can
+   hold at 390px. */
+.to-bracket { font-family: var(--display); letter-spacing: 0.08em; }
+
+.bracket {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: start;
+  margin-top: 1rem;
+}
+
+.bracket-round { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.bracket-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+
+.tie {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.5rem 0.6rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+/* A tie whose teams are not known yet is drawn as an outline, the same way
+   everything else on this site draws a thing that has not happened. */
+.tie.is-open { background: none; border-style: dashed; }
+
+/* The conference sits in the corner of the card, so the card has to keep that
+   corner clear — otherwise it lands on top of the first side's score, which is
+   in the same place and much larger. */
+.tie:has(.tie-conf) { padding-top: 1.15rem; }
+
+.tie-conf {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.5rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  color: var(--chalk-dim);
+  opacity: 0.7;
+}
+
+.tie-side {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  min-height: 1.6rem;
+}
+.tie-side.lost { opacity: 0.55; }
+
+.tie-seed {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  color: var(--chalk-dim);
+}
+
+.tie-slot {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--chalk-dim);
+}
+
+/* A wild-card host is playing for nothing, because the bonus is for the upset.
+   Zero is the most interesting number in the round and should not be dressed
+   up as a stake. */
+.tie .stake { margin-inline-start: auto; }
+.tie .stake.is-nil { color: var(--chalk-dim); opacity: 0.6; }
+.tie .game-score { margin-inline-start: auto; }
+.tie .owners { flex-basis: 100%; }
+
+@media (max-width: 860px) {
+  .bracket { grid-template-columns: 1fr; }
+  .bracket-round {
+    border-top: 1px solid var(--rule);
+    padding-top: 0.6rem;
+  }
+}
+
 .week-head {
   display: flex;
   flex-wrap: wrap;

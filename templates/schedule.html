@@ -36,6 +36,10 @@
     {% if w.label.startswith('Week') %}{{ w.week }}{% else %}{{ w.label|replace('Super Bowl', 'SB')|replace('Wild Card', 'WC')|replace('Divisional', 'DIV')|replace('Conference', 'CON') }}{% endif %}
   </a>
   {% endfor %}
+  {# Where the season is going, at the end of where it has been. Same `:target`
+     mechanism as every week, so it is a real URL and works with scripting
+     off. #}
+  <a class="to-bracket" href="#bracket">Bracket</a>
 </nav>
 
 <div class="weeks">
@@ -147,6 +151,113 @@
     </p>
   </section>
   {% endfor %}
+
+  {# The bracket is a week section like any other, so the switcher, `:target`
+     and the back button all work on it for free. It is never the default: the
+     season being played is what the page should open on. #}
+  <section class="week bracket-week" id="bracket" aria-labelledby="bracket-title">
+    <div class="week-head">
+      <h2 class="section-title" id="bracket-title">The bracket</h2>
+      <p class="week-dates">
+        {% if bracket.final %}
+          Seeded and settled
+        {% elif bracket.seeded %}
+          Projected from the standings as they stand
+        {% else %}
+          Nothing seeded yet
+        {% endif %}
+      </p>
+    </div>
+
+    <p class="page-sub">
+      Fourteen teams, thirteen games, and what every one of them pays.
+      {% if bracket.final %}
+        The field is final — these are the games, and the ones already played
+        carry their scores.
+      {% elif bracket.seeded %}
+        The field is a <strong>projection</strong>: it is where the standings
+        would seed everyone if the regular season ended today. The wild-card
+        round is the only part seeds decide on their own — past it the survivors
+        are reseeded, so those slots say where their team will come from rather
+        than pretending to know.
+      {% else %}
+        Nothing has been played, so there is nothing to seed a field from. The
+        shape is here and it fills in from week one — a projection built on an
+        0-0 league is really just alphabetical order, and this site would rather
+        show you an empty bracket than that.
+      {% endif %}
+    </p>
+
+    {% if bracket.byes %}
+    <div class="byes">
+      <p class="byes-label">First-round bye</p>
+      <ul class="bye-list">
+        {% for b in bracket.byes %}
+        <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
+          <span class="viewer-label">{{ b.conference }}</span>
+          {% if b.team %}
+          <a class="team-chip scored" href="{{ ('/team/' ~ b.team ~ '/')|url }}"
+             style="{{ b.team|chip_style }}"><img class="chip-logo"
+             src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
+             width="14" height="14">{{ b.team }}</a>
+          {% else %}
+          <span class="team-chip dim">1 seed</span>
+          {% endif %}
+          {% if b.owners %}
+          <span class="owners">{% for o in b.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+          {% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {# Rounds as columns on a desktop and as a stack on a phone, which is the
+       one layout a thirteen-game bracket can hold at 390px. #}
+    <div class="bracket">
+      {% for r in bracket.rounds %}
+      <div class="bracket-round" data-round="{{ r.round }}">
+        <h3 class="bracket-label">{{ r.label }}</h3>
+        {% for g in r.games %}
+        <div class="tie{% if g.played %} is-final{% endif %}{% if not g.known %} is-open{% endif %}"
+             data-tie="{{ g.round }}">
+          {% if g.conference %}<span class="tie-conf">{{ g.conference }}</span>{% endif %}
+          {% for side in [g.away, g.home] %}
+          <div class="tie-side{% if side.won %} won{% elif g.played %} lost{% endif %}">
+            {% if side.team %}
+            <a class="team-chip {{ 'dim' if g.played and not side.won else 'scored' }}"
+               href="{{ ('/team/' ~ side.team ~ '/')|url }}" style="{{ side.team|chip_style }}">{{ side.team }}</a>
+            {% if side.seed %}<span class="tie-seed">{{ side.seed }}</span>{% endif %}
+            {% else %}
+            <span class="tie-slot">{{ side.label }}</span>
+            {% endif %}
+
+            {% if side.score is not none %}
+              <span class="game-score">{{ side.score }}</span>
+            {% elif side.stake is not none %}
+              {# What winning this one pays. Zero is the interesting number: a
+                 wild-card host is playing for nothing, because the bonus is
+                 for the upset. #}
+              <span class="stake{% if not side.stake %} is-nil{% endif %}">{{ side.stake|points }}</span>
+            {% endif %}
+
+            <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+
+    <p class="legend">
+      <span>A win in January pays the flat bonus plus that team's
+        {{ term('lf', 'leveling factor') }} — except the wild-card round, which
+        pays the visitor for the upset and the host nothing at all.</span>
+      <span>·</span>
+      <a href="{{ '/rules/'|url }}">What each round is worth</a>
+    </p>
+  </section>
 </div>
 
 <p class="page-sub">
