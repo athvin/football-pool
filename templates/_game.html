@@ -10,6 +10,8 @@
    the schedule page, the team's own season on a team page. A rail scaled to
    the biggest game in football would leave a quiet team's page with eighteen
    invisible rails. #}
+{% from '_glossary.html' import term with context %}
+
 {% macro game_row(g, scale, show_week=false) %}
 <li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
     data-game="{{ g.game_id }}" style="--swing:{{ '%.3f'|format(g.swing / (scale or 1)) }}">
@@ -43,5 +45,50 @@
      matches you. Holding both sides means you score either way, so it reads as
      a range rather than a single number. #}
   <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}">{% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% endfor %}</div>
+
+  {# The rest of what the build already knows about this game. Open in the
+     markup and collapsed by the stylesheet only when there is a client to open
+     it again — see the `data-js` flag in base.html. With scripting off you get
+     every one of these expanded, which is the honest failure mode. #}
+  <button class="game-open" type="button" data-game-open
+          aria-expanded="false" aria-controls="more-{{ g.game_id }}">
+    <span class="visually-hidden">What this game is worth</span>
+    <span class="game-open-mark" aria-hidden="true"></span>
+  </button>
+
+  <div class="game-more" id="more-{{ g.game_id }}">
+    <dl class="game-facts">
+      <div>
+        <dt>{{ term('swing', 'Swing') }}</dt>
+        <dd>{{ g.swing|points }}</dd>
+      </div>
+      <div>
+        <dt>If {{ g.away.team }} win</dt>
+        <dd>{{ g.away.stake|points }}{% if g.away.owners %} to
+          {% for o in g.away.owners %}{{ o.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %} to nobody here{% endif %}</dd>
+      </div>
+      <div>
+        <dt>If {{ g.home.team }} win</dt>
+        <dd>{{ g.home.stake|points }}{% if g.home.owners %} to
+          {% for o in g.home.owners %}{{ o.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+          {% else %} to nobody here{% endif %}</dd>
+      </div>
+    </dl>
+
+    {% if g.stakes %}
+    <p class="game-note">
+      {# Everyone's stake, not only yours. The collapsed row shows you your own
+         number; the argument in the group chat is about everyone else's. #}
+      On the table for
+      {% for s in g.stakes %}<a class="owner" href="{{ ('/entrant/' ~ s.slug ~ '/')|url }}" data-slug="{{ s.slug }}">{{ s.name }}</a> {% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
+    </p>
+    {% else %}
+    <p class="game-note">
+      Nobody here holds either side, so this one cannot move the pool a point
+      whichever way it goes.
+    </p>
+    {% endif %}
+  </div>
 </li>
 {% endmacro %}

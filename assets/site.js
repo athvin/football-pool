@@ -13,6 +13,7 @@ export const THEME_KEY = 'pool-theme';
 export const TZ_KEY = 'pool-tz';
 export const ME_KEY = 'pool-me';
 export const DETAIL_KEY = 'pool-detail';
+export const SLATE_KEY = 'pool-slate';
 export const COMPARE_KEY = 'pool-compare';
 export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_THEME = 'dark';
@@ -605,6 +606,72 @@ function initDetail(doc, storage) {
     storage.set(DETAIL_KEY, on ? 'off' : 'on');
     paint();
   });
+}
+
+/**
+ * The schedule's filter: only the games the pool has a side in.
+ *
+ * A third of any week is games nobody here holds. They are always dimmed and
+ * can now be dropped entirely, which is what turns a sixteen-game week into
+ * the handful worth reading. One attribute on the root does it — so the rule
+ * lives in the stylesheet, costs nothing per row, and survives switching week
+ * without anything being re-marked.
+ */
+function initSlate(doc, storage) {
+  const button = doc.querySelector('[data-slate-toggle]');
+  if (!button) return;
+
+  const paint = () => {
+    button.setAttribute(
+      'aria-pressed',
+      String(doc.documentElement.dataset.slate === 'pool'),
+    );
+  };
+  paint();
+
+  button.addEventListener('click', () => {
+    const on = doc.documentElement.dataset.slate === 'pool';
+    if (on) delete doc.documentElement.dataset.slate;
+    else doc.documentElement.dataset.slate = 'pool';
+    storage.set(SLATE_KEY, on ? 'all' : 'pool');
+    paint();
+  });
+}
+
+/**
+ * Opening a game up.
+ *
+ * Everything in the panel was already in the markup — what each side pays, and
+ * to whom, for every entrant rather than only the reader. The button is the
+ * control, because a row full of links is not something a keyboard can
+ * usefully "press"; clicking the row is a convenience on top of it, and it
+ * stands aside whenever the click landed on a link or on the button itself.
+ */
+function initGameDetail(doc) {
+  // One listener per list rather than two per row: the schedule carries 272
+  // games, and 544 listeners to open a panel is not a trade worth making. The
+  // list rather than the document, because a listener on the document outlives
+  // the markup it was about — run this twice over one document and every click
+  // would toggle twice and appear to do nothing.
+  for (const list of doc.querySelectorAll('.games')) {
+    list.addEventListener('click', (event) => {
+      const row = event.target.closest?.('.game');
+      if (!row) return;
+
+      const button = row.querySelector('[data-game-open]');
+      if (!button) return;
+
+      if (!event.target.closest('[data-game-open]')) {
+        // A chip, a name — anything that already means something else.
+        if (event.target.closest('a, button')) return;
+        // And never while the reader is selecting a score to copy it.
+        if (doc.defaultView?.getSelection?.()?.toString()) return;
+      }
+
+      const open = row.classList.toggle('is-open');
+      button.setAttribute('aria-expanded', String(open));
+    });
+  }
 }
 
 /**
@@ -1332,6 +1399,8 @@ export function init(doc = document, win = window) {
   const scope = doc.documentElement.dataset.pool || '';
   initTheme(doc, storage, win);
   initDetail(doc, storage);
+  initSlate(doc, storage);
+  initGameDetail(doc);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
   initMe(doc, storage, scopedKey(ME_KEY, scope));

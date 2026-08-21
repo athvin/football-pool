@@ -28,6 +28,13 @@
    The scope is read off the element rather than interpolated, which keeps a
    config value out of a <script> body entirely. #}
 <script>
+  // Scripting is on, and this runs before first paint. Anything that is only
+  // collapsible *because* there is a client to expand it again hangs off this
+  // — a game's detail panel is in the markup and open with scripting off,
+  // rather than hidden by an attribute nothing would ever come along to
+  // remove. Set here rather than in site.js, which is deferred: from there the
+  // panels would paint open and then snap shut.
+  document.documentElement.dataset.js = 'on';
   try {
     var t = localStorage.getItem('pool-theme');
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
@@ -36,6 +43,10 @@
     if (me) document.documentElement.dataset.me = me;
     var d = localStorage.getItem('pool-detail');
     if (d === 'on') document.documentElement.dataset.detail = d;
+    // The schedule's own filter, remembered like every other viewer choice.
+    if (localStorage.getItem('pool-slate') === 'pool') {
+      document.documentElement.dataset.slate = 'pool';
+    }
   } catch (e) {}
 </script>
 

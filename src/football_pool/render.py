@@ -628,7 +628,11 @@ def _game_row(
     for e in season.entrants:
         best, worst = schedule_mod.entrant_stake(season, kind, home, away, set(e.teams))
         if best:
-            stakes.append({"slug": e.slug, "max": best, "min": worst})
+            # The name rides along for the expanded panel, which lists everyone
+            # with something on this game rather than only the reader.
+            stakes.append(
+                {"slug": e.slug, "name": short[e.name], "max": best, "min": worst}
+            )
 
     kick = schedule_mod.kickoff(row.gameday, row.gametime)
     return {

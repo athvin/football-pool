@@ -997,6 +997,73 @@ def test_the_standings_page_links_to_the_full_forecast(pool, mid_season, tmp_pat
     assert 'href="/forecast/"' in index
 
 
+def test_every_game_carries_what_it_is_worth_to_everybody(pool, game_data, tmp_path):
+    """The collapsed row shows the reader their own number. The argument in the
+    group chat is about everyone else's, so the panel names all of them."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert html.count('class="game-more"') == len(game_data.games)
+    assert "If KC win" in html
+    assert "On the table for" in html
+    # Both sides priced, whoever is holding them.
+    assert "to nobody here" in html
+
+
+def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(
+    pool, game_data, tmp_path
+):
+    """The one rule this site has about hidden things.
+
+    Nothing is ever invisible without JavaScript, so the panel ships open and
+    the stylesheet folds it away only when `data-js` says there is a client
+    that can open it again. Set before first paint, or the panels would render
+    open and then snap shut.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert "dataset.js = 'on'" in html
+    assert not re.search(r'class="game-more"[^>]*hidden', html)
+    assert 'aria-expanded="false"' in html
+    assert re.search(r'aria-controls="more-[^"]+"', html)
+
+
+def test_the_schedule_can_be_cut_to_the_games_the_pool_is_in(pool, game_data, tmp_path):
+    """A third of any week is games nobody here holds."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert "data-slate-toggle" in html
+    assert "Pool games only" in html
+    # The rows the filter acts on are marked by the build, not found by the
+    # client — `is-idle` already existed to dim them.
+    assert 'class="game is-idle' in html
+
+
+def test_a_week_the_pool_has_no_side_in_says_so_rather_than_going_blank(
+    make_season, game_data, tmp_path
+):
+    """With the filter on, a week of nothing would otherwise look broken.
+
+    January is where this actually happens: four teams that all missed the
+    playoffs leaves the pool with no side in any of the four postseason weeks,
+    and that is a real state a real pool spends a month in.
+    """
+    watching = make_season(
+        [{"name": "Solo", "teams": ["ARI", "CLE", "NYJ", "TEN"]}], year=2025
+    )
+    schedule = _schedule(build_context(watching, game_data))
+    blank = [w for w in schedule["weeks"] if not w["pool_games"]]
+    assert blank, "the fixture should leave this pool out of the postseason"
+
+    render_site(watching, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert html.count('class="empty slate-empty"') == len(blank)
+    assert "Nobody here holds a side in" in html
+
+
 def test_every_team_gets_a_page(pool, game_data, tmp_path):
     """All 32, not only the ones somebody picked.
 

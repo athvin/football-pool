@@ -396,6 +396,25 @@ only the part that separates people — and a game the whole pool is on scores
 exactly zero. Games nobody holds are dimmed rather than dropped: they are still
 the schedule, they just should not compete for attention.
 
+**Pool games only** drops them altogether, which is what turns a sixteen-game
+week into the handful worth reading. It is one attribute on the root element,
+so the rule lives in the stylesheet, costs nothing per row, survives switching
+week, and is remembered per browser like every other viewer choice. Teams on
+bye that nobody holds go with them. A week where the pool genuinely has no side
+— which is most of January for most entries — says so instead of going blank,
+and the build decides that, because the week already knows how many games the
+pool is in.
+
+**Opening a game** shows the rest of what the build already knows: the swing,
+what each side pays and to whom, and every entrant with something on it rather
+than only you. All of it is in the markup — the stylesheet folds it away only
+when `data-js` says there is a client that can unfold it again, which the
+inline script in `base.html` sets before first paint. With scripting off every
+panel is simply open, which is the honest failure mode for a static site. The
+button is the control, because a row full of links is not something a keyboard
+can usefully "press"; clicking the row is a convenience on top of it, and it
+stands aside for clicks that land on a link or while text is being selected.
+
 Which week opens is decided twice. The build bakes in the week that owns its
 fetch instant, and the page re-runs the identical rule against your own clock on
 load, so an overnight rollover between deploys still opens on the right week.

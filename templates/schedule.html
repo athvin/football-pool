@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
-{% from '_game.html' import game_row %}
+{% from '_game.html' import game_row with context %}
 
 {% block title %}Schedule · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}The {{ season.year }} NFL schedule week by week, with what every game is worth to the pool and who is holding each side.{% endblock %}
@@ -10,10 +10,16 @@
 
 <div class="page-head">
   <h1 class="page-title">Schedule</h1>
+  {# The filter sits with the title because it changes the whole page, not one
+     week. Inert without scripting, like every other viewer control here. #}
+  <button class="detail-toggle" type="button" data-slate-toggle aria-pressed="false">
+    Pool games only
+  </button>
   <p class="page-sub">
     Every game, priced. A win pays the winner's own leveling factor — so the two
     sides of one game are almost never worth the same, and the team you want to
     win is not always the one favoured to. Opens on the week being played.
+    Point at a game and open it for what it is worth to everybody.
   </p>
 </div>
 
@@ -112,6 +118,16 @@
       {{ game_row(g, w.biggest.swing if w.biggest else 0) }}
       {% endfor %}
     </ul>
+    {# Only ever seen with the filter on, and only in a week where the pool has
+       no side at all — otherwise the list would simply go blank and look
+       broken. The condition is the build's, not the client's: the week already
+       knows how many games the pool is in. #}
+    {% if not w.pool_games %}
+    <p class="empty slate-empty">
+      Nobody here holds a side in {{ w.label }}. Turn off <strong>pool games
+      only</strong> to see the other {{ w.count }}.
+    </p>
+    {% endif %}
 
     <h3 class="section-title">What's on the table for each of you</h3>
     <div class="forecast-rows">
