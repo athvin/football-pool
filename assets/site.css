@@ -543,13 +543,17 @@ a { color: inherit; }
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.row:hover, .row:focus-visible {
+/* `:focus-within`, not `:focus-visible`: the row is a <div> now and a <div>
+   never takes focus. The links inside it do, and when one of them has it the
+   row should light up exactly as it does under the pointer. `:has()` would say
+   this more precisely, but it is the one selector this stylesheet still guards
+   behind @supports, and the row lighting up is not worth a browser split. */
+.row:hover, .row:focus-within {
   transform: translateY(-2px);
   border-color: color-mix(in srgb, var(--accent) 45%, var(--rule));
   background: var(--surface-2);
-  outline: none;
 }
-.row:hover::before, .row:focus-visible::before { transform: scaleY(1); }
+.row:hover::before, .row:focus-within::before { transform: scaleY(1); }
 
 /* A floodlight passing over the row under the pointer. One pass, on the way in
    only — a sheen that ran continuously would be the brightest moving thing on
@@ -562,6 +566,11 @@ a { color: inherit; }
   inset: 0;
   border-radius: inherit;
   pointer-events: none;
+  /* Above the chips, which have to be raised over the row's stretched link to
+     stay clickable. Without this the floodlight would pass behind four opaque
+     chips and read as a broken pass rather than one. See `.row-link` for the
+     whole stack. */
+  z-index: 3;
   opacity: 0;
   background-image: linear-gradient(100deg,
     transparent 44%,
@@ -571,7 +580,7 @@ a { color: inherit; }
   background-repeat: no-repeat;
   background-position: 100% 0;
 }
-.row:hover::after, .row:focus-visible::after { animation: sheen 0.8s ease-out; }
+.row:hover::after, .row:focus-within::after { animation: sheen 0.8s ease-out; }
 
 /* The leader sits under a floodlight. */
 .row.is-leader {
@@ -598,6 +607,29 @@ a { color: inherit; }
 
 .row-who { grid-area: who; min-width: 0; }
 
+/* The row's click target, kept after the row stopped being one big anchor.
+   The name is the real link; this pseudo-element is what makes the rest of the
+   row — the rank, the score, the bars, the whitespace — go to the same place
+   it does. It is inert paint: no background, no border, nothing to see. The
+   row is `position: relative` and `overflow: hidden` already, so it is
+   anchored and clipped to the row's own corners for free.
+
+   Three layers, and the order is load-bearing enough to write down:
+
+     3  .row::after   the floodlight, over everything, and never a click target
+     2  .row-teams    the chips, which have somewhere else to go
+     1  .row-link     this overlay, which is everywhere else in the row
+     0  everything    the rank, the score, the bars
+
+   `z-index: 1` rather than 0 because the score carries a
+   `view-transition-name`, and that makes it a stacking context of its own —
+   at `auto` it would paint over an overlay it comes after in the markup, and
+   the biggest number on the row would be the one part of it you could not
+   tap. */
+.row-link { text-decoration: none; }
+.row-link::after { content: ''; position: absolute; inset: 0; z-index: 1; }
+.row-link:focus-visible { outline: 2px solid var(--live); outline-offset: 3px; }
+
 .row-name {
   font-family: var(--display);
   font-size: 1.5rem;
@@ -608,7 +640,16 @@ a { color: inherit; }
   overflow-wrap: anywhere;
 }
 
-.row-teams { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 0.3rem; }
+/* Lifted over that overlay, or the chips would be four links nobody can reach.
+   Everything else in the row is deliberately left underneath it. */
+.row-teams {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 0.3rem;
+}
 
 .row-score { grid-area: score; text-align: right; }
 
@@ -937,6 +978,12 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   letter-spacing: 0.02em;
 }
 
+/* The card head is a link to that team's page. No underline — a rule through a
+   26px display face is a scar — so the badge and the code brighten together
+   instead, the same move a chip makes. */
+a.card-team { text-decoration: none; transition: filter 0.14s ease; }
+a.card-team:hover, a.card-team:focus-visible { filter: brightness(1.15); }
+
 .card-points {
   font-family: var(--mono);
   font-size: 1.15rem;
@@ -1136,6 +1183,28 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   font-size: 11px;
   fill: var(--chalk);
 }
+
+/* --- names inside a chart -----------------------------------------------
+   An axis label is the same object as the chip or the name in the prose beside
+   it, so it goes to the same page. SVG gives a link nothing to lean on — there
+   is no border to lift, and an underline through 10px uppercase mono is a
+   smudge — so the affordance is the fill coming up to full strength, which is
+   the move every chart here already makes when it is pointed at. */
+svg a { cursor: pointer; }
+svg a:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+svg a:hover .trend-label,
+svg a:focus-visible .trend-label,
+svg a:hover .cmp-label,
+svg a:focus-visible .cmp-label,
+svg a:hover .ridge-label,
+svg a:focus-visible .ridge-label,
+svg a:hover .heat-head,
+svg a:focus-visible .heat-head { fill: var(--chalk); }
+/* The one exception: a contribution segment's label is already at full strength
+   on a solid fill, so brightening it has nowhere to go. It takes the underline
+   the others cannot afford — at 9px on a wide block of colour, it reads. */
+svg a:hover .contrib-label,
+svg a:focus-visible .contrib-label { text-decoration: underline; }
 
 .trend-tick {
   font-family: var(--mono);
@@ -1636,6 +1705,16 @@ html[data-js='on'] .game-more { display: none; }
   text-transform: uppercase;
   color: var(--chalk-dim);
 }
+/* The team named in a fact is a link to that team, but the label is a 10px
+   caption and cannot afford a chip. The affordance is the one the owner names
+   next to it use — nothing at rest, a lift and a rule under it on the way
+   past. */
+.game-facts dt a { text-decoration: none; border-bottom: 1px solid transparent; }
+.game-facts dt a:hover, .game-facts dt a:focus-visible {
+  color: var(--chalk);
+  border-bottom-color: color-mix(in srgb, var(--chalk) 45%, transparent);
+}
+
 .game-facts dd {
   margin: 0;
   font-family: var(--mono);
@@ -1856,6 +1935,12 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 .cmp-dot.is-picked, .cmp-label.is-picked { opacity: 1; }
 .cmp-dot.is-picked { fill: var(--pick-color); }
 .cmp-label.is-picked { fill: var(--chalk); }
+
+/* Every label is a link to that entrant, but an unpicked one is drawn at zero
+   opacity — a target over nothing anyone can see. It does not take a click
+   until the name is on screen; `initCompare` does the same for the tab order. */
+.cmp-label { pointer-events: none; }
+.cmp-label.is-picked { pointer-events: auto; }
 
 .cmp-label {
   font-family: var(--mono);

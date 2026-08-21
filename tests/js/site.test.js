@@ -464,8 +464,8 @@ function boardMarkup() {
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-me');
   document.body.innerHTML = `
-    <a class="row" data-slug="brian-moore"><span class="badge you" data-me-only>you</span></a>
-    <a class="row" data-slug="paul-moore"><span class="badge you" data-me-only>you</span></a>
+    <div class="row" data-slug="brian-moore"><span class="badge you" data-me-only>you</span></div>
+    <div class="row" data-slug="paul-moore"><span class="badge you" data-me-only>you</span></div>
     <select data-me-select>
       <option value="">Nobody in particular</option>
       <option value="brian-moore">Brian Moore</option>
@@ -520,9 +520,50 @@ describe('this is me', () => {
   });
 
   test('pages with no picker still apply a stored identity', () => {
-    document.body.innerHTML = '<a class="row" data-slug="brian-moore"></a>';
+    document.body.innerHTML = '<div class="row" data-slug="brian-moore"></div>';
     init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
     expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The "your entry" strip
+// ---------------------------------------------------------------------------
+describe('the strip borrows the row it is built from', () => {
+  const board = (rowInner) => {
+    document.documentElement.removeAttribute('data-me');
+    document.body.innerHTML = `
+      <div class="you-strip" data-you hidden></div>
+      <div class="board">
+        <div class="row" data-slug="brian-moore">
+          <span class="row-rank">1</span>
+          ${rowInner}
+          <span class="row-points">42.00</span>
+        </div>
+      </div>`;
+  };
+
+  test('it takes the destination from the name, not from the row', () => {
+    // The row stopped being an anchor when its team chips became links, so
+    // there is no href on it any more to borrow.
+    board('<a class="row-link" href="/entrant/brian-moore/"><span class="row-name">Brian Moore</span></a>');
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
+
+    const strip = document.querySelector('[data-you]');
+    expect(strip.hidden).toBe(false);
+    const link = strip.querySelector('a');
+    expect(link.getAttribute('href')).toBe('/entrant/brian-moore/');
+    expect(link.textContent).toContain('Brian Moore');
+    expect(link.textContent).toContain('42.00');
+  });
+
+  test('a row with nowhere to go leaves no empty bar above the board', () => {
+    board('<span class="row-name">Brian Moore</span>');
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
+
+    const strip = document.querySelector('[data-you]');
+    expect(strip.hidden).toBe(true);
+    expect(strip.textContent).toBe('');
   });
 });
 

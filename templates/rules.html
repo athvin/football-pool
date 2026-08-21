@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from '_links.html' import team_chip %}
 
 {% block title %}Rules · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}How {{ season.pool.name }} scores: leveling factors, bonuses, and playoff points.{% endblock %}
@@ -146,7 +147,7 @@
         <td>
           <span class="row-teams">
           {% for t in teams_in %}
-            <a class="team-chip" href="{{ ('/team/' ~ t ~ '/')|url }}">{{ t }} · {{ '%.2f'|format(season.lf_of(t)) }}</a>
+            {{ team_chip(t, logo=false, suffix=' · ' ~ '%.2f'|format(season.lf_of(t))) }}
           {% endfor %}
           </span>
         </td>

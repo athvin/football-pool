@@ -127,8 +127,13 @@ def rivals(outlook: pd.DataFrame) -> pd.DataFrame:
                 "slug": row["slug"],
                 "gap_to_leader": round(leader - float(row["banked"]), 2),
                 "chasing": None if ahead is None else ahead["name"],
+                # The neighbour's slug rides along with their name, because the
+                # name is a link on the page and the page has no other way back
+                # from "Eli" to /entrant/eli/.
+                "chasing_slug": None if ahead is None else ahead["slug"],
                 "chasing_gap": None if ahead is None else round(float(ahead["banked"]) - float(row["banked"]), 2),
                 "chased_by": None if behind is None else behind["name"],
+                "chased_by_slug": None if behind is None else behind["slug"],
                 "chased_gap": None if behind is None else round(float(row["banked"]) - float(behind["banked"]), 2),
             }
         )
@@ -136,7 +141,10 @@ def rivals(outlook: pd.DataFrame) -> pd.DataFrame:
     df = pd.DataFrame(rows)
     # pandas turns None into NaN, and NaN is *truthy* in a template — the
     # leader's "chasing" cell would render as "nan by nan". Put real Nones back.
-    for col in ("chasing", "chasing_gap", "chased_by", "chased_gap"):
+    for col in (
+        "chasing", "chasing_slug", "chasing_gap",
+        "chased_by", "chased_by_slug", "chased_gap",
+    ):
         df[col] = df[col].astype(object).where(df[col].notna(), None)
     return df
 
