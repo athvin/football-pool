@@ -38,7 +38,7 @@ import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -60,6 +60,13 @@ from .standings import final_seeds, playoff_seeds, regular_season_complete, stan
 TEMPLATE_DIR = REPO_ROOT / "templates"
 ASSET_DIR = REPO_ROOT / "assets"
 
+# The `url` filter, passed around as a plain callable. The charts in svg.py draw
+# names and team codes that are links now, and a link needs the pool's
+# deployment prefix — but there must be exactly one implementation of that
+# prefix, so the charts are handed the environment's own closure rather than
+# growing a second copy of the rule. See `make_environment`.
+UrlFor = Callable[[str], str]
+
 # Long enough that a collision is not a practical concern, short enough to keep
 # the markup readable in a diff.
 ASSET_HASH_CHARS = 8
@@ -71,6 +78,18 @@ ASSET_HASH_CHARS = 8
 # the year rolls over, and a pool cannot have its own copy of the maths.
 MODEL_URL = "https://gist.github.com/datastx/8670c633fd4e44644bfa99c5d0ba1209"
 REPO_URL = "https://github.com/athvin/football-pool"
+
+
+def _root_url(path: str) -> str:
+    """What the ``url`` filter returns for a site deployed at the root.
+
+    The default for the helpers that take a resolver, so anything that only
+    wants the numbers out of them — a test, mostly — can call one without
+    standing up a Jinja environment first. It is never what a real build uses:
+    :func:`render_site` always passes the environment's own closure, which is
+    the only thing that knows this pool's prefix.
+    """
+    return path
 
 
 def _asset_digest(rel: str) -> str:
@@ -287,7 +306,7 @@ def _headline(entrants: pd.DataFrame, column: str) -> dict[str, Any]:
     }
 
 
-def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
+def _forecast(ctx: SiteContext, url: UrlFor = _root_url) -> dict[str, Any] | None:
     """The three distribution charts, or ``None`` when nothing is projected."""
     p = ctx.projections
     if p is None or p.entrants.empty:
@@ -297,6 +316,14 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
     # model's own ranking rather than as the current standings.
     order = p.entrants.sort_values("p_first", ascending=False)["name"].tolist()
     short = _short_names(order)
+    # A name down the side of the grid is the same person as a name in the
+    # table below it, so it goes to the same page. Keyed by the full name
+    # because that is what the chart is handed; the drawn label may be an
+    # abbreviation of it.
+    hrefs = {
+        row["name"]: url(f"/entrant/{row['slug']}/")
+        for _, row in p.entrants.iterrows()
+    }
 
     finish = p.finish_probs.reindex(order)
     h2h = p.head_to_head.reindex(index=order, columns=order)
@@ -320,6 +347,7 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
         "ridge": svg.ridgeline(
             [float(c) for c in p.distribution.centers],
             [(short[n], density.loc[n].tolist()) for n in order],
+            hrefs={short[n]: hrefs[n] for n in order},
         ),
         # NaN on the diagonal becomes None so the template and the chart both
         # read it as "no cell" rather than trying to format a float. Short
@@ -332,6 +360,7 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             # Outright odds ride along so the hover readout can say what a
             # pairwise number means for the pool, not just for the pair.
             [float(by_name.loc[n, "p_first"]) * 100 for n in order],
+            hrefs=hrefs,
         ),
         # The same pairs, priced. Both grids are drawn at build time and the
         # picker only chooses which one is on screen, so the numbers are the
@@ -347,6 +376,7 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             order,
             [float(by_name.loc[n, "p_cash"]) * 100 for n in order],
             verb="out-earns",
+            hrefs=hrefs,
         ),
         # How many places the pot actually reaches, which is what decides how
         # often two entrants are level on money. Truncated to the field: a
@@ -377,6 +407,7 @@ def _projection_for(ctx: SiteContext, name: str) -> dict[str, Any] | None:
 
     r = match.iloc[0]
     band = ctx.projections.entrants
+    slugs = {e.name: e.slug for e in ctx.season.entrants}
     return {
         "p_first": float(r["p_first"]),
         "p_cash": float(r["p_cash"]),
@@ -394,9 +425,11 @@ def _projection_for(ctx: SiteContext, name: str) -> dict[str, Any] | None:
         "odds_meter": svg.meter(float(r["p_first"])),
         "finish_bar": svg.finish_bar(ctx.projections.finish_probs.loc[name].tolist()),
         # Who this entrant is favoured against, best chance first. Their own
-        # cell is NaN and drops out.
+        # cell is NaN and drops out. The slug rides along because every one of
+        # these names is a link on the page — the same names, one table lower,
+        # have always been links, and the two disagreeing was the bug.
         "rivals": [
-            {"name": other, "p": float(v)}
+            {"name": other, "slug": slugs[other], "p": float(v)}
             for other, v in ctx.projections.head_to_head.loc[name]
             .dropna()
             .sort_values(ascending=False)
@@ -421,7 +454,7 @@ def _next_week_byes(ctx: SiteContext) -> tuple[int | None, set[str]]:
     return week, set(schedule_mod.teams_on_bye(ctx.season.teams, slate))
 
 
-def _entrant_rows(ctx: SiteContext) -> list[dict[str, Any]]:
+def _entrant_rows(ctx: SiteContext, url: UrlFor = _root_url) -> list[dict[str, Any]]:
     """Leaderboard rows, already sorted, with their graphics rendered."""
     scale_max = float(ctx.outlook["ceiling"].max()) if not ctx.outlook.empty else 1.0
     bye_week, on_bye = _next_week_byes(ctx)
@@ -466,12 +499,31 @@ def _entrant_rows(ctx: SiteContext) -> list[dict[str, Any]]:
                     float(row.banked), float(row.guaranteed_extra),
                     float(row.ceiling), scale_max,
                 ),
+                # The four codes written into this bar are the same four teams
+                # as the chips in the hero above it, so they go to the same
+                # four pages.
                 "contrib": svg.contribution_bar(
-                    [(t, float(contributions.get(t, 0.0))) for t in row.teams]
+                    [(t, float(contributions.get(t, 0.0))) for t in row.teams],
+                    href_base=url("/team/"),
                 ),
             }
         )
     return rows
+
+
+def _named(
+    season: Season, pairs: Sequence[tuple[str, float]], key: str
+) -> list[dict[str, Any]]:
+    """``(name, number)`` pairs, with the slug that makes the name a link.
+
+    The history and metrics layers deal in names because that is what the
+    frames are indexed by, and their tuple shape is asserted by tests that have
+    nothing to do with the website. The slug is a fact about a *page*, so it is
+    attached here, at the edge where the pool becomes HTML — the same reason
+    ``owners`` and ``stakes`` are built with one further down this file.
+    """
+    slugs = {e.name: e.slug for e in season.entrants}
+    return [{"name": n, "slug": slugs[n], key: v} for n, v in pairs if n in slugs]
 
 
 def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -518,9 +570,9 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "pot": ctx.season.pot,
         "entrants": len(ctx.season.entrants),
         "leader": rows[0] if rows else None,
-        "risers": movers["risers"],
-        "fallers": movers["fallers"],
-        "week_leaders": leaders,
+        "risers": _named(ctx.season, movers["risers"], "change"),
+        "fallers": _named(ctx.season, movers["fallers"], "change"),
+        "week_leaders": _named(ctx.season, leaders, "points"),
         "seeds_final": ctx.seeds_final,
     }
 
@@ -1062,7 +1114,12 @@ def render_site(
     ctx = build_context(season, data, simulations=simulations)
     env = make_environment(site_base if site_base is not None else base, pool_base=base)
 
-    rows = _entrant_rows(ctx)
+    # The templates reach the same function through the `url` filter. The charts
+    # are built here in Python and cannot, so they are handed the filter itself
+    # — one implementation of the deployment prefix, not two.
+    url: UrlFor = env.filters["url"]
+
+    rows = _entrant_rows(ctx, url)
     teams = _team_rows(ctx)
     state = _pool_state(ctx, rows)
     fresh = _freshness(ctx)
@@ -1078,7 +1135,7 @@ def render_site(
         "seeds_final": ctx.seeds_final,
         "projecting": ctx.projections is not None,
         "sim_count": ctx.projections.simulations if ctx.projections else 0,
-        "forecast": _forecast(ctx),
+        "forecast": _forecast(ctx, url),
         # Definitions carry this season's own entry fee, pot and payout places,
         # so the explanation of a word can never drift from the rules file that
         # sets it. See glossary.py.
@@ -1144,6 +1201,12 @@ def render_site(
         # Label a handful, not half the field: with six entries, highlighting
         # five would mean nothing is highlighted.
         lead_names=[r["name"] for r in rows[: min(5, max(2, len(rows) // 2))]],
+        # The two chart families on this page are labelled with people's names,
+        # and a name is a link. `compare_lines` already carries the slug in its
+        # own data and only needs to know where /entrant/ lives; the emphasis
+        # charts are handed names alone, so they get the finished URLs.
+        entrant_href_base=url("/entrant/"),
+        entrant_hrefs={r["name"]: url(f"/entrant/{r['slug']}/") for r in rows},
         leverage=metrics.leverage(season).to_dict("records"),
         picks=metrics.pick_report(season, ctx.team_points).to_dict("records"),
         rivals=metrics.rivals(ctx.outlook).to_dict("records"),
