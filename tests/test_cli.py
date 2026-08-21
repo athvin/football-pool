@@ -351,8 +351,7 @@ def test_build_can_render_one_pool_into_its_real_subpath(wired_pools, capsys, tm
 
     assert (out / "friends" / "index.html").exists()
     assert not (out / "index.html").exists()
-    # One pool named explicitly means no switcher and no per-pool summary.
-    assert "pool-switch" not in (out / "friends" / "index.html").read_text()
+    # One pool named explicitly means no per-pool summary line.
     assert "Friends Pool:" not in capsys.readouterr().out
 
 

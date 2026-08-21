@@ -12,6 +12,13 @@ the same football. Today there are two:
 | **Family Pool** | $10 | [athvin.github.io/football-pool/](https://athvin.github.io/football-pool/) |
 | **Friends Pool** | $50 | [athvin.github.io/football-pool/friends/](https://athvin.github.io/football-pool/friends/) |
 
+The two share a domain as an implementation detail, not an experience: **no
+page in one pool links to the other**, and neither ever names the other. Each
+group gets exactly one URL. The alternative — a switcher in the header — was
+tried and removed: a family member who taps "Friends Pool", doesn't find their
+own name, and doesn't know there are two pools, concludes the site is broken,
+and every one of those conclusions becomes a text to the commissioner.
+
 ## How the pool works
 
 Everyone picks 4 teams for the season. Every team carries a **leveling factor**
@@ -75,7 +82,9 @@ over the teams page.
 Each pool gets a complete site of its own: its own leaderboard, entrant pages,
 schedule, forecast and `data/standings.json`. The one thing they share on disk
 is `/assets/` — a single copy of the stylesheet, the script, the logos and the
-fonts, linked by the same URL from every pool.
+fonts, linked by the same URL from every pool. That sharing stops at assets:
+no rendered page carries a link to, or the name of, any pool but its own, and
+both CI and the test suite grep the built markup to keep it that way.
 
 One build renders all of them:
 
@@ -335,7 +344,12 @@ off, and nothing else changes.
 - **Forecast** — where the model thinks it ends: chance of every finishing
   place, the range of final scores, and every head-to-head.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
-- **Rules** — rendered from `rules.yaml`, the same file the engine reads.
+- **Rules** — rendered from `rules.yaml`, the same file the engine reads. It
+  opens with the two deadlines and how to pay: picks are due before the
+  season's first kickoff and payment by the end of week 1 — both dates read
+  off the schedule data, not typed — with the pool's Venmo link and a QR code
+  (`venmo:` in the pool's file, validated at load because real money follows
+  that URL).
 
 Every one of these exists once **per pool**, under that pool's prefix. Only
 `/assets/` and `/404.html` belong to the site as a whole.

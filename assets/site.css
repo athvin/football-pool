@@ -855,6 +855,73 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   border-radius: var(--radius);
 }
 
+/* --- deadlines & payment (rules page) ----------------------------------- */
+/* The one box on the site that asks the reader to do something, so it gets
+   the accent border nothing else uses and sits above the scoring maths. The
+   QR panel stays white in both themes — a QR code needs a light quiet zone
+   around it, or half the phones pointed at a dark page will not read it. */
+.pay-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.25rem 2rem;
+  margin: 1.5rem 0 2rem;
+  padding: 1.25rem 1.4rem;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--live) 45%, var(--rule));
+  border-radius: var(--radius);
+}
+
+.pay-details { flex: 1 1 30ch; max-width: 68ch; }
+
+.pay-title {
+  font-family: var(--display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pay-deadlines { padding-left: 1.2rem; }
+.pay-deadlines li { color: var(--chalk-dim); margin-top: 0.6rem; }
+.pay-deadlines strong { color: var(--chalk); }
+.pay-how { color: var(--chalk-dim); margin-top: 0.9rem; }
+.pay-how strong { color: var(--chalk); }
+
+.venmo-link {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--chalk);
+  word-break: break-all;
+}
+
+.venmo-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline: auto;
+  text-decoration: none;
+}
+
+.venmo-qr img {
+  display: block;
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+  padding: 10px;
+  background: #fff;
+  border-radius: var(--radius);
+  border: 1px solid var(--rule);
+}
+
+.venmo-qr-caption {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--chalk-dim);
+}
+
+.venmo-qr:hover .venmo-qr-caption { color: var(--chalk); }
+
 /* --- trend chart ------------------------------------------------------- */
 .chart-card {
   background: var(--surface);
@@ -1465,40 +1532,6 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   color: var(--heat);
   border-color: color-mix(in srgb, var(--heat) 45%, var(--rule));
 }
-
-/* --- pool switcher ----------------------------------------------------- */
-/* Only rendered when the season has more than one pool. It sits in the viewer
-   bar rather than the masthead because it answers the same question the other
-   controls do — what am I looking at — and because the masthead's flex row is
-   already full at phone widths. Styled as chips rather than tabs so it doesn't
-   read as a second, competing navigation. */
-.pool-switch {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.pool-switch a {
-  padding: 0.25rem 0.55rem;
-  border: 1px solid var(--rule);
-  border-radius: 6px;
-  font-family: var(--mono);
-  font-size: 0.72rem;
-  text-decoration: none;
-  color: var(--chalk-dim);
-  white-space: nowrap;
-  transition: color 0.18s, background-color 0.18s, border-color 0.18s;
-}
-
-.pool-switch a:hover { color: var(--chalk); background: var(--surface); }
-
-.pool-switch a[aria-current='page'] {
-  color: var(--chalk);
-  background: var(--surface);
-  border-color: color-mix(in srgb, var(--live) 55%, var(--rule));
-}
-
-.pool-switch a:focus-visible { outline: 2px solid var(--live); }
 
 /* Label beside the control, not above it, so the bar stays one line tall. */
 .viewer-inner .me-picker,

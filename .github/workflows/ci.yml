@@ -127,11 +127,15 @@ jobs:
           test -z "$(grep -oE '(href|src)="/[^"]*"' public-project/friends/index.html \
                      | grep -v '="/football-pool/' || true)"
 
-          # The switcher points both ways, and the family pool did not move.
-          grep -q 'href="/football-pool/friends/"' public-project/index.html
-          grep -q 'href="/football-pool/"' public-project/friends/index.html
+          # The pools are sealed off from each other: no page in one links to
+          # the other, so nobody lands on a roster that has no idea who they
+          # are. The family pool did not move — it still owns the site root.
+          ! grep -q 'href="/football-pool/friends/' public-project/index.html
+          ! grep -q 'href="/football-pool/"' public-project/friends/index.html
           grep -q 'Family Pool' public-project/index.html
           grep -q 'Friends Pool' public-project/friends/index.html
+          ! grep -q 'Friends Pool' public-project/index.html
+          ! grep -q 'Family Pool' public-project/friends/index.html
 
           # The root build too, where an empty prefix hides a bug differently.
           grep -qE 'href="/assets/site\.css\?v=[0-9a-f]{8}"' public-root/friends/index.html

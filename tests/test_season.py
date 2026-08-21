@@ -309,6 +309,35 @@ def test_a_second_pool_owns_its_own_money_and_roster(tmp_path, season_writer):
     assert friends.divisions == family.divisions
 
 
+def test_venmo_loads_per_pool_and_is_optional(tmp_path, season_writer):
+    """The family file carries the real venmo URL; a pool without one gets None."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={"friends": _pool()},  # no venmo key at all
+    )
+    assert load_season(2026, root=tmp_path).venmo == "https://venmo.com/u/Brian-Moore-4"
+    assert load_season(2026, root=tmp_path, pool="friends").venmo is None
+
+
+def test_a_venmo_that_is_not_a_venmo_url_is_refused(tmp_path, season_writer):
+    """It renders as the QR everyone pays through — a typo sends real money
+    somewhere else, so it fails the build instead of publishing."""
+    from football_pool.season import ConfigError, load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        rules_overrides={"venmo": "venmo.com/u/Brian-Moore-4"},  # no scheme
+    )
+    with pytest.raises(ConfigError, match="venmo must be a full"):
+        load_season(2026, root=tmp_path)
+
+
 def test_load_pools_returns_every_pool_root_first(tmp_path, season_writer):
     from football_pool.season import load_pools
 
@@ -325,7 +354,7 @@ def test_load_pools_returns_every_pool_root_first(tmp_path, season_writer):
 
 
 def test_every_pool_knows_about_the_others(tmp_path, season_writer):
-    """Each Season carries the full registry, which is what feeds the switcher."""
+    """Each Season carries the full registry, which is how `build` finds siblings."""
     from football_pool.season import load_season
 
     season_writer(

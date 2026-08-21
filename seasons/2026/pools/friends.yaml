@@ -22,6 +22,10 @@ entry_fee: 50.0
 payout_split: [0.50, 0.30, 0.20] # 1st / 2nd / 3rd share of the pot
 picks_per_entrant: 4
 
+# Where the entry fee goes. Rendered on the rules page as a big QR code plus
+# the link itself, so nobody has to ask how to pay.
+venmo: https://venmo.com/u/Brian-Moore-4
+
 # =============================================================================
 # ENTRANTS AND THEIR PICKS
 # =============================================================================

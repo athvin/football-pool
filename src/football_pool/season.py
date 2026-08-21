@@ -164,10 +164,15 @@ class Season:
     picks_per_entrant: int
     entrants: tuple[Entrant, ...]
     forecast: Mapping[str, Any] | None = None
+    # Where the entry fee goes — a Venmo profile URL, rendered on the rules
+    # page with a QR code. Optional: a pool without one simply shows no
+    # payment box. Per-pool because the money is per-pool.
+    venmo: str | None = None
 
-    # Which pool this is, and every pool sharing the season (root first, for
-    # the switcher). Defaulted so a Season can still be built without a pools
-    # directory in sight.
+    # Which pool this is, and every pool sharing the season (root first).
+    # Defaulted so a Season can still be built without a pools directory in
+    # sight. The list is for build orchestration only — no rendered page names
+    # or links to a pool other than its own.
     pool: PoolInfo = PoolInfo(slug="pool", name="The Pool", root=True)
     pools: tuple[PoolInfo, ...] = ()
     # Where this season was loaded from, so a caller holding one pool can find
@@ -315,7 +320,7 @@ def _discover_pools(sdir: Path) -> tuple[PoolInfo, ...]:
             f"That pool is served at the site root; every other one at /<slug>/."
         )
 
-    # Root first — this is the order the pool switcher lists them in.
+    # Root first — the order builds render them in.
     return tuple(sorted(pools, key=lambda p: (not p.root, p.slug)))
 
 
@@ -363,6 +368,7 @@ def load_season(
     _validate_money(pcfg, ppath)
     n_picks = int(pcfg.get("picks_per_entrant", 4))
     entrants = _parse_picks(pcfg, set(teams), n_picks, ppath)
+    venmo = _parse_venmo(pcfg, ppath)
 
     # forecast.yaml is optional and never affects scoring.
     forecast = None
@@ -385,6 +391,7 @@ def load_season(
         picks_per_entrant=n_picks,
         entrants=entrants,
         forecast=forecast,
+        venmo=venmo,
         pool=chosen,
         pools=pools,
         config_root=root,
@@ -522,6 +529,25 @@ def _validate_money(pcfg: dict, path: Path) -> None:
             f"{path}: payout_split sums to {sum(split):.2f} — that pays out "
             f"more than 100% of the pot"
         )
+
+
+def _parse_venmo(pcfg: dict, path: Path) -> str | None:
+    """The pool's Venmo URL, or None. Validated because it renders as a QR code.
+
+    A typo'd URL here is worse than a typo'd pick: the QR on the rules page
+    would send everyone's entry fee somewhere that is not the commissioner, and
+    nothing else in the build would notice.
+    """
+    raw = pcfg.get("venmo")
+    if raw is None:
+        return None
+    url = str(raw).strip()
+    if not url.startswith("https://venmo.com/"):
+        raise ConfigError(
+            f"{path}: venmo must be a full https://venmo.com/... profile URL "
+            f"(got {url!r}) — it is rendered as the QR code people pay through."
+        )
+    return url
 
 
 def _parse_picks(
