@@ -415,6 +415,32 @@ button is the control, because a row full of links is not something a keyboard
 can usefully "press"; clicking the row is a convenience on top of it, and it
 stands aside for clicks that land on a link or while text is being selected.
 
+**The bracket** sits at the end of the week switcher, after 18. It is a week
+section like any other, so `:target`, the switcher and the back button all work
+on it for free, and the only new markup is one more link.
+
+A fourteen-team bracket is a fixed shape — three wild-card games a conference,
+two divisional, one championship, one Super Bowl — and the only thing that
+changes between August and February is how much of it is known. It is drawn at
+full size in every state, so the page never reflows underneath whoever is
+reading it:
+
+| | what is drawn |
+|---|---|
+| **Before the first kickoff** | the shape, empty. `playoff_seeds` returns nothing until a game has been played, because with every club 0-0 the tiebreaker ladder falls through to its alphabetical fallback and produces a confident-looking field with Arizona as a one seed. An empty bracket is honest; that one is not. |
+| **In season** | the wild-card round from the projected seeds — 2 v 7, 3 v 6, 4 v 5, with the one seed named as being on a bye. Everything past it is drawn as slots that say where their team will come from, because reseeding means the divisional pairings genuinely are not knowable yet. |
+| **In January** | the real games, replacing the slots one round at a time, with their scores and their winners. |
+
+Every side carries **what winning that game pays and who in the pool collects
+it**, which is the only reason a pool site should draw a bracket rather than
+link to one. The wild-card round is the interesting case: the bonus rewards the
+upset, so the host is playing for nothing at all, and the bracket says so with
+a dimmed zero rather than quietly omitting it.
+
+`bracket.py` knows nothing about pools, entrants or points — it builds the
+football, and the renderer prices it. That is what keeps a module about the
+NFL's postseason format from growing opinions about money.
+
 Which week opens is decided twice. The build bakes in the week that owns its
 fetch instant, and the page re-runs the identical rule against your own clock on
 load, so an overnight rollover between deploys still opens on the right week.

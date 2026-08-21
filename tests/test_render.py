@@ -27,6 +27,7 @@ from football_pool.render import (
     MODEL_URL,
     REPO_URL,
     _entrant_rows,
+    _bracket,
     _forecast,
     _schedule,
     _team_page,
@@ -57,6 +58,18 @@ def game_data(games_2025):
         datetime(2026, 2, 9, 14, 30, tzinfo=timezone.utc),
         "network",
     )
+
+
+@pytest.fixture
+def preseason_data(games_2025):
+    """August: a regular-season slate, nothing played.
+
+    The postseason rows are dropped rather than blanked, because the league
+    does not publish a wild-card fixture before it knows who is in it.
+    """
+    g = games_2025[games_2025["game_type"] == "REG"].copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    return GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
 
 
 @pytest.fixture
@@ -915,6 +928,91 @@ def test_the_footer_says_how_the_results_were_fetched(season, game_data, tmp_pat
 
 
 # -- the forecast page --------------------------------------------------------
+def test_the_bracket_is_a_week_of_the_schedule(pool, game_data, tmp_path):
+    """So the switcher, `:target` and the back button all work on it for free.
+
+    A separate page would need its own nav entry, its own URL scheme and its
+    own answer to "which week am I on". It is a section like every other week,
+    and the only new markup is one more link on the end of the switcher.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert 'id="bracket"' in html
+    assert 'href="#bracket"' in html
+    # Thirteen games: three, two, one a conference, then one.
+    assert html.count("data-tie=") == 13
+    # And it is never what the page opens on — the season being played is.
+    assert not re.search(r'class="week bracket-week[^"]*is-default', html)
+
+
+def test_a_bracket_before_kickoff_says_what_each_slot_is_waiting_for(
+    pool, preseason_data, tmp_path
+):
+    """No game played means no seeds, and the page says so rather than guessing."""
+    render_site(pool, preseason_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert "Nothing seeded yet" in html
+    # A phrase that does not cross the template's own line wrap.
+    assert "empty bracket than that" in html
+    for slot in ("2 seed", "7 seed", "Wild Card winner", "Divisional winner",
+                 "AFC champion", "NFC champion"):
+        assert slot in html, slot
+    # Nothing is dressed up as a fixture.
+    assert html.count('class="tie is-open"') == 13
+
+
+def test_a_finished_bracket_carries_its_results(pool, game_data, tmp_path):
+    """Scores, and which side won — the same colours a played game gets."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert "Seeded and settled" in html
+    assert html.count('class="tie is-final"') == 13
+    assert html.count('class="tie-side won"') == 13
+    assert 'class="tie is-open"' not in html
+
+
+def test_every_bracket_side_says_what_winning_it_pays(pool, preseason_data, game_data):
+    """Which is the only reason a pool site should draw a bracket at all.
+
+    The wild-card host is the case worth asserting: the bonus rewards the
+    upset, so the host is playing for nothing, and a bracket that quietly
+    printed a stake there would be wrong about the one round people ask about.
+    """
+    ctx = build_context(pool, preseason_data)
+    built = _bracket(ctx)
+    wild_card = next(r for r in built["rounds"] if r["round"] == "WC")
+
+    # Nothing is seeded preseason, so stakes are unknown — the shape still is.
+    assert all(g["home"]["stake"] is None for g in wild_card["games"])
+
+    # With a seeded field, the host of a wild-card game plays for nothing.
+    seeded = build_context(pool, game_data)
+    for game in next(r for r in _bracket(seeded)["rounds"] if r["round"] == "WC")["games"]:
+        assert game["home"]["stake"] == 0.0
+        assert game["away"]["stake"] > 0.0
+
+    # And in every later round both sides are playing for something.
+    for code in ("DIV", "CON", "SB"):
+        for game in next(r for r in _bracket(seeded)["rounds"] if r["round"] == code)["games"]:
+            assert game["home"]["stake"] > 0.0
+            assert game["away"]["stake"] > 0.0
+
+
+def test_the_bracket_names_only_this_pool(two_pools, game_data, tmp_path):
+    """The teams are the league's; the people beside them are the pool's."""
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    friends = (tmp_path / "friends" / "schedule" / "index.html").read_text()
+    root = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert 'id="bracket"' in friends
+    assert "Cousin Mike" not in friends
+    assert "Priya" not in root
+
+
 def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):
     render_site(pool, mid_season, tmp_path, simulations=200)
     html = (tmp_path / "forecast" / "index.html").read_text()
@@ -1424,7 +1522,8 @@ def test_the_schedule_prices_both_sides_of_a_game(pool, games_2025, tmp_path):
     g[["played", "home_won", "away_won", "is_tie"]] = False
     render_site(pool, GameData(g, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache"), tmp_path)
 
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    # The weeks only — see above; the bracket prices January separately.
+    html = (tmp_path / "schedule" / "index.html").read_text().split('id="bracket"')[0]
     stakes = re.findall(r'<span class="stake">([\d.]+)</span>', html)
     assert len(stakes) == 2 * len(g)
     assert len(set(stakes)) > 1
@@ -1442,7 +1541,9 @@ def test_the_schedule_dims_games_nobody_in_the_pool_owns(pool, game_data, tmp_pa
 
 def test_a_played_game_shows_its_score_and_who_won(pool, game_data, tmp_path):
     render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    # The weeks only: the bracket is on the same page and scores its own games
+    # again, which is the point of it and not a second copy of this assertion.
+    html = (tmp_path / "schedule" / "index.html").read_text().split('id="bracket"')[0]
 
     assert html.count('class="game-score"') == 2 * len(game_data.games)
     assert "game-side away won" in html or "game-side home won" in html
