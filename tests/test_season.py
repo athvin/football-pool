@@ -74,9 +74,13 @@ def test_bare_no_in_yaml_is_caught_not_silently_dropped(tmp_path, season_writer)
     from football_pool.season import load_season
 
     season_writer(tmp_path, 2026, [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}])
-    picks = tmp_path / "seasons" / "2026" / "picks.yaml"
+    picks = tmp_path / "seasons" / "2026" / "pools" / "family.yaml"
     # Emit the unquoted form a human would hand-write.
-    picks.write_text("entrants:\n  - name: A\n    teams: [CAR, TB, ATL, NO]\n")
+    picks.write_text(
+        "name: Family Pool\nroot: true\nentry_fee: 10.0\n"
+        "payout_split: [0.5, 0.3, 0.2]\n"
+        "entrants:\n  - name: A\n    teams: [CAR, TB, ATL, NO]\n"
+    )
     with pytest.raises(ConfigError, match="quote it"):
         load_season(2026, root=tmp_path)
 
@@ -258,3 +262,227 @@ def test_repo_rules_file_is_valid():
     assert bonuses.wild_card_berth == 1.5
     assert bonuses.wild_card_upset_add_lf is False
     assert (win_mult, tie_mult) == (1.0, 0.5)
+
+
+# ---------------------------------------------------------------------------
+# More than one pool per season
+# ---------------------------------------------------------------------------
+def _pool(**kw):
+    """A minimal valid pool file, overridable key by key."""
+    return {
+        "name": "Friends Pool",
+        "entry_fee": 50.0,
+        "payout_split": [0.5, 0.3, 0.2],
+        "entrants": [{"name": "B", "teams": ["BUF", "SF", "GB", "MIA"]}],
+        **kw,
+    }
+
+
+def test_a_lone_pool_is_the_root_pool(season):
+    assert season.pool.slug == "family"
+    assert season.pool.root is True
+    assert season.pool.path == ""  # served at the site root
+    assert [p.slug for p in season.pools] == ["family"]
+
+
+def test_a_second_pool_owns_its_own_money_and_roster(tmp_path, season_writer):
+    """The whole point: same scoring, different price, different people."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={"friends": _pool()},
+    )
+    family = load_season(2026, root=tmp_path)
+    friends = load_season(2026, root=tmp_path, pool="friends")
+
+    assert (family.entry_fee, family.pot) == (10.0, 10.0)
+    assert (friends.entry_fee, friends.pot) == (50.0, 50.0)
+    assert [e.name for e in friends.entrants] == ["B"]
+    assert friends.pool.path == "friends"  # served at /friends/
+
+    # The scoring is shared, byte for byte — that is why it lives in rules.yaml.
+    assert friends.lf_of("KC") == family.lf_of("KC")
+    assert friends.bonuses == family.bonuses
+    assert friends.divisions == family.divisions
+
+
+def test_venmo_loads_per_pool_and_is_optional(tmp_path, season_writer):
+    """The family file carries the real venmo URL; a pool without one gets None."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={"friends": _pool()},  # no venmo key at all
+    )
+    assert load_season(2026, root=tmp_path).venmo == "https://venmo.com/u/Brian-Moore-4"
+    assert load_season(2026, root=tmp_path, pool="friends").venmo is None
+
+
+def test_a_venmo_that_is_not_a_venmo_url_is_refused(tmp_path, season_writer):
+    """It renders as the QR everyone pays through — a typo sends real money
+    somewhere else, so it fails the build instead of publishing."""
+    from football_pool.season import ConfigError, load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        rules_overrides={"venmo": "venmo.com/u/Brian-Moore-4"},  # no scheme
+    )
+    with pytest.raises(ConfigError, match="venmo must be a full"):
+        load_season(2026, root=tmp_path)
+
+
+def test_load_pools_returns_every_pool_root_first(tmp_path, season_writer):
+    from football_pool.season import load_pools
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        # Alphabetically ahead of "family", so ordering by name alone would
+        # put the root pool second and move the site's front page.
+        pools={"aaa": _pool(name="Early Pool")},
+    )
+    slugs = [s.pool.slug for s in load_pools(2026, root=tmp_path)]
+    assert slugs == ["family", "aaa"]
+
+
+def test_every_pool_knows_about_the_others(tmp_path, season_writer):
+    """Each Season carries the full registry, which is how `build` finds siblings."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={"friends": _pool()},
+    )
+    friends = load_season(2026, root=tmp_path, pool="friends")
+    assert [(p.slug, p.name) for p in friends.pools] == [
+        ("family", "Family Pool"),
+        ("friends", "Friends Pool"),
+    ]
+
+
+def test_asking_for_an_unknown_pool_lists_the_real_ones(tmp_path, season_writer):
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={"friends": _pool()},
+    )
+    with pytest.raises(ConfigError, match="family, friends"):
+        load_season(2026, root=tmp_path, pool="nope")
+
+
+def test_picks_errors_name_the_pool_file_they_came_from(tmp_path, season_writer):
+    """With two rosters, "duplicate entrant name" must say which one."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={
+            "friends": _pool(
+                entrants=[
+                    {"name": "B", "teams": ["BUF", "SF", "GB", "MIA"]},
+                    {"name": "b", "teams": ["CIN", "WAS", "TEN", "NO"]},
+                ]
+            )
+        },
+    )
+    with pytest.raises(ConfigError, match=r"friends\.yaml: duplicate entrant name"):
+        load_season(2026, root=tmp_path, pool="friends")
+
+
+def test_a_pool_may_set_its_own_pick_count(tmp_path, season_writer):
+    """picks_per_entrant is format, not scoring, so it is the pool's to choose."""
+    from football_pool.season import load_season
+
+    season_writer(
+        tmp_path,
+        2026,
+        [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        pools={
+            "friends": _pool(
+                picks_per_entrant=5,
+                entrants=[{"name": "B", "teams": ["BUF", "SF", "GB", "MIA", "NYJ"]}],
+            )
+        },
+    )
+    assert load_season(2026, root=tmp_path, pool="friends").picks_per_entrant == 5
+    # ...and the family pool is unaffected by its neighbour's choice.
+    assert load_season(2026, root=tmp_path).picks_per_entrant == 4
+
+
+@pytest.mark.parametrize(
+    "pools, expect",
+    [
+        # A slug the renderer already writes would clobber that page, or in the
+        # case of `entrant` be deleted by the prune. This is the only one of
+        # these failures that destroys files rather than just looking wrong.
+        ({"teams": _pool()}, "already writes"),
+        ({"entrant": _pool()}, "already writes"),
+        ({"Friends": _pool()}, "not a usable slug"),
+        ({"-friends": _pool()}, "not a usable slug"),
+        ({"friends": _pool(name="")}, "needs a `name:`"),
+        ({"friends": _pool(root=True)}, "exactly one pool must set"),
+        ({"friends": _pool(entrants=[])}, "non-empty `entrants:` list"),
+        ({"friends": _pool(entry_fee=-5)}, "entry_fee is negative"),
+        ({"friends": _pool(payout_split=[0.5, 0.3, 0.3])}, "more than 100%"),
+    ],
+)
+def test_bad_pools_fail_loudly(tmp_path, season_writer, pools, expect):
+    from football_pool.season import load_pools
+
+    season_writer(
+        tmp_path, 2026, [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}], pools=pools
+    )
+    with pytest.raises(ConfigError, match=expect):
+        load_pools(2026, root=tmp_path)
+
+
+def test_a_season_with_no_root_pool_is_rejected(tmp_path, season_writer):
+    """Something has to answer at the site root."""
+    import yaml
+
+    from football_pool.season import load_season
+
+    sdir = season_writer(tmp_path, 2026, [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}])
+    family = yaml.safe_load((sdir / "pools" / "family.yaml").read_text())
+    family["root"] = False
+    (sdir / "pools" / "family.yaml").write_text(yaml.safe_dump(family))
+    with pytest.raises(ConfigError, match="exactly one pool must set"):
+        load_season(2026, root=tmp_path)
+
+
+def test_a_season_with_no_pools_at_all_says_what_to_write(tmp_path, season_writer):
+    import shutil
+
+    from football_pool.season import load_season
+
+    sdir = season_writer(tmp_path, 2026, [{"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]}])
+    shutil.rmtree(sdir / "pools")
+    with pytest.raises(ConfigError, match="no pools found"):
+        load_season(2026, root=tmp_path)
+
+
+def test_the_repo_pools_are_valid():
+    """The committed 2026 pools must always load, at the prices we agreed."""
+    from football_pool.season import REPO_ROOT, load_pools
+
+    pools = {s.pool.slug: s for s in load_pools(2026, root=REPO_ROOT)}
+    assert pools["family"].pool.root is True
+    assert pools["family"].entry_fee == 10.0
+    # Every pool scores identically — one leveling-factor table per season.
+    lfs = {s.lf_of("KC") for s in pools.values()}
+    assert len(lfs) == 1

@@ -2,17 +2,17 @@
 {# data-theme is set here rather than left to the stylesheet so the page is
    already dark in the markup itself: with scripting off, with CSS still in
    flight, and for anything that reads the document without rendering it. #}
-<html lang="en" data-page="{{ page }}" data-theme="dark">
+<html lang="en" data-page="{{ page }}" data-pool="{{ season.pool.path }}" data-theme="dark">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
-<title>{% block title %}{{ season.year }} Family Pool{% endblock %}</title>
-<meta name="description" content="{% block description %}{{ season.year }} family NFL pool standings.{% endblock %}">
+<title>{% block title %}{{ season.year }} {{ season.pool.name }}{% endblock %}</title>
+<meta name="description" content="{% block description %}{{ season.year }} {{ season.pool.name }} NFL standings.{% endblock %}">
 
-{# When the link lands in the family group chat, the unfurl should be the scoreboard. #}
+{# When the link lands in the group chat, the unfurl should be the scoreboard. #}
 <meta property="og:type" content="website">
-<meta property="og:title" content="{% block og_title %}{{ season.year }} Family Pool{% endblock %}">
+<meta property="og:title" content="{% block og_title %}{{ season.year }} {{ season.pool.name }}{% endblock %}">
 <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
 
 <link rel="icon" href="{{ '/assets/favicon.svg'|url }}" type="image/svg+xml">
@@ -21,12 +21,18 @@
 <body>
 {# Apply the stored theme and identity before first paint, so someone who has
    chosen light mode never sees a dark flash and never sees their own row
-   highlight arrive a beat late. Both are inert if nothing is stored. #}
+   highlight arrive a beat late. Both are inert if nothing is stored.
+
+   The identity key is scoped per pool and must be read the same way here as in
+   site.js, or the page paints one pool's highlight and then corrects itself.
+   The scope is read off the element rather than interpolated, which keeps a
+   config value out of a <script> body entirely. #}
 <script>
   try {
     var t = localStorage.getItem('pool-theme');
     if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
-    var me = localStorage.getItem('pool-me');
+    var p = document.documentElement.dataset.pool || '';
+    var me = localStorage.getItem(p ? 'pool-me:' + p : 'pool-me');
     if (me) document.documentElement.dataset.me = me;
     var d = localStorage.getItem('pool-detail');
     if (d === 'on') document.documentElement.dataset.detail = d;
@@ -40,7 +46,7 @@
    are passed in rather than baked into the JavaScript so the copy stays where
    the rest of the copy is. #}
 <canvas class="gridiron" aria-hidden="true"
-        data-near="Family Pool" data-far="{{ season.year }}"></canvas>
+        data-near="{{ season.pool.name }}" data-far="{{ season.year }}"></canvas>
 
 <div class="grain" aria-hidden="true"></div>
 
@@ -49,7 +55,7 @@
     <a class="brand" href="{{ '/'|url }}">
       <img class="brand-shield" src="{{ '/assets/logos/NFL.png'|url }}" alt="" width="22" height="22">
       <span class="brand-text">
-        <span class="brand-name">Family Pool</span>
+        <span class="brand-name">{{ season.pool.name }}</span>
         <span class="brand-season">{{ season.year }}</span>
       </span>
     </a>

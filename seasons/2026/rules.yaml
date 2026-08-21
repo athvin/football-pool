@@ -1,20 +1,20 @@
 # =============================================================================
-# THE POOL RULES — 2026
+# THE SCORING RULES — 2026
 # =============================================================================
 # This file is the single source of truth for how points are scored.
 # The scoring engine reads it, AND the /rules/ page on the site renders from it,
 # so the posted rules can never drift from the math.
+#
+# It is SHARED by every pool playing this season — see pools/. There is exactly
+# one leveling-factor table per year, so two pools can never quietly disagree
+# about what a win is worth. Money and rosters are per-pool and live in
+# pools/<slug>.yaml; nothing a pool declares can change anything in this file.
 #
 # Nothing in this file is a projection or a prediction. Forecasting inputs live
 # in forecast.yaml and are never consulted when scoring actual results.
 # =============================================================================
 
 season: 2026
-
-# Money
-entry_fee: 10.0
-payout_split: [0.50, 0.30, 0.20] # 1st / 2nd / 3rd share of the pot
-picks_per_entrant: 4
 
 # ---------------------------------------------------------------------------
 # Leveling factors: points scored per regular-season win.

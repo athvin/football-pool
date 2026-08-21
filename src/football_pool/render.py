@@ -19,6 +19,14 @@ markup fetched a moment ago. The skew reads as a layout bug rather than a stale
 file — it has already been reported as one. Asset URLs therefore carry a content
 fingerprint, which makes a changed file a URL no cache has ever seen. Putting it
 in the same filter is the point: a new asset cannot forget to opt in.
+
+With more than one pool on the site, that filter resolves against two prefixes,
+and the rule is one sentence: **``/assets/`` belongs to the site, everything
+else belongs to the pool.** So there is a single copy of the stylesheet, the
+script, the logos and the fonts, linked by the same URL from every pool, while
+``/rules/`` under the friends pool means the friends pool's rules. Keep
+``/assets/`` the only exception — a page URL that needs to be site-relative and
+is not under it would be silently pool-scoped and 404 on the non-root pool only.
 """
 
 from __future__ import annotations
@@ -30,7 +38,7 @@ import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Sequence
 
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -132,11 +140,17 @@ def build_context(
     )
 
 
-def make_environment(base: str = "") -> Environment:
+def make_environment(base: str = "", pool_base: str | None = None) -> Environment:
     """Jinja environment with the base-path filter and formatting helpers.
 
     ``StrictUndefined`` turns a typo in a template into a build failure rather
     than a silently blank cell on the leaderboard.
+
+    Args:
+        base: The deployment prefix — where the *site* lives.
+        pool_base: Where this *pool* lives, if it is not at the site root.
+            Defaults to ``base``, which is the one-pool case and is exactly
+            what this function did before there were two.
     """
     env = Environment(
         loader=FileSystemLoader(TEMPLATE_DIR),
@@ -145,7 +159,8 @@ def make_environment(base: str = "") -> Environment:
         trim_blocks=True,
         lstrip_blocks=True,
     )
-    prefix = base.rstrip("/")
+    site_prefix = base.rstrip("/")
+    pool_prefix = (pool_base if pool_base is not None else base).rstrip("/")
 
     # One entry per distinct asset, filled on first reference. Scoped to this
     # environment rather than to the module on purpose: the test suite renders a
@@ -156,27 +171,35 @@ def make_environment(base: str = "") -> Environment:
     digests: dict[str, str] = {}
 
     def url(path: str) -> str:
-        """Resolve a site-root-relative path against the deployment base.
+        """Resolve a root-relative path against the right base.
+
+        ``/assets/`` is the one namespace that belongs to the *site* rather
+        than to a pool: there is a single copy of the stylesheet, the script
+        and the logos, and every pool links the same URL. Everything else is
+        pool-relative, which is what puts the second pool's whole site under
+        ``/<slug>/`` without a single template knowing there is more than one.
 
         Assets additionally carry a content fingerprint — see the module
         docstring for why. The query string is part of the browser's cache key,
         so a changed file simply becomes a URL it has never seen.
 
         Only ``/assets/`` is fingerprinted. Page URLs are what people paste into
-        the family group chat, and ``/data/standings.json`` is a documented
-        interface; both need to stay stable and clean.
+        the group chat, and ``/data/standings.json`` is a documented interface;
+        both need to stay stable and clean.
         """
         if path.startswith(("http://", "https://", "#", "mailto:")):
             return path
 
-        resolved = f"{prefix}/{path.lstrip('/')}"
         if path.startswith("/assets/"):
+            resolved = f"{site_prefix}/{path.lstrip('/')}"
             rel = path.removeprefix("/assets/")
             if rel not in digests:
                 digests[rel] = _asset_digest(rel)
             if digests[rel]:
                 resolved = f"{resolved}?v={digests[rel]}"
-        return resolved
+            return resolved
+
+        return f"{pool_prefix}/{path.lstrip('/')}"
 
     def points(value: float | None) -> str:
         """Points always show two decimals so columns line up."""
@@ -199,7 +222,7 @@ def make_environment(base: str = "") -> Environment:
     )
     env.globals.update(
         svg=svg,
-        base=prefix,
+        base=pool_prefix,
         now=datetime.now(timezone.utc),
     )
     return env
@@ -723,6 +746,37 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
     }
 
 
+def _deadlines(ctx: SiteContext) -> dict[str, Any] | None:
+    """When picks and money are due, read off the schedule itself.
+
+    The rules page states two deadlines — picks in before the season's first
+    kickoff, payment in by the end of week 1 — and both are dates the NFL
+    owns, not the pool. Deriving them from the same games file the scoring
+    engine reads keeps the posted deadline correct for any season the site is
+    asked to build, including a rebuilt archive year.
+    """
+    reg = ctx.games[ctx.games["game_type"] == "REG"]
+    if reg.empty:
+        return None
+    week1 = reg[reg["week"] == int(reg["week"].min())]
+    kicks = sorted(
+        schedule_mod.kickoff(r.gameday, r.gametime) for r in week1.itertuples()
+    )
+    first, last = kicks[0], kicks[-1]
+
+    last_local = last.astimezone(schedule_mod.SCHEDULE_TZ)
+    return {
+        # ISO so the client can rewrite it into the visitor's own zone —
+        # a deadline is the one number on the site that must not be off by
+        # three hours — with the Eastern rendering as the scripting-off text.
+        "picks_due": first.isoformat(timespec="seconds"),
+        "picks_due_text": _eastern(first),
+        # "End of week 1" means the night its last game is played. A date, not
+        # an instant: nobody schedules money to the minute.
+        "payment_due_date": f"{last_local:%A, %B} {last_local.day}",
+    }
+
+
 # How each fetch outcome reads to somebody who does not know the pipeline.
 # "cache" and "fallback" both mean the build could not reach upstream, and the
 # difference between them — a copy from an earlier run versus the snapshot
@@ -754,10 +808,23 @@ def render_site(
     out_dir: Path,
     base: str = "",
     simulations: int | None = None,
+    *,
+    site_base: str | None = None,
+    copy_assets: bool = True,
 ) -> list[Path]:
-    """Render every page into ``out_dir``. Returns the files written."""
+    """Render one pool's every page into ``out_dir``. Returns the files written.
+
+    Args:
+        base: Where this pool lives — the prefix every page URL gets.
+        site_base: Where the *site* lives, which is where ``/assets/`` resolves
+            against. Defaults to ``base``: for a site with one pool the two are
+            the same, and this behaves exactly as it did before there were two.
+        copy_assets: Whether to copy ``assets/`` alongside the pages. False when
+            a caller is rendering several pools and will copy them once, at the
+            site root — see :func:`render_pools`.
+    """
     ctx = build_context(season, data, simulations=simulations)
-    env = make_environment(base)
+    env = make_environment(site_base if site_base is not None else base, pool_base=base)
 
     rows = _entrant_rows(ctx)
     teams = _team_rows(ctx)
@@ -800,7 +867,7 @@ def render_site(
     write("index.html", "index.html", page="standings")
     write("schedule/index.html", "schedule.html", page="schedule", schedule=_schedule(ctx))
     write("forecast/index.html", "forecast.html", page="forecast")
-    write("rules/index.html", "rules.html", page="rules")
+    write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
     write("teams/index.html", "teams.html", page="teams")
     # Weeks and Trends merged into one Season page: what happened and how it
     # moved are one story, and six tabs was three too many for a family pool.
@@ -852,6 +919,13 @@ def render_site(
         json.dumps(
             {
                 "season": season.year,
+                "pool": {
+                    "slug": season.pool.slug,
+                    "name": season.pool.name,
+                    "path": season.pool.path,
+                    "entry_fee": season.entry_fee,
+                    "pot": season.pot,
+                },
                 "generated": fresh,
                 "state": {k: v for k, v in state.items() if k != "leader"},
                 "entrants": [
@@ -882,9 +956,54 @@ def render_site(
     )
     written.append(data_path)
 
-    if ASSET_DIR.is_dir():
-        target = out_dir / "assets"
-        shutil.copytree(ASSET_DIR, target, dirs_exist_ok=True)
-        written.extend(sorted(target.rglob("*")))
+    if copy_assets:
+        written.extend(_copy_assets(out_dir))
 
+    return written
+
+
+def _copy_assets(out_dir: Path) -> list[Path]:
+    """Copy ``assets/`` to ``out_dir/assets``. One copy serves the whole site."""
+    if not ASSET_DIR.is_dir():
+        return []
+    target = out_dir / "assets"
+    shutil.copytree(ASSET_DIR, target, dirs_exist_ok=True)
+    return sorted(target.rglob("*"))
+
+
+def render_pools(
+    seasons: Sequence[Season],
+    data: GameData,
+    out_dir: Path,
+    base: str = "",
+    simulations: int | None = None,
+) -> list[Path]:
+    """Render every pool into one site. The root pool owns the site root.
+
+    Each pool is a complete site under its own prefix — its own leaderboard,
+    entrant pages and standings feed. The only thing they share on disk is
+    ``/assets/``, which is why the ``url`` filter resolves an asset against the
+    site and a page against the pool.
+
+    Deliberately, no page in one pool links to another pool. The pools share a
+    domain as an implementation detail, not an experience: each group gets one
+    URL, and nobody lands on a roster that has no idea who they are.
+    """
+    site_base = base.rstrip("/")
+
+    written: list[Path] = []
+    for s in seasons:
+        path = s.pool.path
+        written += render_site(
+            s,
+            data,
+            # Path(out) / "" is Path(out), so the root pool needs no special case.
+            out_dir / path if path else out_dir,
+            base=f"{site_base}/{path}" if path else site_base,
+            simulations=simulations,
+            site_base=site_base,
+            copy_assets=False,
+        )
+
+    written.extend(_copy_assets(out_dir))
     return written

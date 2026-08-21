@@ -18,6 +18,26 @@ export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_THEME = 'dark';
 
 /**
+ * Namespace a storage key to one pool.
+ *
+ * localStorage is per *origin*, not per path, so two pools on one Pages site
+ * share a single store. Theme, time zone and density describe the viewer and
+ * should follow them across pools — those keys stay global. Identity does not:
+ * `pool-me` and `pool-compare` hold entrant slugs, which mean nothing in the
+ * other roster. Unscoped, opening the second pool finds the stored slug absent
+ * from its picker, writes '' back over it, and silently forgets who you are in
+ * the first one.
+ *
+ * The root pool's scope is the empty string, deliberately — it leaves the key a
+ * returning visitor already has exactly where it was. Scoping is by slug and
+ * never by year, so the existing self-healing on season rollover still works
+ * instead of stranding a dead key in every browser.
+ */
+export function scopedKey(key, scope) {
+  return scope ? `${key}:${scope}` : key;
+}
+
+/**
  * Colours for the comparison chart, assigned in the order people are picked.
  *
  * Pick order rather than a fixed per-entrant colour, so the first person you
@@ -519,9 +539,9 @@ function paintYouStrip(doc, slug) {
   strip.append(link);
 }
 
-function initMe(doc, storage) {
+function initMe(doc, storage, meKey = ME_KEY) {
   const select = doc.querySelector('[data-me-select]');
-  const stored = storage.get(ME_KEY) || '';
+  const stored = storage.get(meKey) || '';
 
   const apply = (slug) => {
     doc.documentElement.dataset.me = slug;
@@ -538,10 +558,10 @@ function initMe(doc, storage) {
     select.value = stored;
     const slug = select.value === stored ? stored : '';
     apply(slug);
-    if (slug !== stored) storage.set(ME_KEY, slug);
+    if (slug !== stored) storage.set(meKey, slug);
 
     select.addEventListener('change', () => {
-      storage.set(ME_KEY, select.value);
+      storage.set(meKey, select.value);
       apply(select.value);
     });
     return;
@@ -555,13 +575,13 @@ function initMe(doc, storage) {
  * Every line is already in the document; picking only toggles classes and sets
  * a colour, so with scripting off the chart still renders the whole field.
  */
-function initCompare(doc, storage) {
+function initCompare(doc, storage, compareKey = COMPARE_KEY) {
   const charts = Array.from(doc.querySelectorAll('[data-compare]'));
   const buttons = Array.from(doc.querySelectorAll('[data-pick]'));
   if (!charts.length || !buttons.length) return;
 
   const known = new Set(buttons.map((b) => b.dataset.pick));
-  const stored = (storage.get(COMPARE_KEY) || '').split(' ').filter(Boolean);
+  const stored = (storage.get(compareKey) || '').split(' ').filter(Boolean);
   const me = doc.documentElement.dataset.me;
 
   // Nothing stored yet, but they have told us who they are: start on them.
@@ -608,7 +628,7 @@ function initCompare(doc, storage) {
     }
 
     if (empty) empty.hidden = picked.length > 0;
-    storage.set(COMPARE_KEY, picked.join(' '));
+    storage.set(compareKey, picked.join(' '));
   };
 
   for (const button of buttons) {
@@ -1124,18 +1144,21 @@ function initReveal(doc, win) {
 
 export function init(doc = document, win = window) {
   const storage = safeStorage(win.localStorage);
+  // Which pool this page belongs to — '' at the site root. Only the two keys
+  // that name entrants are scoped by it; see scopedKey.
+  const scope = doc.documentElement.dataset.pool || '';
   initTheme(doc, storage);
   initDetail(doc, storage);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
-  initMe(doc, storage);
+  initMe(doc, storage, scopedKey(ME_KEY, scope));
   // The clock comes in through `win` so a test can stand anywhere in the season
   // without touching global time — the same discipline the Python side follows
   // by passing the fetch instant around rather than calling now().
   const nowMs = (win.Date ?? Date).now();
   initTimeZone(doc, storage, nowMs);
   initSchedule(doc, nowMs);
-  initCompare(doc, storage);
+  initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));
   initSort(doc);
   initOdometer(doc, win);
   initHeatmap(doc);

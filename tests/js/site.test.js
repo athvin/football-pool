@@ -14,6 +14,7 @@ import {
   END_ZONE_YARDS,
   FIELD_YARDS,
   ME_KEY,
+  scopedKey,
   PICK_COLORS,
   REVEAL_SELECTOR,
   STALE_AFTER_HOURS,
@@ -44,6 +45,14 @@ import {
 } from '../../assets/site.js';
 
 const ISO = '2026-02-09T14:30:00+00:00';
+
+// documentElement survives between tests in jsdom, and data-pool namespaces the
+// stored identity for every block that calls init(). Cleared centrally rather
+// than in each markup helper so a block that opts into a pool cannot silently
+// leave the next one there — which is exactly how it broke the first time.
+beforeEach(() => {
+  document.documentElement.removeAttribute('data-pool');
+});
 
 describe('nextTheme', () => {
   test('flips an explicit theme', () => {
@@ -508,6 +517,61 @@ describe('this is me', () => {
     document.body.innerHTML = '<a class="row" data-slug="brian-moore"></a>';
     init(document, fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) }));
     expect(document.querySelector('[data-slug="brian-moore"]').classList.contains('is-me')).toBe(true);
+  });
+});
+
+describe('identity is scoped per pool', () => {
+  beforeEach(boardMarkup);
+
+  test('the pool at the site root keeps the unsuffixed key', () => {
+    // Which is what lets a returning visitor's saved identity survive the day
+    // a second pool appears.
+    expect(scopedKey(ME_KEY, '')).toBe('pool-me');
+    expect(scopedKey(COMPARE_KEY, '')).toBe('pool-compare');
+  });
+
+  test('a pool below the root gets its own key', () => {
+    expect(scopedKey(ME_KEY, 'friends')).toBe('pool-me:friends');
+    expect(scopedKey(COMPARE_KEY, 'friends')).toBe('pool-compare:friends');
+  });
+
+  test('one pool does not erase who you are in another', () => {
+    // The bug this prevents: localStorage is per origin, so both pools share a
+    // store. Landing on a pool whose picker has no such entrant used to write
+    // '' straight over the other pool's answer, and you came back a stranger.
+    document.documentElement.dataset.pool = 'friends';
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'brian-moore']]) });
+    init(document, win);
+
+    expect(win._store.get(ME_KEY)).toBe('brian-moore');
+    expect(document.querySelector('[data-me-select]').value).toBe('');
+  });
+
+  test('a choice made in one pool is stored under that pool', () => {
+    document.documentElement.dataset.pool = 'friends';
+    const win = fakeWindow();
+    init(document, win);
+
+    const select = document.querySelector('[data-me-select]');
+    select.value = 'paul-moore';
+    select.dispatchEvent(new window.Event('change'));
+
+    expect(win._store.get('pool-me:friends')).toBe('paul-moore');
+    expect(win._store.has(ME_KEY)).toBe(false);
+  });
+
+  test('viewer preferences stay global — they follow you across pools', () => {
+    document.documentElement.dataset.pool = 'friends';
+    const win = fakeWindow();
+    init(document, win);
+
+    document.querySelector('[data-theme-toggle]')?.click();
+    // Whatever theme/tz end up as, they are never namespaced.
+    for (const key of win._store.keys()) {
+      expect(key.startsWith('pool-theme:')).toBe(false);
+      expect(key.startsWith('pool-tz:')).toBe(false);
+      expect(key.startsWith('pool-detail:')).toBe(false);
+    }
   });
 });
 

@@ -2,7 +2,7 @@
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
 
-{% block title %}Forecast · {{ season.year }} Family Pool{% endblock %}
+{% block title %}Forecast · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}How the {{ season.year }} pool is likely to end — chance of each finishing place, the range of final scores, and every head-to-head.{% endblock %}
 
 {% block content %}

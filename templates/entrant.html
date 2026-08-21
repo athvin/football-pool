@@ -2,7 +2,7 @@
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
 
-{% block title %}{{ entrant.name }} · {{ season.year }} Family Pool{% endblock %}
+{% block title %}{{ entrant.name }} · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}{{ entrant.name }} is {{ entrant.rank|ordinal }} with {{ entrant.banked|points }} points from {{ entrant.teams|join(', ') }}.{% endblock %}
 
 {% block content %}
