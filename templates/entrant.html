@@ -15,9 +15,14 @@
     <p class="state-label">Rank {{ entrant.rank }} of {{ state.entrants }}</p>
     <h1 class="hero-name" style="view-transition-name: name-{{ entrant.slug }}">{{ entrant.name }}</h1>
     <div class="row-teams" style="margin-top:.6rem">
+      {# Each of the four is a link to that team's own page: what it has
+         produced, for whom, and every game it plays. The chip carries a
+         view-transition-name so it travels into that page's hero rather than
+         the document cross-fading — the same move a board row makes on its way
+         here. #}
       {% for t in entrant.teams %}
-        <span class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-              style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>
+        <a class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
+           href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}; view-transition-name: chip-{{ t }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>
       {% endfor %}
       <span class="badge you" data-me-only>you</span>
       {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
@@ -82,9 +87,9 @@
       {% if entrant.byes %}
       <span class="bye-note">
         {{ term('bye', 'on bye') }}:
-        {% for t in entrant.byes %}<span class="team-chip bye dim" style="{{ t|chip_style }}"><img
+        {% for t in entrant.byes %}<a class="team-chip bye dim" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img
               class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
-              width="14" height="14">{{ t }}</span>{% endfor %}
+              width="14" height="14">{{ t }}</a>{% endfor %}
       </span>
       {% endif %}
     </p>

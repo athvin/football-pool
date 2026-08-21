@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
+{% from '_game.html' import game_row %}
+
+{% block title %}{{ team.team }} · {{ season.year }} {{ season.pool.name }}{% endblock %}
+{% block description %}What {{ team.team }} has produced for the {{ season.year }} pool, who is holding them, and every game they play.{% endblock %}
+
+{% block content %}
+
+{# The team as an object: the badge, what a win by them pays, and what they
+   have actually banked so far. `view-transition-name` pairs this with the chip
+   that was clicked to get here, so the chip travels up into the hero instead of
+   the page cross-fading — the same trick a row already does on the way to an
+   entrant page. #}
+<div class="hero team-hero">
+  <div>
+    <p class="state-label">{{ team.division }}{% if team.seed %} · seed {{ team.seed }}{% endif %}</p>
+    <h1 class="hero-name">
+      <img class="team-crest" src="{{ ('/assets/logos/' ~ team.team ~ '.png')|url }}"
+           alt="" width="44" height="44">
+      <span style="view-transition-name: chip-{{ team.team }}">{{ team.team }}</span>
+    </h1>
+    <p class="page-sub">
+      {{ team.record }} · a win pays {{ term('lf', 'LF') }}
+      <strong>{{ '%.2f'|format(team.lf) }}</strong>{% if team.owners %},
+      and {{ team.owners|length }} of you {{ 'is' if team.owners|length == 1 else 'are' }} holding them{% endif %}.
+    </p>
+  </div>
+  <div class="hero-score">
+    <p class="state-label">Produced</p>
+    <p class="hero-total">{{ team.points|points }}</p>
+    <p class="row-sub">{{ team.played }} of {{ team.games|length }} games played</p>
+  </div>
+</div>
+
+{# The three ways a team scores, side by side. A team can be having a fine
+   season and have produced nothing yet, and the split is what says so. #}
+<div class="stat-grid">
+  <div class="stat">
+    <p class="stat-label">From wins</p>
+    <p class="stat-value">{{ team.win_points|points }}</p>
+    <p class="stat-note">{{ '%.2f'|format(team.lf) }} a win</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">Berth and division</p>
+    <p class="stat-value">{{ team.berth_points|points }}</p>
+    <p class="stat-note">{% if team.seed %}seed {{ team.seed }}{% else %}nothing clinched{% endif %}</p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">January</p>
+    <p class="stat-value">{{ team.playoff_points|points }}</p>
+    <p class="stat-note">playoff wins</p>
+  </div>
+</div>
+
+<h2 class="section-title">What they have been worth</h2>
+{% if team.owners %}
+<p class="page-sub">
+  The points are the same number for everybody holding them — a team scores what
+  it scores. The share is not, and that is the part worth reading: the same
+  {{ team.points|points }} is a different slice of every entry it is in.
+</p>
+<div class="forecast-rows">
+  {% for o in team.owners %}
+  <a class="forecast-row" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">
+    <span class="forecast-name">{{ o.name }}<span class="badge you" data-me-only>you</span></span>
+    <span class="forecast-bar">{{ o.bar|safe }}</span>
+    <span class="forecast-odds">{{ '%.0f%%'|format(o.share * 100) }}</span>
+  </a>
+  {% endfor %}
+</div>
+<p class="legend">
+  <span>Bar is what {{ team.team }} is of that entry's banked total{% if not team.points %} — nothing yet, because nobody has banked anything yet{% endif %}.</span>
+</p>
+{% else %}
+<p class="empty">
+  Nobody in this pool holds {{ team.team }}. Every point they score is a point
+  that separates the field from nobody — which is its own kind of useful, and
+  the reason this page exists for all 32 rather than only for the ones picked.
+</p>
+{% endif %}
+
+<h2 class="section-title">Every game</h2>
+<p class="page-sub">
+  The whole season down one column, priced the same way the
+  <a href="{{ '/schedule/'|url }}">schedule</a> prices it: what the game pays
+  the side that wins it, and who in the pool is holding each side. Games nobody
+  here holds are dimmed.
+</p>
+<ul class="games">
+  {% for g in team.season %}
+  {# `.get`, not `.bye`: the environment is StrictUndefined, so asking a real
+     game for a key it does not have is a build failure rather than a falsy. #}
+  {% if g.get('bye') %}
+  {# Named where it falls. A list that jumps from week 5 to week 7 has said
+     nothing about week 6, and a bye is the most common thing a quiet week gets
+     mistaken for. #}
+  <li class="game-bye">
+    <span class="game-week">Week {{ g.week }}</span>
+    <span>{{ term('bye', 'on bye') }} — nothing to score, and nothing lost</span>
+  </li>
+  {% else %}
+  {{ game_row(g, team.swing_scale, show_week=true) }}
+  {% endif %}
+  {% endfor %}
+</ul>
+
+{% endblock %}

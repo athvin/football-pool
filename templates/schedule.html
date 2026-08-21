@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_game.html' import game_row %}
 
 {% block title %}Schedule · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}The {{ season.year }} NFL schedule week by week, with what every game is worth to the pool and who is holding each side.{% endblock %}
@@ -82,11 +83,11 @@
            crossed out. #}
         {% for b in w.byes %}
         <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
-          <span class="team-chip bye" style="{{ b.team|chip_style }}"><img
+          <a class="team-chip bye" href="{{ ('/team/' ~ b.team ~ '/')|url }}" style="{{ b.team|chip_style }}"><img
                 class="chip-logo" src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
-                width="14" height="14">{{ b.team }}</span>
+                width="14" height="14">{{ b.team }}</a>
           {% if b.owners %}
-          <span class="owners">{% for o in b.owners %}<span class="owner" data-slug="{{ o.slug }}">{{ o.name }}</span>{% endfor %}</span>
+          <span class="owners">{% for o in b.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -98,9 +99,9 @@
     <p class="biggest">
       <span class="biggest-label">Biggest game</span>
       <span class="biggest-teams">
-        <span class="team-chip scored" style="{{ w.biggest.away.team|chip_style }}">{{ w.biggest.away.team }}</span>
+        <a class="team-chip scored" href="{{ ('/team/' ~ w.biggest.away.team ~ '/')|url }}" style="{{ w.biggest.away.team|chip_style }}">{{ w.biggest.away.team }}</a>
         at
-        <span class="team-chip scored" style="{{ w.biggest.home.team|chip_style }}">{{ w.biggest.home.team }}</span>
+        <a class="team-chip scored" href="{{ ('/team/' ~ w.biggest.home.team ~ '/')|url }}" style="{{ w.biggest.home.team|chip_style }}">{{ w.biggest.home.team }}</a>
       </span>
       <span class="biggest-swing">{{ term('swing', 'swing') }} {{ w.biggest.swing|points }}</span>
     </p>
@@ -108,35 +109,7 @@
 
     <ul class="games">
       {% for g in w.games %}
-      <li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
-          data-game="{{ g.game_id }}" style="--swing:{{ '%.3f'|format(g.swing / (w.biggest.swing or 1)) }}">
-        <div class="game-when">
-          <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
-          {% if g.played %}<span class="game-status">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
-          {% if g.neutral %}<span class="badge">neutral</span>{% endif %}
-        </div>
-
-        {% for side in [g.away, g.home] %}
-        <div class="game-side {{ 'home' if loop.last else 'away' }}{% if side.outcome %} {{ side.outcome }}{% endif %}">
-          <span class="team-chip {{ side.chip }}" style="{{ side.team|chip_style }}">{{ side.team }}</span>
-          {% if g.played %}
-            <span class="game-score">{{ side.score }}</span>
-          {% else %}
-            <span class="stake">{{ side.stake|points }}</span>
-            {% if side.p_win is not none %}
-            <span class="p-win model">{{ '%.0f%%'|format(side.p_win * 100) }}</span>
-            {% endif %}
-          {% endif %}
-          <span class="owners">{% for o in side.owners %}<span class="owner" data-slug="{{ o.slug }}">{{ o.name }}</span>{% endfor %}</span>
-        </div>
-        {% if not loop.last %}<span class="game-at" aria-hidden="true">at</span>{% endif %}
-        {% endfor %}
-
-        {# At most one of these is ever visible — `initMe` reveals the one whose
-           slug matches you. Holding both sides means you score either way, so it
-           reads as a range rather than a single number. #}
-        <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}">{% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% endfor %}</div>
-      </li>
+      {{ game_row(g, w.biggest.swing if w.biggest else 0) }}
       {% endfor %}
     </ul>
 

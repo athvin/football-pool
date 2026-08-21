@@ -1,0 +1,47 @@
+{# One game, priced and attributed.
+
+   Shared by the schedule page, which groups these by week, and by a team's own
+   page, which lists one team's season straight down. Extracted rather than
+   copied: the two pages have to agree about what a game is worth and who is
+   holding each side, and the client hooks (`data-slug`, `data-game`) are the
+   same on both — `initMe` reveals your own stake wherever the row appears.
+
+   `scale` is the biggest swing the row is being drawn against: the week's on
+   the schedule page, the team's own season on a team page. A rail scaled to
+   the biggest game in football would leave a quiet team's page with eighteen
+   invisible rails. #}
+{% macro game_row(g, scale, show_week=false) %}
+<li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
+    data-game="{{ g.game_id }}" style="--swing:{{ '%.3f'|format(g.swing / (scale or 1)) }}">
+  <div class="game-when">
+    {% if show_week %}<span class="game-week">{{ g.kind if g.kind != 'REG' else 'Week ' ~ g.week }}</span>{% endif %}
+    <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
+    {% if g.played %}<span class="game-status">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
+    {% if g.neutral %}<span class="badge">neutral</span>{% endif %}
+  </div>
+
+  {% for side in [g.away, g.home] %}
+  <div class="game-side {{ 'home' if loop.last else 'away' }}{% if side.outcome %} {{ side.outcome }}{% endif %}">
+    <a class="team-chip {{ side.chip }}" href="{{ ('/team/' ~ side.team ~ '/')|url }}"
+       style="{{ side.team|chip_style }}">{{ side.team }}</a>
+    {% if g.played %}
+      <span class="game-score">{{ side.score }}</span>
+    {% else %}
+      <span class="stake">{{ side.stake|points }}</span>
+      {% if side.p_win is not none %}
+      <span class="p-win model">{{ '%.0f%%'|format(side.p_win * 100) }}</span>
+      {% endif %}
+    {% endif %}
+    {# The people holding this side, each a link to their own page. A name on
+       this site is always the same object and always goes to the same place. #}
+    <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+  </div>
+  {% if not loop.last %}<span class="game-at" aria-hidden="true">at</span>{% endif %}
+  {% endfor %}
+
+  {# At most one of these is ever visible — `initMe` reveals the one whose slug
+     matches you. Holding both sides means you score either way, so it reads as
+     a range rather than a single number. #}
+  <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}">{% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% endfor %}</div>
+</li>
+{% endmacro %}

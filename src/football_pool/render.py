@@ -647,11 +647,98 @@ def _game_row(
         "neutral": row.location == "Neutral",
         "swing": schedule_mod.game_swing(season, kind, home, away),
         "stakes": stakes,
+        # Which week this is. The schedule page groups by week and never needs
+        # it; a team's own page lists one team's season straight down and has
+        # to say where in the season each game sits.
+        "week": int(row.week),
+        "kind": kind,
         # Nobody in the pool holds either side. A third of the 2026 slate, and
         # dimming it is what turns a 16-game week into the handful that matter.
         "idle": not home_side["owners"] and not away_side["owners"],
         # Pool money on both sides — the games people actually argue about.
         "derby": bool(home_side["owners"] and away_side["owners"]),
+    }
+
+
+def _team_page(ctx: SiteContext, team: str) -> dict[str, Any]:
+    """One team's own page: what it has produced, for whom, and every game.
+
+    The season down one column. A team is the unit everybody actually argues
+    about — "what has Cincinnati actually done for me" is the question behind
+    half the group chat — and until now the answer was spread across a row of
+    the teams table, a chip on your own page, and eighteen weeks of schedule.
+
+    Games come through :func:`_game_row`, the same builder the schedule page
+    uses, so a game cannot be priced one way here and another way there.
+    """
+    owners = {t: o.owners for t, o in metrics.ownership(ctx.season).items()}
+    slugs = {e.name: e.slug for e in ctx.season.entrants}
+    short = _short_names([e.name for e in ctx.season.entrants])
+
+    games = ctx.games[
+        (ctx.games["home_team"] == team) | (ctx.games["away_team"] == team)
+    ]
+    rows = [_game_row(ctx, r, owners, slugs, short) for r in games.itertuples()]
+    rows.sort(key=lambda g: (g["week"], g["kickoff"]))
+
+    # The bye, named where it falls. A season list that jumps from week 5 to
+    # week 7 has told you nothing about week 6, and "my team did nothing that
+    # week" is the single most common thing a bye is mistaken for. Regular
+    # season only: in January, "not playing" describes two dozen teams that are
+    # simply out, which is a different sentence.
+    reg = ctx.games[ctx.games["game_type"] == "REG"]
+    playing = {g["week"] for g in rows}
+    season_rows: list[dict[str, Any]] = [
+        *rows,
+        *(
+            {"bye": True, "week": int(w), "kickoff": "", "played": False}
+            for w in sorted(set(reg["week"].astype(int)) - playing)
+        ),
+    ]
+    season_rows.sort(key=lambda g: (g["week"], g["kickoff"]))
+
+    # What this team is worth to the people holding it. The points are the same
+    # number for all of them — a team scores what it scores — but the share of
+    # a total is not, and that is the part worth printing: the same 12 points
+    # is a quarter of one entry and a twentieth of another.
+    held = []
+    for row in ctx.outlook.itertuples():
+        if team not in row.teams:
+            continue
+        points = float((row.contributions or {}).get(team, 0.0))
+        banked = float(row.banked)
+        share = (points / banked) if banked > 0 else 0.0
+        held.append(
+            {
+                "name": row.name,
+                "slug": row.slug,
+                "points": points,
+                "banked": banked,
+                "share": share,
+                # Banked, so green — this is what the team has actually put in
+                # the bag, and cyan on this site means a number the model made
+                # up. The one rule the palette has.
+                "bar": svg.meter(share, width=240, height=10, fill=svg.BANKED),
+            }
+        )
+    held.sort(key=lambda o: (-o["share"], o["name"]))
+
+    card = _team_card(ctx, team)
+    played = [g for g in rows if g["played"]]
+    return {
+        **card,
+        # The season as it reads, byes included; and the count of things that
+        # are actually games, which is what "3 of 17 played" is counting.
+        "season": season_rows,
+        "games": rows,
+        "owners": held,
+        "played": len(played),
+        # The biggest swing among this team's own games, which is what the
+        # accent rail on each row is drawn against. Its own season, not the
+        # league's: a rail scaled to the biggest game in football would leave
+        # a bad team's page with eighteen invisible rails.
+        "swing_scale": max((g["swing"] for g in rows), default=0.0),
+        "next": next((g for g in rows if not g["played"]), None),
     }
 
 
@@ -863,8 +950,11 @@ def render_site(
 
     # Entrant paths come from the picks file, so a rebuild after someone is
     # removed or renamed would otherwise leave their old page live and
-    # reachable. Every other page has a fixed name and is simply overwritten.
+    # reachable. Team paths come from rules.yaml and are just as capable of
+    # changing under a rebuild. Every other page has a fixed name and is simply
+    # overwritten.
     shutil.rmtree(out_dir / "entrant", ignore_errors=True)
+    shutil.rmtree(out_dir / "team", ignore_errors=True)
 
     written: list[Path] = []
 
@@ -919,6 +1009,18 @@ def render_site(
             "entrant.html",
             page="entrant",
             entrant=row,
+        )
+
+    # One page per team, per pool. The football on them is identical — a team
+    # scores what it scores, whoever is watching — but the people are not, and
+    # a friends-pool page naming a family-pool owner would put a hole straight
+    # through the wall between the two.
+    for team in season.teams:
+        write(
+            f"team/{team}/index.html",
+            "team.html",
+            page="team",
+            team=_team_page(ctx, team),
         )
 
     # A machine-readable copy of the leaderboard, useful for debugging a build

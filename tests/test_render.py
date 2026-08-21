@@ -29,6 +29,7 @@ from football_pool.render import (
     _entrant_rows,
     _forecast,
     _schedule,
+    _team_page,
     _team_rows,
     build_context,
     make_environment,
@@ -642,8 +643,11 @@ def test_every_chip_that_names_a_team_is_coloured(season, game_data, tmp_path):
     render_site(season, game_data, tmp_path)
     html = (tmp_path / "teams" / "index.html").read_text()
 
+    # The chips on this page became links when teams got pages of their own,
+    # so the href sits between the class and the style.
     chips = re.findall(
-        r'<span class="team-chip[^"]*"\s*\n?\s*style="([^"]*)">(?:<img[^>]*>)?([A-Z]{2,3})</span>',
+        r'<a class="team-chip[^"]*"\s*\n?\s*href="[^"]*"\s*\n?\s*'
+        r'style="([^"]*)">(?:<img[^>]*>)?([A-Z]{2,3})</a>',
         html,
     )
     assert len(chips) >= 32
@@ -991,6 +995,151 @@ def test_the_standings_page_links_to_the_full_forecast(pool, mid_season, tmp_pat
     assert 'class="finish"' in index  # the summary bars
     assert 'class="ridge"' not in index  # but not the full picture
     assert 'href="/forecast/"' in index
+
+
+def test_every_team_gets_a_page(pool, game_data, tmp_path):
+    """All 32, not only the ones somebody picked.
+
+    A team nobody holds is exactly the team you want to read about when you are
+    deciding whether to be annoyed that nobody has it.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for team in pool.teams:
+        page = tmp_path / "team" / team / "index.html"
+        assert page.exists(), team
+        assert team in page.read_text()
+
+
+def test_a_team_page_lists_that_team_and_nobody_else(pool, game_data, tmp_path):
+    """Every game they play, in order, and none that they do not."""
+    ctx = build_context(pool, game_data)
+    page = _team_page(ctx, "KC")
+
+    theirs = ctx.games[
+        (ctx.games["home_team"] == "KC") | (ctx.games["away_team"] == "KC")
+    ]
+    assert len(page["games"]) == len(theirs)
+    for g in page["games"]:
+        assert "KC" in (g["home"]["team"], g["away"]["team"])
+    # Ordered by week, then kickoff — a season reads down the page.
+    weeks = [g["week"] for g in page["games"]]
+    assert weeks == sorted(weeks)
+
+
+def test_a_team_page_names_the_bye_where_it_falls(pool, game_data, tmp_path):
+    """A list that jumps from week 5 to week 7 has said nothing about week 6."""
+    ctx = build_context(pool, game_data)
+    page = _team_page(ctx, "KC")
+
+    played_weeks = {g["week"] for g in page["games"]}
+    reg = ctx.games[ctx.games["game_type"] == "REG"]
+    missing = set(reg["week"].astype(int)) - played_weeks
+
+    byes = [r for r in page["season"] if r.get("bye")]
+    assert {b["week"] for b in byes} == missing
+    assert byes, "the fixture season has a bye somewhere"
+    # The bye sits in week order with the games rather than at the end.
+    order = [r["week"] for r in page["season"]]
+    assert order == sorted(order)
+
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "team" / "KC" / "index.html").read_text()
+    assert "game-bye" in html
+
+
+def test_a_team_page_says_what_it_was_worth_to_each_owner(pool, game_data, tmp_path):
+    """The points are one number; the share of a total is not.
+
+    That is the whole reason the block exists — the same 12 points is a quarter
+    of one entry and a twentieth of another.
+    """
+    ctx = build_context(pool, game_data)
+    # Cousin Mike holds KC in the three-way fixture; Aunt Carol does not.
+    page = _team_page(ctx, "KC")
+
+    assert [o["name"] for o in page["owners"]] == ["Cousin Mike"]
+    owner = page["owners"][0]
+    assert owner["points"] == pytest.approx(page["points"])
+    assert owner["share"] == pytest.approx(owner["points"] / owner["banked"])
+    assert 0.0 < owner["share"] <= 1.0
+
+
+def test_a_team_nobody_holds_still_has_a_page(pool, game_data, tmp_path):
+    """And says so, rather than rendering an empty block."""
+    ctx = build_context(pool, game_data)
+    held = {t for e in pool.entrants for t in e.teams}
+    spare = next(t for t in pool.teams if t not in held)
+
+    assert _team_page(ctx, spare)["owners"] == []
+
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "team" / spare / "index.html").read_text()
+    assert "Nobody in this pool holds" in html
+
+
+def test_team_pages_are_scoped_to_their_own_pool(two_pools, game_data, tmp_path):
+    """Same football, different people — and the people are the pool's own.
+
+    The football on a team page is identical in both pools, so the owners block
+    is the entire difference and the entire risk: one family name on a friends
+    page is a hole straight through the wall between them.
+    """
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+
+    root = (tmp_path / "team" / "KC" / "index.html").read_text()
+    friends = (tmp_path / "friends" / "team" / "KC" / "index.html").read_text()
+
+    assert "Cousin Mike" in root and "Priya" not in root
+    assert "Priya" in friends and "Cousin Mike" not in friends
+    assert 'href="/friends/entrant/priya/"' in friends
+
+
+def test_a_removed_team_page_does_not_survive_a_rebuild(pool, game_data, tmp_path):
+    """Team paths come from rules.yaml, so they can change under a rebuild."""
+    render_site(pool, game_data, tmp_path)
+    stale = tmp_path / "team" / "XYZ"
+    stale.mkdir(parents=True)
+    (stale / "index.html").write_text("a team that no longer exists")
+
+    render_site(pool, game_data, tmp_path)
+    assert not stale.exists()
+
+
+def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(pool, game_data, tmp_path):
+    """A team is one object on this site, and it goes to one place.
+
+    The board is the exception and has to be: its rows are already links to an
+    entrant page, and an anchor inside an anchor is not a thing HTML has.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for name in (
+        "entrant/brandon/index.html",
+        "teams/index.html",
+        "schedule/index.html",
+        "season/index.html",
+        "rules/index.html",
+        "team/KC/index.html",
+    ):
+        html = (tmp_path / name).read_text()
+        assert re.search(r'<a class="team-chip[^>]*href="/team/\w+/"', html), name
+
+
+def test_no_page_ever_nests_one_link_inside_another(pool, game_data, tmp_path):
+    """Which is what making chips and names clickable could most easily break.
+
+    An anchor inside an anchor is invalid, and browsers recover from it by
+    closing the outer one early — so the rest of the row silently stops being
+    a link and nobody notices until somebody taps it.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for page in tmp_path.rglob("*.html"):
+        depth = 0
+        for token in re.findall(r"<a\b|</a>", page.read_text()):
+            depth += 1 if token == "<a" else -1
+            assert depth in (0, 1), f"{page.name}: nested anchor"
 
 
 def test_an_entrant_page_shows_their_own_odds(pool, mid_season, tmp_path):
