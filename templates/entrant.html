@@ -7,26 +7,29 @@
 
 {% block content %}
 
-{# The two view-transition-names here match the ones on this entrant's row on
-   the standings page, which is what makes the click a morph rather than a
+{# The three view-transition-names here match the ones on this entrant's row
+   on the standings page, which is what makes the click a morph rather than a
    cross-fade. Change one and you must change the other. #}
 <div class="hero" data-slug="{{ entrant.slug }}">
-  <div>
-    <p class="state-label">Rank {{ entrant.rank }} of {{ state.entrants }}</p>
-    <h1 class="hero-name" style="view-transition-name: name-{{ entrant.slug }}">{{ entrant.name }}</h1>
-    <div class="row-teams" style="margin-top:.6rem">
-      {# Each of the four is a link to that team's own page: what it has
-         produced, for whom, and every game it plays. The chip carries a
-         view-transition-name so it travels into that page's hero rather than
-         the document cross-fading — the same move a board row makes on its way
-         here. #}
-      {% for t in entrant.teams %}
-        <a class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-           href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}; view-transition-name: chip-{{ t }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>
-      {% endfor %}
-      <span class="badge you" data-me-only>you</span>
-      {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
-      {% if entrant.money %}<span class="badge money">{{ entrant.money|money }} if it ended today</span>{% endif %}
+  <div class="hero-who">
+    <span class="avatar-wrap" style="view-transition-name: pic-{{ entrant.slug }}">{{ svg.avatar(entrant.name, entrant.teams, 84)|safe }}</span>
+    <div>
+      <p class="state-label">Rank {{ entrant.rank }} of {{ state.entrants }}</p>
+      <h1 class="hero-name" style="view-transition-name: name-{{ entrant.slug }}">{{ entrant.name }}</h1>
+      <div class="row-teams" style="margin-top:.6rem">
+        {# Each of the four is a link to that team's own page: what it has
+           produced, for whom, and every game it plays. The chip carries a
+           view-transition-name so it travels into that page's hero rather than
+           the document cross-fading — the same move a board row makes on its
+           way here. #}
+        {% for t in entrant.teams %}
+          <a class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
+             href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}; view-transition-name: chip-{{ t }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>
+        {% endfor %}
+        <span class="badge you" data-me-only>you</span>
+        {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
+        {% if entrant.money %}<span class="badge money">{{ entrant.money|money }} if it ended today</span>{% endif %}
+      </div>
     </div>
   </div>
   <div style="text-align:right">

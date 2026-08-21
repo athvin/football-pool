@@ -86,17 +86,22 @@
     <span class="row-rank">{{ r.rank }}</span>
 
     <span class="row-who">
-      <span class="row-name" style="view-transition-name: name-{{ r.slug }}">{{ r.name }}</span>
-      <span class="row-teams">
-        {% for t in r.teams %}
-          <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-                style="{{ t|chip_style }}"><img class="chip-logo"
-                src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
-                width="14" height="14">{{ t }}</span>
-        {% endfor %}
-        <span class="badge you" data-me-only>you</span>
-        {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
-        {% if r.money %}<span class="badge money">{{ r.money|money }}</span>{% endif %}
+      {# The third morphing element after name and total: the same pic-<slug>
+         sits on the entrant page's hero, so the face travels with the name. #}
+      <span class="avatar-wrap" style="view-transition-name: pic-{{ r.slug }}">{{ svg.avatar(r.name, r.teams)|safe }}</span>
+      <span class="row-id">
+        <span class="row-name" style="view-transition-name: name-{{ r.slug }}">{{ r.name }}</span>
+        <span class="row-teams">
+          {% for t in r.teams %}
+            <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
+                  style="{{ t|chip_style }}"><img class="chip-logo"
+                  src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
+                  width="14" height="14">{{ t }}</span>
+          {% endfor %}
+          <span class="badge you" data-me-only>you</span>
+          {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
+          {% if r.money %}<span class="badge money">{{ r.money|money }}</span>{% endif %}
+        </span>
       </span>
     </span>
 

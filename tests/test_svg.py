@@ -683,3 +683,73 @@ def test_heatmap_cells_carry_their_distance_from_the_corner():
         "--i:2",
     ]
     assert {t.get("style") for t in el.findall(".//text[@class='heat-cell']")} == {"--i:1"}
+
+
+# -- avatar -----------------------------------------------------------------
+# The monogram roundel every entrant wears on the board and their own page.
+def test_avatar_takes_first_and_last_initials():
+    el = parse(svg.avatar("Brian Moore", ["KC", "BAL", "DAL", "CIN"]))
+    assert el.find("text").text == "BM"
+
+
+def test_avatar_drops_a_parenthesised_aside():
+    """It is Shannon's entry; the housemates in brackets don't get a letter."""
+    el = parse(svg.avatar("Shannon (plus Si & Rachel)", ["DET", "CIN", "PHI", "BAL"]))
+    assert el.find("text").text == "S"
+
+
+def test_avatar_keeps_apostrophe_surnames_whole():
+    el = parse(svg.avatar("Asher O'Hara", ["BAL", "CIN", "KC", "BUF"]))
+    assert el.find("text").text == "AO"
+
+
+def test_avatar_tells_a_households_two_entries_apart():
+    """Zac + Sammy hold two entries; the trailing number is the difference."""
+    one = parse(svg.avatar("Zac + Sammy #1", ["KC", "CIN", "BAL", "DAL"]))
+    two = parse(svg.avatar("Zac + Sammy #2", ["DET", "NYG", "WAS", "BUF"]))
+    assert one.find("text").text == "ZS1"
+    assert two.find("text").text == "ZS2"
+
+
+def test_avatar_wears_the_first_picks_club_colours():
+    from football_pool import teamcolors
+
+    el = parse(svg.avatar("Eli", ["LAR", "SEA", "KC", "NE"]))
+    circle = el.find("circle")
+    primary, secondary = teamcolors.TEAM_COLORS["LAR"]
+    assert circle.get("fill") == primary
+    assert circle.get("stroke") == secondary
+
+
+def test_avatar_ink_is_readable_on_every_clubs_ground():
+    """The initials must pass the same contrast bar the chips pass.
+
+    3.0:1 is the AA threshold for large or bold text, which a monogram is —
+    the same bar test_teamcolors holds the chip labels to.
+    """
+    from football_pool import teamcolors
+
+    for team, (primary, _) in teamcolors.TEAM_COLORS.items():
+        el = parse(svg.avatar("Aunt Carol", [team]))
+        ink = el.find("text").get("fill")
+        assert teamcolors.contrast_ratio(ink, primary) >= 3.0, team
+
+
+def test_avatar_survives_a_team_with_no_colours_and_no_teams_at_all():
+    """Falls back to theme variables rather than a broken image."""
+    for teams in (["XXX"], []):
+        el = parse(svg.avatar("Aunt Carol", teams))
+        assert el.find("circle").get("fill") == "var(--surface-2)"
+        assert el.find("text").text == "AC"
+
+
+def test_avatar_is_deterministic():
+    """Nobody's face may change between builds."""
+    a = svg.avatar("Brian Moore", ["KC", "BAL", "DAL", "CIN"])
+    assert a == svg.avatar("Brian Moore", ["KC", "BAL", "DAL", "CIN"])
+
+
+def test_avatar_is_decorative_markup():
+    """The name is always printed beside it, so it must not be read twice."""
+    markup = svg.avatar("Brian Moore", ["KC"])
+    assert 'aria-hidden="true"' in markup

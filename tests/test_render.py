@@ -20,6 +20,7 @@ from pathlib import Path
 
 import pytest
 
+from football_pool import teamcolors
 from football_pool.history import weekly_frame
 from football_pool.nflverse import GameData, parse_games
 from football_pool.render import (
@@ -263,6 +264,29 @@ def test_every_entrant_page_is_reachable_and_names_its_teams(pool, game_data, tm
     assert "Brandon" in page
     for team in ("ARI", "NYJ", "TEN", "CLE"):
         assert team in page
+
+
+def test_every_entrant_wears_a_face_on_the_board_and_their_page(pool, game_data, tmp_path):
+    """One avatar per row, morph-paired with the same face on the hero.
+
+    The pairing is by view-transition-name, exactly like name-<slug> and
+    total-<slug>: break one side and the picture stops travelling with the
+    click.
+    """
+    render_site(pool, game_data, tmp_path)
+    index = (tmp_path / "index.html").read_text()
+
+    assert index.count('class="avatar"') == 3  # one per entrant, no strays
+    for slug in ("aunt-carol", "cousin-mike", "brandon"):
+        assert f"view-transition-name: pic-{slug}" in index
+        page = (tmp_path / "entrant" / slug / "index.html").read_text()
+        assert page.count('class="avatar"') == 1
+        assert f"view-transition-name: pic-{slug}" in page
+
+    # Aunt Carol's first pick is SEA, so her monogram sits on Seattle's navy.
+    primary, secondary = teamcolors.TEAM_COLORS["SEA"]
+    assert f'fill="{primary}" stroke="{secondary}"' in index
+    assert ">AC</text>" in index
 
 
 def test_every_page_carries_the_two_links_off_the_site(pool, game_data, tmp_path):

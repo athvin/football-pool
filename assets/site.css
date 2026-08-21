@@ -596,7 +596,23 @@ a { color: inherit; }
 }
 .row.is-leader .row-rank { color: var(--live); }
 
-.row-who { grid-area: who; min-width: 0; }
+/* The face sits beside the name, and .row-id keeps the name's own min-width:0
+   so a long name still truncates instead of pushing the score off the row. */
+.row-who { grid-area: who; min-width: 0; display: flex; align-items: center; gap: 0.75rem; }
+.row-id { min-width: 0; }
+
+/* --- entrant avatars ----------------------------------------------------
+   A monogram roundel per entrant, drawn at build time in the first pick's
+   club colours (svg.avatar). The circle clip is on the wrapper too, so the
+   view-transition snapshot morphing between board and hero stays round. */
+.avatar-wrap { flex: none; display: inline-flex; border-radius: 50%; }
+.avatar { display: block; border-radius: 50%; }
+.avatar-text {
+  font-family: var(--display);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.hero-who { display: flex; align-items: center; gap: 1.1rem; min-width: 0; flex-wrap: wrap; }
 
 .row-name {
   font-family: var(--display);
@@ -2380,6 +2396,8 @@ html.is-relighting [style*='view-transition-name'] {
   }
   .row-rank { font-size: 1.5rem; line-height: 1.25; }
   .row-name { font-size: 1.15rem; }
+  .row-who { gap: 0.55rem; }
+  .row-who .avatar { width: 34px; height: 34px; }
   .row-points { font-size: 1.2rem; }
   .row-sub { font-size: 0.62rem; white-space: normal; }
   .row-bars { gap: 0.4rem; }

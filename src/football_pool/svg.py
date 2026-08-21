@@ -12,8 +12,11 @@ chart, and so light and dark mode work without regenerating anything.
 from __future__ import annotations
 
 import math
+import re
 from html import escape
 from typing import Sequence
+
+from . import teamcolors
 
 # Semantic colour roles. Actual results and model output never share a colour.
 BANKED = "var(--live)"
@@ -411,6 +414,57 @@ def _spread(
         if shift > 0:
             placed = [(n, x, y - shift) for n, x, y in placed]
     return placed
+
+
+# -- avatars ----------------------------------------------------------------
+def _initials(name: str) -> str:
+    """The letters an entrant's monogram shows.
+
+    First letters of the first two words, with parenthesised asides dropped
+    ("Shannon (plus Si & Rachel)" is Shannon's entry, so it reads S) and a
+    trailing entry number kept, because "Zac + Sammy #1" and "#2" are two
+    entries and must not wear the same face.
+    """
+    aside_free = re.sub(r"\(.*?\)", " ", name)
+    words = re.findall(r"[A-Za-z]+", aside_free)
+    letters = "".join(w[0] for w in words[:2]).upper()
+    tail = re.search(r"(\d+)\s*$", name)
+    if tail:
+        letters += tail.group(1)
+    return letters or "?"
+
+
+def avatar(name: str, teams: Sequence[str] = (), size: int = 44) -> str:
+    """A monogram roundel: the pool's stand-in for a profile picture.
+
+    Nobody sends in a headshot for a family pool, and generated fake faces
+    would be worse than nothing. So the picture is built from what an entrant
+    has actually committed to: the roundel wears their first pick's club
+    colours, with their initials on top in whichever of black or white can be
+    read on that ground — the same WCAG decision the team chips make.
+    Deterministic, so nobody's face changes between builds.
+
+    An entrant with no teams, or a first team we hold no colours for, gets the
+    neutral surface in theme variables rather than a broken image.
+    """
+    initials = _initials(name)
+    pair = teamcolors.TEAM_COLORS.get(teams[0].upper()) if teams else None
+    if pair:
+        ground, edge = pair
+        ink = teamcolors.readable_text_on(ground)
+    else:
+        ground, edge, ink = "var(--surface-2)", "var(--rule)", "var(--chalk)"
+    # A third character (a shared entry's number) needs a smaller face to fit.
+    font = {1: 21, 2: 18}.get(len(initials), 14)
+    return (
+        f'<svg class="avatar" width="{size}" height="{size}" viewBox="0 0 48 48" '
+        f'aria-hidden="true">'
+        f'<circle cx="24" cy="24" r="22.5" fill="{ground}" stroke="{edge}" '
+        f'stroke-width="3"/>'
+        f'<text x="24" y="24" text-anchor="middle" dominant-baseline="central" '
+        f'class="avatar-text" font-size="{font}" fill="{ink}">{escape(initials)}</text>'
+        f"</svg>"
+    )
 
 
 def meter(fraction: float, width: int = 60, height: int = 6, fill: str = MODEL) -> str:
