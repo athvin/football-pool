@@ -451,6 +451,24 @@ with JavaScript off the charts still show the full field.
 The site is dark by default and does not follow your operating system — light is
 an opt-in from the toggle in the header, remembered per browser.
 
+The two themes are two kickoffs rather than a colour scheme and its inversion.
+**Night** is a floodlit stadium: chalk lines on near-black, lime for what has
+been banked. **Day** is a one o'clock game on grass — the surface is turf, the
+cards sit on it like broadcast graphics, and the lines are *white paint* rather
+than ink, because that is what a field is in daylight. It used to be a
+parchment page with an olive accent: perfectly readable, and not football.
+
+Every value in both palettes is picked against a contrast target rather than by
+eye, and `tests/test_theme.py` parses the tokens out of the stylesheet and
+holds them to it — body text clears AA on the turf, on the mown stripe and on a
+card; every semantic colour clears AA as type on a card and the large-text
+threshold on the field; and banked, modelled and trouble stay at least 30° apart
+in hue, which is a hue check on purpose, since a green and a teal of identical
+brightness are 1.03:1 apart by luminance and unmistakable to a reader. The one
+thing deliberately *below* a text threshold is the paint, and that is asserted
+too: a field marking that reached text contrast would be competing with the
+scoreboard on top of it.
+
 ## The field
 
 The background is a football field, one end zone at the top of the screen and

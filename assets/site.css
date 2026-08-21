@@ -83,40 +83,55 @@
 }
 
 /* Day game. Same semantics, repitched for a light surface. Opt-in only. */
+/* Day game — a one o'clock kickoff on grass, which is what the light theme
+   should always have been. It used to be a parchment page with an olive
+   accent: perfectly readable, and not football. The surface is turf, the cards
+   sit on it like broadcast graphics, and the lines are white paint rather than
+   ink, because that is what a field is in daylight.
+
+   Every value here was picked against a contrast target rather than by eye,
+   and tests/test_theme.py holds them to it: body text clears AA on the turf,
+   on the mown stripe and on a card, and so does every semantic colour it can
+   appear as text in. The one thing deliberately *below* a text threshold is
+   the paint, which is a field marking and not something anyone reads.
+
+   The night palette is untouched. This is the day game, not a repaint. */
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --field: #f4f1ea;
-  --turf-a: #f4f1ea;
-  --turf-b: #eeeade;
-  --surface: #fffefb;
-  --surface-2: #ece7dc;
-  --chalk: #14181b;
-  --chalk-dim: #5c6874;
-  --rule: #d9d2c4;
+  --field: #d7e5c6;
+  --turf-a: #d7e5c6;
+  /* The mown stripe, one pass of the mower deeper. */
+  --turf-b: #cee0bb;
+  --surface: #fbfdf8;
+  --surface-2: #e9f1de;
+  --chalk: #12210f;
+  --chalk-dim: #4a5b42;
+  --rule: #b9cfa6;
 
-  --live: #4f7a06;
-  --live-dim: #8aa85c;
-  --model: #0d7c8c;
-  --heat: #c4400d;
-  --edge: #b9b0a0;
+  --live: #14702f;
+  --live-dim: #6f9c58;
+  --model: #0a6c86;
+  --heat: #b93c0a;
+  --edge: #a3bb8e;
 
-  --series-1: #4f7a06;
-  --series-2: #0d7c8c;
-  --series-3: #b26800;
+  --series-1: #14702f;
+  --series-2: #0a6c86;
+  --series-3: #a35c00;
   --series-4: #6b48a8;
-  --shadow: 0 1px 2px rgb(0 0 0 / 6%), 0 8px 24px rgb(0 0 0 / 8%);
+  --shadow: 0 1px 2px rgb(18 33 15 / 8%), 0 8px 24px rgb(18 33 15 / 10%);
 
-  /* Day game: the lines are ink on a pale field rather than chalk on a dark
-     one, and dark-on-light reads considerably stronger at the same alpha —
-     hence the lower numbers, not a straight inversion of the night palette. */
-  --paint-chalk: rgb(20 24 27 / 5%);
-  --paint-chalk-strong: rgb(20 24 27 / 11%);
-  --paint-number: rgb(20 24 27 / 7%);
-  --paint-hash: rgb(20 24 27 / 4%);
-  --paint-endzone: rgb(79 122 6 / 5%);
-  --paint-wordmark: rgb(79 122 6 / 13%);
-  --paint-pylon: rgb(196 64 13 / 30%);
+  /* White paint on grass. The night field is chalk-coloured lines on near
+     black at a few per cent; this is the same idea the right way up, and it
+     needs far more alpha, because white on a mid-tone green is a much smaller
+     step than pale chalk on black. */
+  --paint-chalk: rgb(255 255 255 / 55%);
+  --paint-chalk-strong: rgb(255 255 255 / 95%);
+  --paint-number: rgb(255 255 255 / 70%);
+  --paint-hash: rgb(255 255 255 / 45%);
+  --paint-endzone: rgb(20 112 47 / 14%);
+  --paint-wordmark: rgb(255 255 255 / 72%);
+  --paint-pylon: rgb(185 60 10 / 40%);
 }
 
 /* --- reset ------------------------------------------------------------- */
