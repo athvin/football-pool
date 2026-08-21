@@ -259,6 +259,47 @@ def test_rules_page_renders_from_the_rules_file(pool, game_data, tmp_path):
     assert "2.60" in html  # ARI's leveling factor
 
 
+def test_rules_page_posts_the_deadlines_from_the_schedule(pool, game_data, tmp_path):
+    """Picks due before the first kickoff, money due by the end of week 1.
+
+    Both dates are read off the games file rather than typed into a template,
+    so they are right for whichever season is being built. The 2025 fixture
+    opens Thursday Sep 4 and closes its first week on Monday Sep 8.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "rules" / "index.html").read_text()
+
+    assert "Picks are due before kickoff" in html
+    # An instant, machine-readable, so the client can show the visitor's zone —
+    # with the Eastern rendering as the scripting-off text.
+    assert 'datetime="2025-09-05T00:20:00+00:00"' in html
+    assert "Thu, Sep 4, 8:20 PM EDT" in html
+    assert "Payment is due by the end of Week" in html
+    assert "Monday, September 8" in html
+
+
+def test_rules_page_shows_venmo_as_a_qr_and_a_link(pool, game_data, tmp_path):
+    """How to pay is on the rules page twice: a scannable code and a tappable
+    link, both straight to the commissioner's Venmo profile."""
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "rules" / "index.html").read_text()
+
+    assert 'href="https://venmo.com/u/Brian-Moore-4"' in html
+    assert ">https://venmo.com/u/Brian-Moore-4</a>" in html  # the URL is visible text
+    assert "@Brian-Moore-4 on Venmo" in html
+    # The QR is a site asset, so it carries the cache-busting fingerprint.
+    assert re.search(r'src="/assets/venmo-qr\.svg\?v=[0-9a-f]{8}"', html)
+
+
+def test_a_pool_without_venmo_still_posts_its_deadlines(two_pools, game_data, tmp_path):
+    """The friends fixture has no venmo key: deadlines render, the QR doesn't."""
+    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+    html = (tmp_path / "friends" / "rules" / "index.html").read_text()
+
+    assert "Picks are due before kickoff" in html
+    assert "venmo" not in html.lower()
+
+
 def test_freshness_stamps_are_machine_readable(pool, game_data, tmp_path):
     """Rendered as UTC in a datetime attribute so JS can localise them."""
     render_site(pool, game_data, tmp_path)
@@ -784,9 +825,9 @@ def test_the_ci_contract_holds(two_pools, game_data, tmp_path):
         (friends / "index.html").read_text(),
     )
     assert not (friends / "assets").exists()
-    # The switcher points both ways, and the root pool did not move.
-    assert 'href="/football-pool/friends/"' in (project / "index.html").read_text()
-    assert 'href="/football-pool/"' in (friends / "index.html").read_text()
+    # The pools are sealed off from each other, and the root pool did not move.
+    assert 'href="/football-pool/friends/' not in (project / "index.html").read_text()
+    assert 'href="/football-pool/"' not in (friends / "index.html").read_text()
     # And the root build too, where an empty prefix hides a bug differently.
     assert re.search(
         r'href="/assets/site\.css\?v=[0-9a-f]{8}"',
@@ -1420,25 +1461,28 @@ def test_each_pool_keeps_its_own_money_and_field(two_pools, game_data, tmp_path)
     }
 
 
-def test_the_switcher_names_every_pool_and_marks_the_current_one(
-    two_pools, game_data, tmp_path
-):
+def test_no_pool_ever_links_to_another_pool(two_pools, game_data, tmp_path):
+    """The pools share a domain, not an experience.
+
+    Each group gets exactly one URL. A visitor to the family pool must never
+    see a link to the friends pool (or vice versa) — someone who follows one
+    lands on a roster that has no idea who they are, and rightly wonders where
+    their name went. Every page of both builds is checked, because a stray link
+    in a footer is exactly as confusing as one in the masthead.
+    """
     render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
 
-    home = (tmp_path / "index.html").read_text()
-    away = (tmp_path / "friends" / "index.html").read_text()
-
-    assert 'href="/football-pool/friends/"' in home
-    assert 'href="/football-pool/"' in away
-    # aria-current lands on the page you are actually on, and only there.
-    assert '<a href="/football-pool/" aria-current="page">Family Pool</a>' in home
-    assert '<a href="/football-pool/friends/" aria-current="page">Friends Pool</a>' in away
-
-
-def test_a_single_pool_site_has_no_switcher(pool, game_data, tmp_path):
-    """An archived year, or any season with one pool, renders as it always did."""
-    render_site(pool, game_data, tmp_path)
-    assert "pool-switch" not in (tmp_path / "index.html").read_text()
+    friends_dir = tmp_path / "friends"
+    for page in tmp_path.rglob("*.html"):
+        html = page.read_text()
+        if friends_dir in page.parents:
+            # Inside the friends pool, no URL reaches back up to the root pool.
+            assert 'href="/football-pool/"' not in html, page
+            assert "Family Pool" not in html, page
+        else:
+            # And the root pool never names or links the nested one.
+            assert 'href="/football-pool/friends/' not in html, page
+            assert "Friends Pool" not in html, page
 
 
 def test_every_page_of_a_nested_pool_carries_its_own_prefix(

@@ -38,7 +38,7 @@ import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Sequence
 
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -740,6 +740,37 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
     }
 
 
+def _deadlines(ctx: SiteContext) -> dict[str, Any] | None:
+    """When picks and money are due, read off the schedule itself.
+
+    The rules page states two deadlines — picks in before the season's first
+    kickoff, payment in by the end of week 1 — and both are dates the NFL
+    owns, not the pool. Deriving them from the same games file the scoring
+    engine reads keeps the posted deadline correct for any season the site is
+    asked to build, including a rebuilt archive year.
+    """
+    reg = ctx.games[ctx.games["game_type"] == "REG"]
+    if reg.empty:
+        return None
+    week1 = reg[reg["week"] == int(reg["week"].min())]
+    kicks = sorted(
+        schedule_mod.kickoff(r.gameday, r.gametime) for r in week1.itertuples()
+    )
+    first, last = kicks[0], kicks[-1]
+
+    last_local = last.astimezone(schedule_mod.SCHEDULE_TZ)
+    return {
+        # ISO so the client can rewrite it into the visitor's own zone —
+        # a deadline is the one number on the site that must not be off by
+        # three hours — with the Eastern rendering as the scripting-off text.
+        "picks_due": first.isoformat(timespec="seconds"),
+        "picks_due_text": _eastern(first),
+        # "End of week 1" means the night its last game is played. A date, not
+        # an instant: nobody schedules money to the minute.
+        "payment_due_date": f"{last_local:%A, %B} {last_local.day}",
+    }
+
+
 # How each fetch outcome reads to somebody who does not know the pipeline.
 # "cache" and "fallback" both mean the build could not reach upstream, and the
 # difference between them — a copy from an earlier run versus the snapshot
@@ -773,7 +804,6 @@ def render_site(
     simulations: int | None = None,
     *,
     site_base: str | None = None,
-    pools: Sequence[Mapping[str, Any]] = (),
     copy_assets: bool = True,
 ) -> list[Path]:
     """Render one pool's every page into ``out_dir``. Returns the files written.
@@ -783,8 +813,6 @@ def render_site(
         site_base: Where the *site* lives, which is where ``/assets/`` resolves
             against. Defaults to ``base``: for a site with one pool the two are
             the same, and this behaves exactly as it did before there were two.
-        pools: Switcher entries. Empty renders no switcher, so a one-pool build
-            is byte-identical to a single-pool site.
         copy_assets: Whether to copy ``assets/`` alongside the pages. False when
             a caller is rendering several pools and will copy them once, at the
             site root — see :func:`render_pools`.
@@ -800,9 +828,6 @@ def render_site(
 
     shared = {
         "season": season,
-        # Always present, so StrictUndefined is satisfied on every page whether
-        # or not this site has a second pool to switch to.
-        "pools": pools,
         "state": state,
         "fresh": fresh,
         "rows": rows,
@@ -836,7 +861,7 @@ def render_site(
     write("index.html", "index.html", page="standings")
     write("schedule/index.html", "schedule.html", page="schedule", schedule=_schedule(ctx))
     write("forecast/index.html", "forecast.html", page="forecast")
-    write("rules/index.html", "rules.html", page="rules")
+    write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
     write("teams/index.html", "teams.html", page="teams")
     # Weeks and Trends merged into one Season page: what happened and how it
     # moved are one story, and six tabs was three too many for a family pool.
@@ -940,11 +965,6 @@ def _copy_assets(out_dir: Path) -> list[Path]:
     return sorted(target.rglob("*"))
 
 
-def _pool_href(site_base: str, path: str) -> str:
-    """A pool's front page, carrying the deployment prefix."""
-    return f"{site_base}/{path}/" if path else f"{site_base}/"
-
-
 def render_pools(
     seasons: Sequence[Season],
     data: GameData,
@@ -959,20 +979,11 @@ def render_pools(
     ``/assets/``, which is why the ``url`` filter resolves an asset against the
     site and a page against the pool.
 
-    Switcher hrefs are computed here rather than by the ``url`` filter, which
-    would resolve ``/friends/`` *inside* the friends pool to
-    ``/friends/friends/``. Which pools exist is data a template loops over, not
-    a path a template author writes.
+    Deliberately, no page in one pool links to another pool. The pools share a
+    domain as an implementation detail, not an experience: each group gets one
+    URL, and nobody lands on a roster that has no idea who they are.
     """
     site_base = base.rstrip("/")
-    entries = [
-        {
-            "slug": s.pool.slug,
-            "name": s.pool.name,
-            "href": _pool_href(site_base, s.pool.path),
-        }
-        for s in seasons
-    ]
 
     written: list[Path] = []
     for s in seasons:
@@ -985,7 +996,6 @@ def render_pools(
             base=f"{site_base}/{path}" if path else site_base,
             simulations=simulations,
             site_base=site_base,
-            pools=[{**e, "current": e["slug"] == s.pool.slug} for e in entries],
             copy_assets=False,
         )
 

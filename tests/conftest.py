@@ -26,7 +26,9 @@ REAL_2026 = REPO_ROOT / "seasons" / "2026"
 # routes overrides by key so a test can say `rules_overrides={"entry_fee": 25}`
 # without caring which file the loader keeps it in — that is the loader's
 # business, and it has already moved once.
-POOL_KEYS = frozenset({"name", "root", "entry_fee", "payout_split", "picks_per_entrant"})
+POOL_KEYS = frozenset(
+    {"name", "root", "entry_fee", "payout_split", "picks_per_entrant", "venmo"}
+)
 
 
 def write_season(

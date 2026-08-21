@@ -14,6 +14,47 @@
   </p>
 </div>
 
+{# Deadlines and payment come before the scoring maths on purpose: they are
+   the only two things on this page a person can get wrong in a way that
+   costs them, and the audience includes people who will not scroll. #}
+<section class="pay-box" id="payment" aria-labelledby="payment-title">
+  <div class="pay-details">
+    <h2 class="pay-title" id="payment-title">Before the season starts</h2>
+    <ol class="pay-deadlines">
+      <li>
+        <strong>Picks are due before kickoff of the first game</strong>
+        {% if deadlines %}
+        — <time datetime="{{ deadlines.picks_due }}" data-ts="kickoff">{{ deadlines.picks_due_text }}</time>.
+        {% else %}
+        of the season.
+        {% endif %}
+        No picks, no entry.
+      </li>
+      <li>
+        <strong>Payment is due by the end of Week&nbsp;1</strong>{% if deadlines %}
+        — {{ deadlines.payment_due_date }}{% endif %}.
+        The entry fee is ${{ '%.0f'|format(season.entry_fee) }} per entry.
+      </li>
+    </ol>
+    {% if season.venmo %}
+    {% set venmo_handle = season.venmo.rstrip('/').rsplit('/', 1)[-1] %}
+    <p class="pay-how">
+      The simplest way to pay is <strong>Venmo</strong> — scan the code with
+      your phone's camera, or use the link. Both go straight to the
+      commissioner:
+    </p>
+    <p><a class="venmo-link" href="{{ season.venmo }}">{{ season.venmo }}</a></p>
+    {% endif %}
+  </div>
+  {% if season.venmo %}
+  <a class="venmo-qr" href="{{ season.venmo }}">
+    <img src="{{ '/assets/venmo-qr.svg'|url }}" width="220" height="220"
+         alt="Venmo QR code — scan to pay the entry fee">
+    <span class="venmo-qr-caption">@{{ venmo_handle }} on Venmo</span>
+  </a>
+  {% endif %}
+</section>
+
 <div class="prose">
   <h2>The basics</h2>
   <p>
