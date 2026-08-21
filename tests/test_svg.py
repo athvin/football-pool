@@ -615,3 +615,23 @@ def test_heatmap_short_odds_do_not_fail_the_build():
     el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"], None, [30.0]))
     heads = el.findall(".//text[@class='heat-head heat-row']")
     assert [h.get("data-win") for h in heads] == ["30", None]
+
+
+def test_heatmap_cells_carry_their_distance_from_the_corner():
+    """The stylesheet deals the grid in on that diagonal — see `--i`.
+
+    Every part of a cell holds for the same beat, blanks included: a diagonal
+    that skipped the empty squares would arrive as a wave with holes in it.
+    """
+    el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["A", "B"]))
+    waves = {
+        (int(r.get("data-r")), int(r.get("data-c"))): r.get("style")
+        for r in el.findall(".//rect[@class='heat-box']")
+    }
+
+    assert waves == {(0, 1): "--i:1", (1, 0): "--i:1"}
+    assert [b.get("style") for b in el.findall(".//rect[@class='heat-blank']")] == [
+        "--i:0",
+        "--i:2",
+    ]
+    assert {t.get("style") for t in el.findall(".//text[@class='heat-cell']")} == {"--i:1"}

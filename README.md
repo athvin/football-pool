@@ -354,6 +354,15 @@ off, and nothing else changes.
 Every one of these exists once **per pool**, under that pool's prefix. Only
 `/assets/` and `/404.html` belong to the site as a whole.
 
+Two links in the masthead lead off it: **Model**, the arithmetic the forecast
+is built on, [written out in the open][model]; and the GitHub mark, the source
+that builds the page you are reading. The first is cyan because every projected
+number on this site is cyan, and this is where those numbers come from. Both
+are `MODEL_URL` and `REPO_URL` in `render.py` — facts about the project rather
+than about a season, so neither moves when the year rolls over.
+
+[model]: https://gist.github.com/datastx/8670c633fd4e44644bfa99c5d0ba1209
+
 The Schedule page exists because a pool schedule is not an NFL schedule. A win
 pays the *winner's own* leveling factor, so the two sides of one game are almost
 never worth the same, and the team you need is not always the one favoured. Each
@@ -461,12 +470,26 @@ rather than shared, because chalk on a night field and ink on a day field do not
 read at the same strength.
 
 The field does not move. It is anchored to the viewport rather than the
-document, so scrolling never shifts it and it is drawn once per resize.
-A broadcast first-down line that tracked the scroll was tried and taken out
-again: it is a nice idea for about ten seconds and an irritation for the rest
-of the time, because the eye keeps going to the one thing on the page that
-moves. With scripting off, the stylesheet's mown turf carries the page on its
-own.
+document, so scrolling never shifts it and it is drawn once per resize. With
+scripting off, the stylesheet's mown turf carries the page on its own.
+
+**The chain crew** does move: two marks that ride the scroll from your own goal
+line to the far end zone, with the yard they are standing on written in the
+sideline — own 34, midfield, opp 12, touchdown. Inside the twenty they turn
+from floodlight green to orange, and reaching the far end zone sets off a flare,
+which is the only thing on this site you can win by scrolling.
+
+The first version of this was the broadcast first-down line: one bright rule
+from sideline to sideline. Across an empty field that is exactly right, and
+across a paragraph it is a strike-through — it landed on whatever sentence you
+happened to be reading and cut it in half. So the middle came out and the ends
+stayed, which is where the chain crew stands anyway. The marks reach in as far
+as the edge of the text column and stop: on a wide screen that is a good long
+run, on a phone it is a tick at the very edge of the glass, and at no width does
+anything cross anything worth reading. Everything about them is one transform on
+one element, read inside an animation frame rather than inside the scroll event,
+so a fast flick queues one repaint instead of forty — and `prefers-reduced-motion`
+stands the whole thing down.
 
 Panels and cards settle into place as you reach them. The hidden state is added
 by the client and removed on first sight, so nothing is ever invisible without
@@ -474,6 +497,15 @@ JavaScript — and anything already on screen when the script runs is left alone
 because that would be a flicker rather than an entrance. Headings and body copy
 are deliberately never animated: a title that assembles itself while its own
 paragraph is already there makes a section look out of order.
+
+Four more pieces of motion, each earning its keep:
+
+| | |
+|---|---|
+| **Sorting a table** | The rows glide to their new places instead of teleporting. FLIP: they are already where they belong, so each one is offset back to where it was and released — one layout read, then pure compositing. Watching your own row travel to fourth is worth more than finding it already there. |
+| **The head-to-head grid** | Deals itself in on the diagonal. Every cell carries its distance from the corner as `--i` and holds for that long, so the whole grid arrives as one wave instead of a hundred cells in reading order. |
+| **The theme toggle** | The floodlights come on from the switch that asked for them: a circle of the new palette opening out of the button, via a View Transition with a `clip-path` the client sizes to the far corner. Anything carrying its own `view-transition-name` is suppressed for the length of the wipe, or it would sit outside the circle and change palette on its own schedule. |
+| **A row under the pointer** | One pass of a floodlight across it. On the way in only — a sheen that ran continuously would be the brightest moving thing on a page whose whole job is to hold still and be read. |
 
 ## Saying what the words mean
 

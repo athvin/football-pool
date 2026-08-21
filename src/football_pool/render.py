@@ -63,6 +63,14 @@ ASSET_DIR = REPO_ROOT / "assets"
 # the markup readable in a diff.
 ASSET_HASH_CHARS = 8
 
+# The two links out of the site, in the masthead of every page. The first is
+# the arithmetic the forecast is built on, written out in the open; the second
+# is what builds the page it is written on. Constants rather than season
+# config, because neither is a fact about a season — nothing here changes when
+# the year rolls over, and a pool cannot have its own copy of the maths.
+MODEL_URL = "https://gist.github.com/datastx/8670c633fd4e44644bfa99c5d0ba1209"
+REPO_URL = "https://github.com/athvin/football-pool"
+
 
 def _asset_digest(rel: str) -> str:
     """Short content hash of an asset, or ``""`` when there is no such file.
@@ -847,6 +855,8 @@ def render_site(
         # so the explanation of a word can never drift from the rules file that
         # sets it. See glossary.py.
         "glossary": glossary_mod.terms(season),
+        "model_url": MODEL_URL,
+        "repo_url": REPO_URL,
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)

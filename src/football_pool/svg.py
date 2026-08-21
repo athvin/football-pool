@@ -671,6 +671,12 @@ def heatmap(
         row_values = matrix[i] if i < len(matrix) else ()
         for j in range(n):
             x = grid_left + cell * j
+            # How far this cell is from the top-left corner, in cells. The
+            # stylesheet holds each one back by that much as the grid arrives,
+            # so it deals itself in along the diagonal rather than filling row
+            # by row — a hundred cells in reading order is long enough to be a
+            # wait, and the same hundred on a wave is one gesture.
+            wave = f' style="--i:{i + j}"'
             # A matrix that does not match the labels draws blanks rather than
             # raising: the grid is generated data, and a shape mismatch should
             # show up as a visibly empty cell, not as a failed build.
@@ -679,7 +685,7 @@ def heatmap(
                 out.append(
                     f'<rect class="heat-blank" x="{x + 1}" y="{y + 1}" '
                     f'width="{cell - 2}" height="{cell - 2}" '
-                    f'rx="4" fill="var(--surface-2)" opacity="0.4"/>'
+                    f'rx="4" fill="var(--surface-2)" opacity="0.4"{wave}/>'
                 )
                 continue
             v = float(value)
@@ -689,12 +695,12 @@ def heatmap(
                 f'fill="{MODEL}" opacity="{0.08 + 0.72 * v:.3f}" '
                 f'data-r="{i}" data-c="{j}" data-p="{v * 100:.0f}" '
                 f'data-row="{escape(names[i], quote=True)}" '
-                f'data-col="{escape(names[j], quote=True)}">'
+                f'data-col="{escape(names[j], quote=True)}"{wave}>'
                 f"<title>{escape(names[i])} finishes above {escape(names[j])} "
                 f"{v * 100:.0f}% of the time</title></rect>"
                 f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" '
                 f'text-anchor="middle" class="heat-cell'
-                f'{" is-strong" if v >= 0.5 else ""}">{v * 100:.0f}%</text>'
+                f'{" is-strong" if v >= 0.5 else ""}"{wave}>{v * 100:.0f}%</text>'
             )
 
     out.append("</svg>")

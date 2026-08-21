@@ -24,6 +24,8 @@ from football_pool.history import weekly_frame
 from football_pool.nflverse import GameData, parse_games
 from football_pool.render import (
     ASSET_DIR,
+    MODEL_URL,
+    REPO_URL,
     _entrant_rows,
     _forecast,
     _schedule,
@@ -247,6 +249,23 @@ def test_every_entrant_page_is_reachable_and_names_its_teams(pool, game_data, tm
     assert "Brandon" in page
     for team in ("ARI", "NYJ", "TEN", "CLE"):
         assert team in page
+
+
+def test_every_page_carries_the_two_links_off_the_site(pool, game_data, tmp_path):
+    """The model the forecast runs on, and the source that builds the page.
+
+    On every page rather than tucked in a footer somewhere: "where did this
+    number come from" is a question that gets asked on whichever page the
+    number is on. Both open in a new tab — unlike the Venmo link, which is an
+    errand you go and run — and `rel="noopener"` goes with `target="_blank"`.
+    """
+    render_site(pool, game_data, tmp_path)
+
+    for name in ("index.html", "forecast/index.html", "rules/index.html"):
+        html = (tmp_path / name).read_text()
+        assert f'href="{MODEL_URL}" target="_blank" rel="noopener"' in html, name
+        assert f'href="{REPO_URL}" target="_blank" rel="noopener"' in html, name
+        assert ">Model</a>" in html, name
 
 
 def test_rules_page_renders_from_the_rules_file(pool, game_data, tmp_path):
