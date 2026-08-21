@@ -833,6 +833,50 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   font-variant-numeric: tabular-nums;
 }
 
+/* --- a team's own page --------------------------------------------------
+   The same hero an entrant gets, with the club's badge set into the name.
+   A team is an object on this site — it has a page, a colour and a record —
+   and the crest is what makes the page recognisable before a word is read. */
+.team-hero .hero-name { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.team-crest {
+  width: clamp(34px, 6vw, 52px);
+  height: auto;
+  object-fit: contain;
+  /* The same floodlight the masthead shield stands under. */
+  filter: drop-shadow(0 0 16px color-mix(in srgb, var(--live) 30%, transparent));
+}
+
+.hero-score { text-align: right; }
+
+/* A season down one column wants the week beside the kickoff, in the same
+   muted mono the time is set in — it is an index, not a headline. */
+.game-week {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+
+/* The share bars on a team page sit in the same slot the forecast bars do,
+   and have to fill it the same way. */
+.forecast-bar .meter { width: 100%; height: auto; }
+
+/* A bye in the middle of a season list. Deliberately not a game row: it has no
+   sides, no price and no owners, and dressing it as one would put an empty
+   fixture on the page. */
+.game-bye {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.9rem 0.5rem 1rem;
+  border: 1px dashed var(--rule);
+  border-radius: var(--radius);
+  font-size: 0.8rem;
+  color: var(--chalk-dim);
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
@@ -1471,6 +1515,16 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   white-space: nowrap;
 }
 .owner.is-me { color: var(--live); border-color: color-mix(in srgb, var(--live) 45%, var(--rule)); }
+
+/* A name is a link to that person's page wherever it appears. Underlining it
+   would put a rule through a 10px chip in a row that already has five of them;
+   the border is the affordance, and it brightens under the pointer. */
+a.owner { text-decoration: none; transition: color 0.14s ease, border-color 0.14s ease; }
+a.owner:hover, a.owner:focus-visible {
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--chalk) 40%, var(--rule));
+}
+a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 
 .game-mine {
   font-family: var(--mono);

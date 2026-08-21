@@ -146,7 +146,7 @@
         <td>
           <span class="row-teams">
           {% for t in teams_in %}
-            <span class="team-chip">{{ t }} · {{ '%.2f'|format(season.lf_of(t)) }}</span>
+            <a class="team-chip" href="{{ ('/team/' ~ t ~ '/')|url }}">{{ t }} · {{ '%.2f'|format(season.lf_of(t)) }}</a>
           {% endfor %}
           </span>
         </td>

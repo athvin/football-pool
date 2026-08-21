@@ -180,14 +180,14 @@
         <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
         <td>
           <span class="row-teams">
-            {% for t in r.unique_teams %}<span class="team-chip scored" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
+            {% for t in r.unique_teams %}<a class="team-chip scored" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>{% endfor %}
             {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
           </span>
         </td>
         <td class="num" data-value="{{ r.leverage }}">{{ '%.2f'|format(r.leverage) }}</td>
         <td>
           <span class="row-teams">
-            {% for t in r.shared_teams %}<span class="team-chip dim" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</span>{% endfor %}
+            {% for t in r.shared_teams %}<a class="team-chip dim" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>{% endfor %}
           </span>
         </td>
       </tr>
@@ -218,9 +218,9 @@
       {% for r in picks %}
       <tr>
         <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td><span class="team-chip scored" style="{{ r.best_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.best_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.best_team }}</span> {{ r.best_points|points }}</td>
+        <td><a class="team-chip scored" href="{{ ('/team/' ~ r.best_team ~ '/')|url }}" style="{{ r.best_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.best_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.best_team }}</a> {{ r.best_points|points }}</td>
         <td class="num" data-value="{{ r.best_share }}">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
-        <td><span class="team-chip dim" style="{{ r.worst_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.worst_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.worst_team }}</span></td>
+        <td><a class="team-chip dim" href="{{ ('/team/' ~ r.worst_team ~ '/')|url }}" style="{{ r.worst_team|chip_style }}"><img class="chip-logo" src="{{ ('/assets/logos/' ~ r.worst_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.worst_team }}</a></td>
         <td class="num" data-value="{{ r.worst_points }}">{{ r.worst_points|points }}</td>
       </tr>
       {% endfor %}

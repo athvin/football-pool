@@ -344,6 +344,13 @@ off, and nothing else changes.
 - **Forecast** — where the model thinks it ends: chance of every finishing
   place, the range of final scores, and every head-to-head.
 - **Teams** — every team's leveling factor, record, points generated, and owners.
+  Each one links to **that team's own page**: what it has produced and how that
+  splits three ways (wins, berth, January), who in the pool is holding it and
+  what share of their banked total it is, and its whole season down one column
+  — priced by the same builder the schedule page uses, so a game cannot be
+  worth one thing there and another here. The bye is named where it falls,
+  because a list that jumps from week 5 to week 7 has said nothing about week
+  6. All 32 get a page, including the ones nobody picked.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads. It
   opens with the two deadlines and how to pay: picks are due before the
   season's first kickoff and payment by the end of week 1 — both dates read
@@ -351,8 +358,20 @@ off, and nothing else changes.
   (`venmo:` in the pool's file, validated at load because real money follows
   that URL).
 
-Every one of these exists once **per pool**, under that pool's prefix. Only
-`/assets/` and `/404.html` belong to the site as a whole.
+Every one of these exists once **per pool**, under that pool's prefix — team
+pages included. The football on a team page is identical in both pools, but the
+owners block is not, and one family name on a friends page would be a hole
+straight through the wall between them. Only `/assets/` and `/404.html` belong
+to the site as a whole.
+
+**Names and teams are clickable wherever they appear.** A team chip goes to
+that team's page and a person's name goes to theirs, on the schedule, the teams
+table, the season page, the rules page and each other's pages. The one
+exception is the leaderboard itself, whose rows are already links to an
+entrant page — an anchor inside an anchor is not a thing HTML has, and browsers
+recover from it by closing the outer link early, which would silently cost the
+row half its click target. A test walks every built page and asserts nesting
+depth never exceeds one.
 
 Two links in the masthead lead off it: **Model**, the arithmetic the forecast
 is built on, [written out in the open][model]; and the GitHub mark, the source
