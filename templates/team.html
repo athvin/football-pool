@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
-{% from '_game.html' import game_row %}
+{% from '_game.html' import game_row with context %}
 
 {% block title %}{{ team.team }} · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}What {{ team.team }} has produced for the {{ season.year }} pool, who is holding them, and every game they play.{% endblock %}

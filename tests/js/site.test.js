@@ -807,6 +807,153 @@ describe('sortable table headers', () => {
   });
 });
 
+describe('only the games that matter', () => {
+  beforeEach(() => {
+    document.documentElement.removeAttribute('data-slate');
+    document.body.innerHTML = `
+      <button data-slate-toggle aria-pressed="false">Pool games only</button>
+      <ul class="games">
+        <li class="game"><button data-game-open aria-expanded="false"></button>
+          <div class="game-more"></div></li>
+        <li class="game is-idle"><button data-game-open aria-expanded="false"></button>
+          <div class="game-more"></div></li>
+      </ul>`;
+  });
+
+  test('the filter is one attribute on the root, and it is remembered', () => {
+    const win = fakeWindow();
+    init(document, win);
+    const button = document.querySelector('[data-slate-toggle]');
+
+    button.click();
+    expect(document.documentElement.dataset.slate).toBe('pool');
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(win._store.get('pool-slate')).toBe('pool');
+
+    button.click();
+    expect(document.documentElement.dataset.slate).toBeUndefined();
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    // Stored as a value rather than removed, so a browser that already has
+    // "pool" in it is actually told to stop.
+    expect(win._store.get('pool-slate')).toBe('all');
+  });
+
+  test('a filter already applied before paint is what the button reports', () => {
+    // The inline script in base.html sets the attribute before first paint;
+    // site.js is deferred and must agree with what it finds rather than
+    // resetting it.
+    document.documentElement.dataset.slate = 'pool';
+    init(document, fakeWindow());
+
+    expect(document.querySelector('[data-slate-toggle]').getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(document.documentElement.dataset.slate).toBe('pool');
+  });
+
+  test('a page without the filter is left alone', () => {
+    document.body.innerHTML = '<ul class="games"></ul>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+describe('opening a game up', () => {
+  const gameMarkup = () => {
+    document.body.innerHTML = `
+      <ul class="games">
+        <li class="game" data-game="G1">
+          <div class="game-when"><time>Sun</time></div>
+          <div class="game-side"><a class="team-chip" href="/team/KC/">KC</a>
+            <span class="owners"><a class="owner" href="/entrant/bo/">Bo</a></span></div>
+          <button class="game-open" type="button" data-game-open
+                  aria-expanded="false" aria-controls="more-G1"></button>
+          <div class="game-more" id="more-G1">what it is worth</div>
+        </li>
+        <li class="game" data-game="G2">
+          <div class="game-when"><time>Mon</time></div>
+          <button class="game-open" type="button" data-game-open aria-expanded="false"></button>
+          <div class="game-more">and this one</div>
+        </li>
+      </ul>`;
+  };
+
+  const rows = () => Array.from(document.querySelectorAll('.game'));
+  const click = (el) => el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+  beforeEach(() => {
+    gameMarkup();
+    init(document, fakeWindow());
+  });
+
+  test('the button opens the panel and says so', () => {
+    const [row] = rows();
+    click(row.querySelector('[data-game-open]'));
+
+    expect(row.classList.contains('is-open')).toBe(true);
+    expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('true');
+
+    click(row.querySelector('[data-game-open]'));
+    expect(row.classList.contains('is-open')).toBe(false);
+    expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('clicking the row anywhere else opens it too', () => {
+    const [row] = rows();
+    click(row.querySelector('.game-when time'));
+    expect(row.classList.contains('is-open')).toBe(true);
+  });
+
+  test('but never when the click was on a link', () => {
+    // A chip goes to the team's page and a name to that person's. Opening a
+    // panel underneath the page you are leaving is a bug, not a bonus.
+    // Navigation is cancelled only to keep jsdom quiet about it.
+    const [row] = rows();
+    const quietly = (el) => {
+      el.addEventListener('click', (event) => event.preventDefault());
+      click(el);
+    };
+
+    quietly(row.querySelector('a.team-chip'));
+    expect(row.classList.contains('is-open')).toBe(false);
+
+    quietly(row.querySelector('a.owner'));
+    expect(row.classList.contains('is-open')).toBe(false);
+  });
+
+  test('and never while text is being selected', () => {
+    const [row] = rows();
+    const selection = window.getSelection;
+    window.getSelection = () => ({ toString: () => '2.15' });
+    try {
+      click(row.querySelector('.game-when time'));
+      expect(row.classList.contains('is-open')).toBe(false);
+    } finally {
+      window.getSelection = selection;
+    }
+  });
+
+  test('one game at a time is a choice the reader makes, not the page', () => {
+    const [first, second] = rows();
+    click(first.querySelector('.game-when'));
+    click(second.querySelector('.game-when'));
+
+    expect(first.classList.contains('is-open')).toBe(true);
+    expect(second.classList.contains('is-open')).toBe(true);
+  });
+
+  test('a click outside any game does nothing at all', () => {
+    click(document.querySelector('.games'));
+    expect(document.querySelectorAll('.game.is-open')).toHaveLength(0);
+  });
+
+  test('a game row with no panel is not made interactive', () => {
+    document.body.innerHTML = '<ul class="games"><li class="game"><time>x</time></li></ul>';
+    init(document, fakeWindow());
+    click(document.querySelector('.game time'));
+
+    expect(document.querySelector('.game').classList.contains('is-open')).toBe(false);
+  });
+});
+
 describe('weekForInstant', () => {
   // Three weeks, each closing just before the next opens.
   const WINDOWS = [

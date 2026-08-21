@@ -1428,7 +1428,7 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
 .game {
   position: relative;
   display: grid;
-  grid-template-columns: 10.5rem minmax(0, 1fr) 1.6rem minmax(0, 1fr) 4.5rem;
+  grid-template-columns: 10.5rem minmax(0, 1fr) 1.6rem minmax(0, 1fr) 4.5rem 1.4rem;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.85rem 0.5rem 1.1rem;
@@ -1461,6 +1461,97 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
    because it is the schedule, but it should not compete for attention. */
 .game.is-idle { opacity: 0.5; }
 .game.is-idle:hover { opacity: 0.9; }
+
+/* --- opening a game up ---------------------------------------------------
+   Every game already carries what it is worth to each side and to each of
+   you; the row has only ever had room for your own number. The rest is in the
+   markup and folded away — and folded away only when there is a client that
+   can unfold it again, which is what `data-js` says. With scripting off,
+   every panel is simply open. */
+html[data-js='on'] .game-more { display: none; }
+.game.is-open .game-more { display: block; }
+
+.game-more {
+  grid-column: 1 / -1;
+  margin-top: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px dashed var(--rule);
+}
+
+.game-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.75rem;
+  margin: 0;
+}
+.game-facts div { display: flex; align-items: baseline; gap: 0.4rem; }
+.game-facts dt {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+.game-facts dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.game-note {
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--chalk-dim);
+}
+.game-note .owner { margin-inline-end: 0.15rem; }
+
+/* The affordance. Small, at the end of the row, and a real button — the row
+   itself is full of links, and a click handler on a row is a convenience for
+   a mouse rather than a control anything else can reach. */
+.game-open {
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--chalk-dim);
+  cursor: pointer;
+  transition: color 0.16s, border-color 0.16s, background-color 0.16s;
+}
+.game-open:hover, .game-open:focus-visible {
+  color: var(--chalk);
+  border-color: var(--rule);
+  background: var(--surface-2);
+}
+
+/* A chevron drawn from a rotated corner, so there is no glyph to load and no
+   second element to place. */
+.game-open-mark {
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.game.is-open .game-open-mark { transform: translateY(1px) rotate(225deg); }
+
+/* --- only the games that matter -----------------------------------------
+   A third of any week is games nobody in the pool holds. They are dimmed
+   always and can be dropped entirely, which is what turns a 16-game week into
+   the handful worth reading. The filter is one attribute on the root, so it
+   costs the client nothing per row and survives a week switch. */
+html[data-slate='pool'] .game.is-idle,
+html[data-slate='pool'] .bye-team.is-spare { display: none; }
+
+/* Only reachable with the filter on, and only in a week the pool has no side
+   in at all — where the list would otherwise simply go blank. */
+.slate-empty { display: none; }
+html[data-slate='pool'] .slate-empty { display: block; }
 
 .game-when {
   display: flex;
