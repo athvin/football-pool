@@ -1004,11 +1004,35 @@ function initSchedule(doc, nowMs) {
  * 100 − p, so the sentence always agrees with the number printed in that cell
  * no matter how either was rounded. Outright odds are optional: without them
  * the claim stands on its own rather than the readout inventing a number.
+ *
+ * The money grid is the same shape with one difference that matters. Its
+ * opposite cells do not add to 100%, because a season that paid neither of
+ * them is a season neither out-earned the other — so the remainder is named
+ * out loud rather than left as a gap the reader has to notice and explain to
+ * themselves. Both figures come from real cells; the ties are what is left.
  */
-export function headToHeadReadout({ row, col, percent, reverse, rowWin, colWin }) {
+export function headToHeadReadout({
+  row, col, percent, reverse, rowWin, colWin, view = 'order',
+}) {
   const other = reverse === undefined || reverse === null
     ? 100 - Number(percent)
     : Number(reverse);
+
+  if (view === 'money') {
+    const level = Math.max(100 - Number(percent) - other, 0);
+    const claim =
+      `${row} takes home more than ${col} in ${percent}% of simulated seasons, `
+      + `less in ${other}%`
+      + (level > 0 ? `, and the same in the other ${level}%.` : '.');
+    if (rowWin == null || colWin == null) return { claim, odds: null };
+    return {
+      claim,
+      odds:
+        `Outright, ${row} is paid something ${rowWin}% of the time `
+        + `and ${col} ${colWin}%.`,
+    };
+  }
+
   const claim =
     `${row} finishes above ${col} in ${percent}% of simulated seasons, `
     + `and below them in the other ${other}%.`;
@@ -1031,67 +1055,117 @@ export function headToHeadReadout({ row, col, percent, reverse, rowWin, colWin }
  * without them having to trace two fingers across a chart on a phone.
  */
 function initHeatmap(doc) {
-  const chart = doc.querySelector('svg.heat');
   const readout = doc.querySelector('[data-heat-readout]');
-  if (!chart) return;
-
-  const cells = Array.from(chart.querySelectorAll('.heat-box'));
-  if (!cells.length) return;
   // The prompt the readout carries when nothing is hovered, restored on exit.
   const rest = readout ? readout.textContent : '';
 
-  const mark = (r, c) => {
-    for (const el of chart.querySelectorAll('[data-r], [data-c]')) {
-      const onAxis = el.dataset.r === r || el.dataset.c === c;
-      const exact = el.dataset.r === r && el.dataset.c === c;
-      el.classList.toggle('is-lit', onAxis);
-      el.classList.toggle('is-picked', exact);
+  /** Wire one grid up to the readout. Both are live; only one is on screen. */
+  const wire = (panel) => {
+    const chart = panel.querySelector('svg.heat');
+    if (!chart) return;
+    const cells = Array.from(chart.querySelectorAll('.heat-box'));
+    if (!cells.length) return;
+    // Which question this grid is answering. It rides on the panel because the
+    // server drew the grid and the server knows; the client is not going to
+    // infer it from the numbers.
+    const view = panel.dataset?.heatGrid || 'order';
+
+    const mark = (r, c) => {
+      for (const el of chart.querySelectorAll('[data-r], [data-c]')) {
+        const onAxis = el.dataset.r === r || el.dataset.c === c;
+        const exact = el.dataset.r === r && el.dataset.c === c;
+        el.classList.toggle('is-lit', onAxis);
+        el.classList.toggle('is-picked', exact);
+      }
+    };
+
+    /** Outright odds live on the axis label, so there are 2n, not n². */
+    const winOdds = (axis, index) =>
+      chart.querySelector(`.heat-${axis}[data-${axis[0]}="${index}"]`)?.dataset.win ?? null;
+
+    const say = (cell) => {
+      if (!readout) return;
+      const { r, c } = cell.dataset;
+      const opposite = chart.querySelector(`.heat-box[data-r="${c}"][data-c="${r}"]`);
+      const parts = headToHeadReadout({
+        row: cell.dataset.row,
+        col: cell.dataset.col,
+        percent: cell.dataset.p,
+        reverse: opposite?.dataset.p,
+        rowWin: winOdds('row', r),
+        colWin: winOdds('col', c),
+        view,
+      });
+
+      readout.textContent = '';
+      const claim = doc.createElement('span');
+      claim.className = 'heat-claim';
+      claim.textContent = parts.claim;
+      readout.append(claim);
+      if (!parts.odds) return;
+      const odds = doc.createElement('span');
+      odds.className = 'heat-odds';
+      odds.textContent = parts.odds;
+      readout.append(odds);
+    };
+
+    const clear = () => {
+      for (const el of chart.querySelectorAll('.is-lit, .is-picked')) {
+        el.classList.remove('is-lit', 'is-picked');
+      }
+      if (readout) readout.textContent = rest;
+    };
+
+    for (const cell of cells) {
+      cell.addEventListener('pointerenter', () => {
+        mark(cell.dataset.r, cell.dataset.c);
+        say(cell);
+      });
     }
+    chart.addEventListener('pointerleave', clear);
   };
 
-  /** Outright odds live on the axis label, so there are 2n of them, not n². */
-  const winOdds = (axis, index) =>
-    chart.querySelector(`.heat-${axis}[data-${axis[0]}="${index}"]`)?.dataset.win ?? null;
+  // A page with one unwrapped grid — which is every page but the forecast —
+  // still gets the readout wiring, so this stays one code path.
+  const panels = Array.from(doc.querySelectorAll('[data-heat-grid]'));
+  if (panels.length) panels.forEach(wire);
+  else if (doc.querySelector('svg.heat')) wire(doc);
 
-  const say = (cell) => {
-    if (!readout) return;
-    const { r, c } = cell.dataset;
-    const opposite = chart.querySelector(`.heat-box[data-r="${c}"][data-c="${r}"]`);
-    const parts = headToHeadReadout({
-      row: cell.dataset.row,
-      col: cell.dataset.col,
-      percent: cell.dataset.p,
-      reverse: opposite?.dataset.p,
-      rowWin: winOdds('row', r),
-      colWin: winOdds('col', c),
-    });
+  initHeatView(doc, readout, rest);
+}
 
-    readout.textContent = '';
-    const claim = doc.createElement('span');
-    claim.className = 'heat-claim';
-    claim.textContent = parts.claim;
-    readout.append(claim);
-    if (!parts.odds) return;
-    const odds = doc.createElement('span');
-    odds.className = 'heat-odds';
-    odds.textContent = parts.odds;
-    readout.append(odds);
-  };
+/**
+ * The picker over the two grids: who finishes above whom, or who out-earns whom.
+ *
+ * Both grids are in the document already, drawn by the same code from the same
+ * simulations, so choosing between them is `hidden` and nothing else — no
+ * arithmetic on the client, and no way for the two to disagree. The note above
+ * the grid is swapped with it, because the money grid's opposite cells add to
+ * less than 100% and a reader is owed the reason on the same screen as the
+ * evidence.
+ */
+function initHeatView(doc, readout, rest) {
+  const select = doc.querySelector('[data-heat-view]');
+  if (!select) return;
 
-  const clear = () => {
-    for (const el of chart.querySelectorAll('.is-lit, .is-picked')) {
-      el.classList.remove('is-lit', 'is-picked');
-    }
+  const grids = Array.from(doc.querySelectorAll('[data-heat-grid]'));
+  const notes = Array.from(doc.querySelectorAll('[data-heat-note]'));
+  if (!grids.length) return;
+
+  const show = (view) => {
+    for (const grid of grids) grid.hidden = grid.dataset.heatGrid !== view;
+    for (const note of notes) note.hidden = note.dataset.heatNote !== view;
+    // The readout is describing a cell in the grid that just left the screen.
     if (readout) readout.textContent = rest;
   };
 
-  for (const cell of cells) {
-    cell.addEventListener('pointerenter', () => {
-      mark(cell.dataset.r, cell.dataset.c);
-      say(cell);
-    });
-  }
-  chart.addEventListener('pointerleave', clear);
+  // Whatever the markup shipped as visible is the truth at load; the select is
+  // pulled into line with it rather than the other way round, so a browser
+  // restoring a stale selection cannot leave the page showing one grid and
+  // naming the other.
+  const shown = grids.find((grid) => !grid.hidden);
+  if (shown) select.value = shown.dataset.heatGrid;
+  select.addEventListener('change', () => show(select.value));
 }
 
 /**

@@ -443,7 +443,10 @@ the bins are never per-entrant.
 **Head to head** gives P(row finishes above column) for every pair, with ties
 splitting evenly so opposite cells always add to 100%. The number is printed in
 every cell and colour is only reinforcement, so it reads in greyscale and with
-any colour vision. Both axes are captioned, and that is not decoration: a grid
+any colour vision. The grid is never drawn larger than the size it was
+generated at: everything inside an SVG scales with its viewBox, so a
+two-person grid stretched across a desktop column would be drawn at four times
+life size — postcard cells under an axis caption running off its own axis. Both axes are captioned, and that is not decoration: a grid
 of names against the same names looks symmetrical and is not, so without a
 caption every cell has two opposite readings and nothing on the page says which
 one is on the screen. The caption is one sentence broken across the two edges —
@@ -454,6 +457,28 @@ across a grid is not a thing anyone should have to do on a phone. The readout
 carries both entrants' outright odds alongside the pairwise figure: one number
 on its own misleads, because beating somebody 62% of the time reads very
 differently when neither of you is likely to win the thing.
+
+The same pairs can be **priced instead of ranked** — a picker beside the
+heading swaps the grid for *who out-earns whom*: how often the row's entry took
+home more money than the column's, across the same seasons. Both grids are
+drawn at build time from one ranking, so the picker is a `hidden` attribute and
+nothing else; there is no arithmetic on the client and no way for the two to
+disagree.
+
+The money grid breaks the antisymmetry on purpose, and this is the interesting
+part. Its opposite cells add to *less* than 100%, because in a pool that pays
+three places two mid-table entries both take home nothing in most seasons, and
+$0 does not beat $0. Splitting those seasons half each — the way the finishing
+grid splits a tie on points — would park every such pair at 50% and bury the
+one fact worth reading, which is how rarely money separates them at all. So the
+ties are left out of both directions and the readout names them:
+
+> Brian Moore takes home more than Eric Riggs in 41% of simulated seasons,
+> less in 27%, and the same in the other 32%.
+> Outright, Brian Moore is paid something 70% of the time and Eric Riggs 55%.
+
+Being paid more implies finishing above — the ladder is paid down the ranking —
+so the money grid can never lead the finishing one, and the suite asserts it.
 
 **Winning and making money are two different questions**, and the page now says
 so before anything else. Chance of winning is first place and nothing else;

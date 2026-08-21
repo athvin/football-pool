@@ -286,6 +286,96 @@ def test_nobody_races_themselves(pool_projection):
     assert h.to_numpy().diagonal().tolist() == [pytest.approx(np.nan, nan_ok=True)] * len(h)
 
 
+def test_money_head_to_head_counts_only_a_strictly_bigger_cheque(pool_projection):
+    """Opposite cells add to *at most* 1, and the gap is the seasons that tied.
+
+    Deliberately not antisymmetric, unlike the finishing grid. Two entrants who
+    both finish out of the money took the same nothing home, and splitting that
+    half each would park every mid-table pair at 50% — hiding the one fact the
+    money view exists to show, which is how rarely money separates them.
+    """
+    m = pool_projection.money_head_to_head.to_numpy()
+    off_diagonal = ~np.eye(m.shape[0], dtype=bool)
+    pairs = (m + m.T)[off_diagonal]
+
+    assert (pairs <= 1.0 + 1e-9).all()
+    assert (pairs >= 0.0).all()
+    assert (m[off_diagonal] >= 0.0).all()
+
+
+def test_money_head_to_head_leaves_the_diagonal_empty(pool_projection):
+    """Nobody out-earns themselves, the same way nobody races themselves."""
+    m = pool_projection.money_head_to_head
+    assert m.to_numpy().diagonal().tolist() == [pytest.approx(np.nan, nan_ok=True)] * len(m)
+    assert list(m.index) == list(pool_projection.head_to_head.index)
+    assert list(m.columns) == list(pool_projection.head_to_head.columns)
+
+
+def test_money_head_to_head_agrees_with_expected_payout(pool_projection):
+    """The two are computed from one ranking, so they cannot disagree.
+
+    Whoever is worth the most must out-earn everybody more often than they are
+    out-earned. This is the assertion that would fail if the payout ladder were
+    ever indexed differently in the two places it is used.
+    """
+    entrants = pool_projection.entrants
+    best = entrants.loc[entrants["expected_payout"].idxmax(), "name"]
+    m = pool_projection.money_head_to_head
+
+    for other in m.columns:
+        if other == best:
+            continue
+        assert m.loc[best, other] >= m.loc[other, best], other
+
+
+def test_out_earning_is_never_more_common_than_finishing_above(pool_projection):
+    """Being paid more implies finishing above, so the money grid cannot lead.
+
+    Ranking is derived from points, and the ladder is paid down the ranking —
+    so a bigger cheque means strictly more points, every time. Anything else
+    means the two grids have been computed from different orderings.
+    """
+    order = pool_projection.head_to_head.to_numpy()
+    money = pool_projection.money_head_to_head.to_numpy()
+    off_diagonal = ~np.eye(order.shape[0], dtype=bool)
+
+    assert (money[off_diagonal] <= order[off_diagonal] + 1e-9).all()
+
+
+def test_everybody_paid_leaves_only_the_ties_between_the_two_grids(
+    make_season, games_2025
+):
+    """A pool that pays every place has nothing money can separate but a tie.
+
+    Three entrants and three paying places: whoever finishes above is paid
+    more, so the money grid is the finishing grid — except in a season where
+    two entries tie on points exactly, which leveling factors in fifths of a
+    point make perfectly possible. The finishing grid splits such a season half
+    to each side and the money grid awards it to neither, so what the two grids
+    differ by is the same on both sides of every pair.
+    """
+    field = make_season(
+        [
+            {"name": "A", "teams": ["KC", "SEA", "DAL", "NE"]},
+            {"name": "B", "teams": ["ARI", "NYJ", "TEN", "CLE"]},
+            {"name": "C", "teams": ["DET", "BUF", "TB", "CHI"]},
+        ],
+        year=2025,
+    )
+    partial = games_2025.copy()
+    partial.loc[partial["week"] > 10, "played"] = False
+
+    p = project(field, partial, simulations=200)
+    gap = p.head_to_head.to_numpy() - p.money_head_to_head.to_numpy()
+    off_diagonal = ~np.eye(3, dtype=bool)
+
+    # Small, because a tie is rare — but asserted as symmetric rather than as
+    # zero, because "rare" is not "never" and this suite does not flake.
+    assert (gap[off_diagonal] >= -1e-9).all()
+    assert (gap[off_diagonal] < 0.05).all()
+    assert np.allclose(gap, gap.T, equal_nan=True)
+
+
 def test_head_to_head_agrees_with_the_finishing_order(pool_projection):
     """The entrant most likely to win must be favoured over everyone."""
     entrants = pool_projection.entrants

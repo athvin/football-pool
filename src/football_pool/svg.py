@@ -11,6 +11,7 @@ chart, and so light and dark mode work without regenerating anything.
 
 from __future__ import annotations
 
+import math
 from html import escape
 from typing import Sequence
 
@@ -580,6 +581,7 @@ def heatmap(
     labels: Sequence[str],
     full_labels: Sequence[str] | None = None,
     win_odds: Sequence[float] | None = None,
+    verb: str = "finishes above",
     cell: int = 62,
     label_width: int = 132,
     header_height: int = 46,
@@ -606,11 +608,18 @@ def heatmap(
     readout; the drawn labels stay short because "Shannon (plus Si & Rachel)"
     is not a column header.
 
-    ``win_odds`` are each entrant's chance of finishing first, as percentages
-    in the same order. They ride on the axis labels rather than on the hundred
+    ``win_odds`` are each entrant's outright odds, as percentages in the same
+    order — of winning the pool for the finishing grid, of being paid at all
+    for the money one. They ride on the axis labels rather than on the hundred
     cells, and they are what lets the hover readout put a pairwise number next
     to what it actually means for the pool — "beats him 62% of the time" reads
     very differently when both of them win it once in five.
+
+    ``verb`` is the relation a cell asserts, and it is the whole difference
+    between the two grids this draws: "finishes above" or "out-earns". It runs
+    through the axis caption, every cell's title and the image's own
+    description, so the chart cannot end up drawn as one question and read as
+    the other.
     """
     n = len(labels)
     if n == 0:
@@ -627,12 +636,26 @@ def heatmap(
     rows_text = fit_labels(labels, 18)
 
     grid_left = axis_width + label_width
-    width = grid_left + cell * n
+    # The top caption is centred over the grid, and the grid can be narrower
+    # than the caption is long: two entrants are 124px of cells underneath
+    # "… finishes above these ↓". Widen the canvas to hold it rather than let
+    # the viewBox crop the sentence that says which way the chart reads. The
+    # 6.6 is one 9px mono character plus its 0.13em tracking — measured type is
+    # not available at build time, and being a few pixels generous here costs
+    # nothing but empty field.
+    caption = f"… {verb} these ↓"
+    caption_right = grid_left + cell * n / 2 + len(caption) * 6.6 / 2
+    width = max(grid_left + cell * n, math.ceil(caption_right) + 4)
     height = header_height + cell * n
     out = [
+        # The drawn size rides along as a custom property so the stylesheet can
+        # refuse to scale the grid up past it. A two-person pool is 278px wide
+        # and stretching that across a desktop column draws 62px cells at 250
+        # and 10px labels at 40 — see `.heat` in site.css.
         f'<svg class="heat" width="{width}" height="{height}" '
+        f'style="--heat-w:{width}px" '
         f'viewBox="0 0 {width} {height}" role="img" '
-        f'aria-label="How often each entrant finishes above each other entrant. '
+        f'aria-label="How often each entrant {escape(verb)} each other entrant. '
         f'Each row is one entrant; each column is the rival they are measured '
         f'against." '
         f'preserveAspectRatio="xMidYMid meet">'
@@ -644,9 +667,12 @@ def heatmap(
         f'<text class="heat-axis" transform="translate(11 {header_height + cell * n / 2:.1f}) '
         f'rotate(-90)" text-anchor="middle">Each entry &#8595;</text>'
     )
+    # Drawn from the same string that was measured, with the two glyphs the
+    # rest of this file writes as entities put back as entities.
+    drawn = escape(caption).replace("…", "&#8230;").replace("↓", "&#8595;")
     out.append(
         f'<text class="heat-axis" x="{grid_left + cell * n / 2:.1f}" y="15" '
-        f'text-anchor="middle">&#8230; finishes above these &#8595;</text>'
+        f'text-anchor="middle">{drawn}</text>'
     )
 
     def win_attr(index: int) -> str:
@@ -696,7 +722,7 @@ def heatmap(
                 f'data-r="{i}" data-c="{j}" data-p="{v * 100:.0f}" '
                 f'data-row="{escape(names[i], quote=True)}" '
                 f'data-col="{escape(names[j], quote=True)}"{wave}>'
-                f"<title>{escape(names[i])} finishes above {escape(names[j])} "
+                f"<title>{escape(names[i])} {escape(verb)} {escape(names[j])} "
                 f"{v * 100:.0f}% of the time</title></rect>"
                 f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" '
                 f'text-anchor="middle" class="heat-cell'

@@ -57,6 +57,7 @@ class Projections:
     # losing the part that makes a forecast worth looking at.
     finish_probs: pd.DataFrame  # index=name, columns 1..n places
     head_to_head: pd.DataFrame  # index/columns=name, P(row finishes above column)
+    money_head_to_head: pd.DataFrame  # same pairs, P(row is paid more)
     distribution: Distribution
     home_win_rate: pd.Series  # index=game_id, P(the home side wins)
     # Which market the ratings were fitted to: "market" for this week's posted
@@ -149,7 +150,7 @@ def project(
     # filter ever changes, change both.
     game_ids = games.loc[games["game_type"] == "REG", "game_id"]
 
-    entrants, finish, h2h, dist = _score_field(season, points)
+    entrants, finish, h2h, money_h2h, dist = _score_field(season, points)
     return Projections(
         entrants=entrants,
         teams=team_stats,
@@ -157,6 +158,7 @@ def project(
         games_remaining=schedule.games_left,
         finish_probs=finish,
         head_to_head=h2h,
+        money_head_to_head=money_h2h,
         distribution=dist,
         home_win_rate=pd.Series(home_win_rate, index=game_ids.to_numpy(), name="home_win_rate"),
         basis=basis,
@@ -166,7 +168,7 @@ def project(
 
 def _score_field(
     season: Season, points: np.ndarray
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, Distribution]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame, Distribution]:
     """Rank the real entrants inside every simulated season."""
     names = [e.name for e in season.entrants]
     picks = season.picks_matrix()  # (entrants, teams)
@@ -207,7 +209,13 @@ def _score_field(
             "mean_rank": np.round(rank.mean(axis=0), 2),
         }
     )
-    return entrants, finish, _head_to_head(totals, names), _distribution(totals, names)
+    return (
+        entrants,
+        finish,
+        _head_to_head(totals, names),
+        _money_head_to_head(rank, paid, payouts, names),
+        _distribution(totals, names),
+    )
 
 
 def _finish_probs(rank: np.ndarray, names: list[str], n_entrants: int) -> pd.DataFrame:
@@ -234,6 +242,37 @@ def _head_to_head(totals: np.ndarray, names: list[str]) -> pd.DataFrame:
     level = (totals[:, :, None] == totals[:, None, :]).mean(axis=0)
     matrix = above + 0.5 * level
     np.fill_diagonal(matrix, np.nan)  # nobody races themselves
+    return pd.DataFrame(matrix, index=names, columns=names)
+
+
+def _money_head_to_head(
+    rank: np.ndarray, paid: int, payouts: np.ndarray, names: list[str]
+) -> pd.DataFrame:
+    """P(the row's entrant is paid strictly more than the column's).
+
+    The same pairs as :func:`_head_to_head`, priced. What each entrant took
+    home in a simulated season is the payout ladder if they finished in a
+    paying place and nothing if they did not — the same slice of the same
+    ranking the expected-payout column is computed from, so the two can never
+    tell different stories.
+
+    Ties are **not** split half-and-half here, which is the one place this
+    matrix deliberately parts company with the finishing one. In a pool that
+    pays three places, two entrants who both finish out of the money are level
+    at nothing, and calling that half a win each would park every mid-table
+    pair at 50% and bury the single most interesting fact about them: that
+    money almost never separates them at all. So opposite cells add to *less*
+    than 100%, and what is missing is exactly the share of seasons that paid
+    the two of them the same.
+    """
+    # Clipped before indexing rather than after: a rank past the last paying
+    # place has no rung on the ladder, and `where` evaluates both arms whatever
+    # the condition says. The ladder itself is never empty — a pool whose
+    # payout_split pays nobody fails to load, so `paid` is at least one.
+    place = np.clip(rank - 1, 0, paid - 1)
+    took = np.where(rank <= paid, payouts[place], 0.0)
+    matrix = (took[:, :, None] > took[:, None, :]).mean(axis=0)
+    np.fill_diagonal(matrix, np.nan)
     return pd.DataFrame(matrix, index=names, columns=names)
 
 
