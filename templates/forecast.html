@@ -111,20 +111,47 @@
   {{ forecast.ridge|safe }}
 </div>
 
-<h2 class="section-title">{{ term('head_to_head', 'Head to head') }}</h2>
-<p class="page-sub">
-  Every pair in the pool, as a straight two-horse race with everybody else
-  ignored. Read a <strong>row</strong> to see who that person is favoured
-  against; read a <strong>column</strong> to see who is favoured against them.
-  Every pair of opposite cells adds to 100%.
-</p>
-{# The axes are named in the markup as well as drawn in the chart, and the
-   readout below is filled in as you hover a cell — because "62%" in a grid of
-   names tells you a number without ever telling you whose number it is. #}
-<div class="heat-wrap">
-  <div class="table-scroll">
+{# Two grids over the same pairs, and the picker chooses which is on screen.
+   Both are drawn at build time: the numbers are the model's in either view,
+   and with scripting off the page still shows the finishing one. The axes are
+   named in the markup as well as in the chart, and the readout below is filled
+   in as you hover — because "62%" in a grid of names tells you a number
+   without ever telling you whose number it is. #}
+<div class="section-head">
+  <h2 class="section-title">{{ term('head_to_head', 'Head to head') }}</h2>
+  <label class="heat-picker">
+    <span class="viewer-label">Showing</span>
+    <select data-heat-view>
+      <option value="order">Who finishes above whom</option>
+      <option value="money">Who out-earns whom</option>
+    </select>
+  </label>
+</div>
+
+<div class="heat-wrap" data-heat-wrap>
+  <p class="page-sub" data-heat-note="order">
+    Every pair in the pool, as a straight two-horse race with everybody else
+    ignored. Read a <strong>row</strong> to see who that person is favoured
+    against; read a <strong>column</strong> to see who is favoured against them.
+    Every pair of opposite cells adds to 100%.
+  </p>
+  <p class="page-sub" data-heat-note="money" hidden>
+    The same pairs, priced: how often the <strong>row</strong> takes home more
+    money than the <strong>column</strong>, across the same seasons. This pool
+    pays {{ forecast.paid_places }} place{{ '' if forecast.paid_places == 1 else 's' }},
+    so two entries can easily end a season level on money and nowhere near
+    level on points — which is why opposite cells here can add to <em>less</em>
+    than 100%. What is missing is exactly the seasons that paid the two of them
+    the same, and $0 does not beat $0.
+  </p>
+
+  <div class="table-scroll" data-heat-grid="order">
     {{ forecast.heatmap|safe }}
   </div>
+  <div class="table-scroll" data-heat-grid="money" hidden>
+    {{ forecast.money_heatmap|safe }}
+  </div>
+
   <p class="heat-readout" data-heat-readout aria-live="polite">
     Point at any cell to read it as a sentence, with what it is worth to both
     of them.

@@ -1452,6 +1452,145 @@ describe('the head-to-head grid', () => {
   });
 });
 
+describe('the money grid, and the picker over the two', () => {
+  /**
+   * Both grids as the forecast page ships them: the finishing one shown, the
+   * money one hidden, one note each, and a select over the pair.
+   */
+  const bothGrids = () => {
+    const grid = (view, ab, ba, rowWin, colWin) => `
+      <div class="table-scroll" data-heat-grid="${view}"${view === 'money' ? ' hidden' : ''}>
+        <svg class="heat">
+          <text class="heat-head heat-col" data-c="0" data-win="${rowWin}">Brian</text>
+          <text class="heat-head heat-col" data-c="1" data-win="${colWin}">Eric</text>
+          <text class="heat-head heat-row" data-r="0" data-win="${rowWin}">Brian</text>
+          <text class="heat-head heat-row" data-r="1" data-win="${colWin}">Eric</text>
+          <rect class="heat-box" data-r="0" data-c="1" data-p="${ab}"
+                data-row="Brian Moore" data-col="Eric Riggs"></rect>
+          <rect class="heat-box" data-r="1" data-c="0" data-p="${ba}"
+                data-row="Eric Riggs" data-col="Brian Moore"></rect>
+        </svg>
+      </div>`;
+
+    document.body.innerHTML = `
+      <main>
+        <label><select data-heat-view>
+          <option value="order">Who finishes above whom</option>
+          <option value="money">Who out-earns whom</option>
+        </select></label>
+        <div class="heat-wrap" data-heat-wrap>
+          <p data-heat-note="order">Opposite cells add to 100%.</p>
+          <p data-heat-note="money" hidden>Or to less than 100%.</p>
+          ${grid('order', 62, 38, 30, 20)}
+          ${grid('money', 41, 27, 70, 55)}
+          <p class="heat-readout" data-heat-readout>Point at any cell.</p>
+        </div>
+      </main>`;
+  };
+
+  const pick = (view) => {
+    const select = document.querySelector('[data-heat-view]');
+    select.value = view;
+    select.dispatchEvent(new window.Event('change'));
+  };
+  const shown = () => Array.from(document.querySelectorAll('[data-heat-grid]'))
+    .filter((g) => !g.hidden).map((g) => g.dataset.heatGrid);
+
+  beforeEach(() => {
+    bothGrids();
+    init(document, fakeWindow());
+  });
+
+  test('the money sentence names the seasons that paid them the same', () => {
+    // 41 and 27 leaves 32% where neither took more than the other — a gap the
+    // finishing grid never has, and one a reader would otherwise have to
+    // notice and explain to themselves.
+    const out = headToHeadReadout({
+      row: 'Brian', col: 'Eric', percent: '41', reverse: '27',
+      rowWin: '70', colWin: '55', view: 'money',
+    });
+    expect(out.claim).toBe(
+      'Brian takes home more than Eric in 41% of simulated seasons, '
+      + 'less in 27%, and the same in the other 32%.',
+    );
+    expect(out.odds).toBe(
+      'Outright, Brian is paid something 70% of the time and Eric 55%.',
+    );
+  });
+
+  test('no ties, no clause about them', () => {
+    expect(headToHeadReadout({
+      row: 'A', col: 'B', percent: '78', reverse: '22', view: 'money',
+    }).claim).toBe(
+      'A takes home more than B in 78% of simulated seasons, less in 22%.',
+    );
+  });
+
+  test('a rounding overshoot never reports a negative share of ties', () => {
+    expect(headToHeadReadout({
+      row: 'A', col: 'B', percent: '51', reverse: '50', view: 'money',
+    }).claim).not.toContain('-');
+  });
+
+  test('the picker swaps the grid, the note, and nothing else', () => {
+    expect(shown()).toEqual(['order']);
+
+    pick('money');
+    expect(shown()).toEqual(['money']);
+    expect(document.querySelector('[data-heat-note="money"]').hidden).toBe(false);
+    expect(document.querySelector('[data-heat-note="order"]').hidden).toBe(true);
+
+    pick('order');
+    expect(shown()).toEqual(['order']);
+    expect(document.querySelector('[data-heat-note="order"]').hidden).toBe(false);
+  });
+
+  test('each grid reads its own cells in its own words', () => {
+    const cell = (view, r, c) => document.querySelector(
+      `[data-heat-grid="${view}"] .heat-box[data-r="${r}"][data-c="${c}"]`,
+    );
+    const readout = document.querySelector('[data-heat-readout]');
+
+    cell('order', 0, 1).dispatchEvent(new window.Event('pointerenter'));
+    expect(readout.querySelector('.heat-claim').textContent)
+      .toContain('finishes above Eric Riggs in 62%');
+    expect(readout.querySelector('.heat-odds').textContent)
+      .toContain('wins the pool 30%');
+
+    pick('money');
+    cell('money', 0, 1).dispatchEvent(new window.Event('pointerenter'));
+    expect(readout.querySelector('.heat-claim').textContent)
+      .toBe('Brian Moore takes home more than Eric Riggs in 41% of simulated '
+        + 'seasons, less in 27%, and the same in the other 32%.');
+    expect(readout.querySelector('.heat-odds').textContent)
+      .toContain('is paid something 70%');
+  });
+
+  test('switching clears a readout describing a cell that has left the screen', () => {
+    document.querySelector('[data-heat-grid="order"] .heat-box')
+      .dispatchEvent(new window.Event('pointerenter'));
+    pick('money');
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+  });
+
+  test('the select is pulled into line with the markup, not the other way round', () => {
+    // A browser restoring a stale selection must not leave the page showing
+    // one grid and naming the other.
+    bothGrids();
+    document.querySelector('[data-heat-view]').value = 'money';
+    init(document, fakeWindow());
+
+    expect(document.querySelector('[data-heat-view]').value).toBe('order');
+    expect(shown()).toEqual(['order']);
+  });
+
+  test('a page with the picker but no grids is left alone', () => {
+    document.body.innerHTML = '<main><select data-heat-view></select></main>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
 // ---------------------------------------------------------------------------
 // Sorting
 // ---------------------------------------------------------------------------

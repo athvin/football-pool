@@ -921,6 +921,77 @@ def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):
     assert "modelled" in html
 
 
+def test_the_forecast_ships_both_head_to_head_grids(pool, mid_season, tmp_path):
+    """Drawn at build time, both of them, and the picker only chooses one.
+
+    Neither grid is computed on the client: the numbers are the model's in
+    either view, there is no arithmetic to get wrong twice, and with scripting
+    off the page still shows the finishing one.
+    """
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    html = (tmp_path / "forecast" / "index.html").read_text()
+
+    assert html.count('class="heat"') == 2
+    assert 'data-heat-grid="order"' in html
+    assert 'data-heat-grid="money"' in html
+    assert "finishes above these" in html
+    assert "out-earns these" in html
+    # The money grid is the hidden one, so no-JS gets the finishing order.
+    assert re.search(r'data-heat-grid="money" hidden', html)
+    assert not re.search(r'data-heat-grid="order" hidden', html)
+    # And the control that swaps them, with a note for each.
+    assert "data-heat-view" in html
+    assert 'data-heat-note="order"' in html
+    assert 'data-heat-note="money" hidden' in html
+
+
+def test_the_two_grids_carry_the_odds_each_one_is_about(pool, mid_season, tmp_path):
+    """Outright is winning under one grid and being paid at all under the other.
+
+    A pairwise number needs the outright one beside it or it misleads, and
+    which outright number that is depends on which question the grid is
+    asking. The odds ride on the axis labels, so there are 2n of them per grid.
+    """
+    ctx = build_context(pool, mid_season, simulations=200)
+    forecast = _forecast(ctx)
+    by_name = ctx.projections.entrants.set_index("name")
+    order = forecast["order"]
+
+    def odds(grid):
+        return re.findall(r'class="heat-head heat-row" data-r="\d+" data-win="(\d+)"', grid)
+
+    assert odds(forecast["heatmap"]) == [
+        f"{by_name.loc[n, 'p_first'] * 100:.0f}" for n in order
+    ]
+    assert odds(forecast["money_heatmap"]) == [
+        f"{by_name.loc[n, 'p_cash'] * 100:.0f}" for n in order
+    ]
+
+
+def test_the_forecast_counts_the_places_that_actually_pay(make_season, mid_season, tmp_path):
+    """Which is what decides how often two entrants are level on money.
+
+    A pool smaller than its own payout ladder cannot reach the bottom of it, so
+    the page says how many places the pot really reaches rather than repeating
+    the three tiers the pool file happens to declare. Two entrants, three
+    tiers: two places pay, and the money grid's note says two.
+    """
+    duo = make_season(
+        [
+            {"name": "Aunt Carol", "teams": ["SEA", "NE", "PHI", "LAR"]},
+            {"name": "Brandon", "teams": ["ARI", "NYJ", "TEN", "CLE"]},
+        ],
+        year=2025,
+    )
+    assert len(duo.payouts) == 3
+
+    ctx = build_context(duo, mid_season, simulations=200)
+    assert _forecast(ctx)["paid_places"] == 2
+
+    render_site(duo, mid_season, tmp_path, simulations=200)
+    assert "pays 2 places" in (tmp_path / "forecast" / "index.html").read_text()
+
+
 def test_the_forecast_page_has_a_row_per_entrant(pool, mid_season, tmp_path):
     render_site(pool, mid_season, tmp_path, simulations=200)
     html = (tmp_path / "forecast" / "index.html").read_text()

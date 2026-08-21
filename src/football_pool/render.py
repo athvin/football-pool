@@ -299,6 +299,7 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
 
     finish = p.finish_probs.reindex(order)
     h2h = p.head_to_head.reindex(index=order, columns=order)
+    money_h2h = p.money_head_to_head.reindex(index=order, columns=order)
     density = p.distribution.density.reindex(order)
     # One indexed copy, rather than re-indexing the frame per entrant inside
     # the comprehensions below.
@@ -331,6 +332,25 @@ def _forecast(ctx: SiteContext) -> dict[str, Any] | None:
             # pairwise number means for the pool, not just for the pair.
             [float(by_name.loc[n, "p_first"]) * 100 for n in order],
         ),
+        # The same pairs, priced. Both grids are drawn at build time and the
+        # picker only chooses which one is on screen, so the numbers are the
+        # model's either way and the page needs no arithmetic of its own.
+        # Outright here is the chance of being paid at all, because that is
+        # the question the money grid is a pairwise version of.
+        "money_heatmap": svg.heatmap(
+            [
+                [None if pd.isna(v) else float(v) for v in money_h2h.loc[n]]
+                for n in order
+            ],
+            [short[n] for n in order],
+            order,
+            [float(by_name.loc[n, "p_cash"]) * 100 for n in order],
+            verb="out-earns",
+        ),
+        # How many places the pot actually reaches, which is what decides how
+        # often two entrants are level on money. Truncated to the field: a
+        # two-person pool with three payout tiers pays two.
+        "paid_places": min(len(ctx.season.payouts), len(order)),
         "order": order,
         # The two headline answers, which are not the same question and do not
         # always have the same answer. Named separately so the page can say so

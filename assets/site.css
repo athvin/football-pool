@@ -1164,7 +1164,23 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
 
 /* Heatmap: the number is in every cell, so colour is reinforcement only and
    the grid stays readable in greyscale or with any colour vision. */
-.heat { width: 100%; height: auto; min-width: 520px; }
+/* Fills the column, but never grows past the size it was drawn at. Everything
+   inside an SVG scales with its viewBox, so a two-person grid — 278px wide,
+   with 62px cells and 10px labels — stretched across a 1100px column is drawn
+   at four times life size: cells like postcards, and an axis caption running
+   off its own axis. `--heat-w` is the drawn width, written onto the element by
+   the generator, so this holds for a field of any size.
+
+   The floor is the same idea from the other end: a wide grid keeps its cells
+   legible and lets `.table-scroll` scroll it sideways on a phone, rather than
+   squashing eleven columns into 358px. A grid narrower than the floor does not
+   need one, hence the min(). */
+.heat {
+  width: 100%;
+  height: auto;
+  max-width: var(--heat-w, 100%);
+  min-width: min(520px, var(--heat-w, 520px));
+}
 .heat-head {
   font-family: var(--mono);
   font-size: 10px;
@@ -1216,6 +1232,25 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
 /* The hovered pair, written out. This is the part that actually removes the
    ambiguity for anyone who is not going to trace two fingers across a grid. */
 .heat-wrap { margin-top: 0.5rem; }
+
+/* A section heading with a control on the same line, pushed to the far end.
+   The control belongs beside the title it changes rather than under the prose
+   describing it, because the prose is one of the things it changes. */
+.section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1rem;
+  margin-top: 2rem;
+}
+.section-head .section-title { margin-top: 0; }
+
+.heat-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-inline-start: auto;
+}
 
 .heat-readout {
   margin-top: 0.6rem;
@@ -1687,7 +1722,7 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
 }
 
 .me-picker { display: flex; flex-direction: column; gap: 0.15rem; }
-.me-picker select, .tz select {
+.me-picker select, .tz select, .heat-picker select {
   font-family: var(--mono);
   font-size: 0.76rem;
   padding: 0.3rem 0.5rem;
@@ -1696,7 +1731,16 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   border: 1px solid var(--rule);
   border-radius: 6px;
 }
-.me-picker select:focus-visible, .tz select:focus-visible { outline: 2px solid var(--live); }
+.me-picker select:focus-visible,
+.tz select:focus-visible,
+.heat-picker select:focus-visible { outline: 2px solid var(--live); }
+
+/* The one select on the site that changes a chart rather than a preference,
+   so it is cyan like everything else the model owns. */
+.heat-picker select {
+  color: var(--model);
+  border-color: color-mix(in srgb, var(--model) 32%, var(--rule));
+}
 
 /* --- sortable tables --------------------------------------------------- */
 /* The indicator is an inline ::after rather than an absolutely positioned one.

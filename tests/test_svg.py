@@ -617,6 +617,54 @@ def test_heatmap_short_odds_do_not_fail_the_build():
     assert [h.get("data-win") for h in heads] == ["30", None]
 
 
+def test_heatmap_says_the_same_thing_in_all_three_places():
+    """The verb runs through the caption, the titles and the description.
+
+    A grid drawn as one question and read as another is worse than no grid, and
+    there are three places a reader or a screen reader can pick the question up
+    from. All three come from one argument so they cannot drift.
+    """
+    el = parse(
+        svg.heatmap([[None, 0.62], [0.30, None]], ["A", "B"], verb="out-earns")
+    )
+    caption = [t.text for t in el.findall(".//text[@class='heat-axis']")]
+
+    assert any("out-earns these" in c for c in caption)
+    assert all("finishes above" not in c for c in caption)
+    assert el.get("aria-label").startswith("How often each entrant out-earns")
+    titles = [t.text for t in el.findall(".//title")]
+    assert titles == ["A out-earns B 62% of the time", "B out-earns A 30% of the time"]
+
+
+def test_heatmap_reads_as_finishing_order_by_default():
+    """The grid that has always been there keeps the words it has always had."""
+    el = parse(svg.heatmap([[None, 0.62], [0.30, None]], ["A", "B"]))
+    caption = [t.text for t in el.findall(".//text[@class='heat-axis']")]
+
+    assert any("finishes above these" in c for c in caption)
+    assert el.findall(".//title")[0].text == "A finishes above B 62% of the time"
+
+
+def test_heatmap_widens_itself_to_hold_its_own_caption():
+    """Two entrants are 124px of cells under a 24-character sentence.
+
+    Left alone the viewBox crops the caption, and the cropped part is the arrow
+    that says which way the grid reads. The canvas grows instead; the extra is
+    empty field either way.
+    """
+    small = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["A", "B"]))
+    grid_right = 22 + 132 + 62 * 2  # axis + labels + two columns
+
+    assert int(small.get("width")) > grid_right
+    # And the drawn size is published to the stylesheet, which uses it to
+    # refuse to scale the grid up past life size.
+    assert small.get("style") == f"--heat-w:{small.get('width')}px"
+
+    # A field wide enough to hold the caption on its own is not padded at all.
+    wide = parse(svg.heatmap([[None] * 8] * 8, [f"E{i}" for i in range(8)]))
+    assert int(wide.get("width")) == 22 + 132 + 62 * 8
+
+
 def test_heatmap_cells_carry_their_distance_from_the_corner():
     """The stylesheet deals the grid in on that diagonal — see `--i`.
 
