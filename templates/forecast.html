@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% block title %}Forecast · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}How the {{ season.year }} pool is likely to end — chance of each finishing place, the range of final scores, and every head-to-head.{% endblock %}
@@ -52,7 +53,7 @@
       worth exactly as little to it as last.
     </p>
     <p class="question-lede model">
-      {{ forecast.best_odds.name }} · {{ '%.0f%%'|format(forecast.best_odds.p_first * 100) }}
+      {{ entrant_link(forecast.best_odds.slug, forecast.best_odds.name, cls='') }} · {{ '%.0f%%'|format(forecast.best_odds.p_first * 100) }}
     </p>
   </div>
   <div class="question">
@@ -64,14 +65,14 @@
       worth less than its odds suggest.
     </p>
     <p class="question-lede model">
-      {{ forecast.best_money.name }} · {{ '$%.0f'|format(forecast.best_money.expected_payout) }}
+      {{ entrant_link(forecast.best_money.slug, forecast.best_money.name, cls='') }} · {{ '$%.0f'|format(forecast.best_money.expected_payout) }}
     </p>
   </div>
 </div>
 {% if forecast.best_odds.slug != forecast.best_money.slug %}
 <p class="page-sub callout">
-  Note that these disagree right now: <strong>{{ forecast.best_odds.name }}</strong>
-  is likeliest to win, but <strong>{{ forecast.best_money.name }}</strong> is the
+  Note that these disagree right now: <strong>{{ entrant_link(forecast.best_odds.slug, forecast.best_odds.name, cls='') }}</strong>
+  is likeliest to win, but <strong>{{ entrant_link(forecast.best_money.slug, forecast.best_money.name, cls='') }}</strong> is the
   more valuable entry — they finish in the money more often, which is what
   actually gets paid.
 </p>
@@ -186,7 +187,7 @@
       {% for r in rows|sort(attribute='projection.expected_payout', reverse=true) %}
       {% set p = r.projection %}
       <tr data-slug="{{ r.slug }}">
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         <td class="num model" data-value="{{ p.p_first }}">{{ '%.0f%%'|format(p.p_first * 100) }}</td>
         <td class="num model" data-value="{{ p.p_cash }}">{{ '%.0f%%'|format(p.p_cash * 100) }}</td>
         <td class="num model" data-value="{{ p.expected_payout }}">{{ '$%.0f'|format(p.expected_payout) }}</td>

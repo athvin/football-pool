@@ -1,0 +1,34 @@
+{# The two links this site is made of.
+
+   A name on this site is always the same object and always goes to the same
+   place: a three-letter code is that team's page, a person's name is their
+   page. That rule used to live in thirty-odd hand-written anchors, and it
+   drifted exactly the way thirty-odd copies of anything drift — one chip on
+   the rules page wore no club colours, two on the schedule lost their badge,
+   and the owners in the "Owned by" column were the only entrant links on the
+   site with no `data-slug`, so "who are you?" never lit them up.
+
+   Behind a macro the rule is structural rather than remembered: there is no
+   way to put a team code on a page without also giving it its page. The
+   whitespace control is not decoration — `{{ team_chip(t) }}` is called from
+   inside tight inline loops where a stray newline becomes a visible gap
+   between two chips, so every one of these tags trims its own edges. #}
+
+{# The order of the attributes is load-bearing. Two tests match chip markup with
+   a regex that expects class, then href, then style, and a chip is a link on
+   almost every page — see `test_every_chip_that_names_a_team_is_coloured`. #}
+{% macro team_chip(t, mods='', logo=true, large=false, vt=false, suffix='') -%}
+  {%- set px = 18 if large else 14 -%}
+  <a class="team-chip{% if mods %} {{ mods }}{% endif %}" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}
+  {%- if vt %}; view-transition-name: chip-{{ t }}{% endif %}">
+  {%- if logo %}<img class="chip-logo{% if large %} chip-logo-lg{% endif %}" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="{{ px }}" height="{{ px }}">{% endif %}
+  {{- t }}{{ suffix }}</a>
+{%- endmacro %}
+
+{# `data-slug` always, whatever the class. It is the identity the rest of the
+   site is keyed on: `initMe` toggles `.is-me` on every element carrying one, so
+   a name that has it finds itself for free and a name that forgets it is the
+   one name on the page that stays anonymous when you say who you are. #}
+{% macro entrant_link(slug, name, cls='owner') -%}
+  <a{% if cls %} class="{{ cls }}"{% endif %} href="{{ ('/entrant/' ~ slug ~ '/')|url }}" data-slug="{{ slug }}">{{ name }}</a>
+{%- endmacro %}

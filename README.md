@@ -364,14 +364,34 @@ owners block is not, and one family name on a friends page would be a hole
 straight through the wall between them. Only `/assets/` and `/404.html` belong
 to the site as a whole.
 
-**Names and teams are clickable wherever they appear.** A team chip goes to
-that team's page and a person's name goes to theirs, on the schedule, the teams
-table, the season page, the rules page and each other's pages. The one
-exception is the leaderboard itself, whose rows are already links to an
-entrant page — an anchor inside an anchor is not a thing HTML has, and browsers
-recover from it by closing the outer link early, which would silently cost the
-row half its click target. A test walks every built page and asserts nesting
-depth never exceeds one.
+**Names and teams are clickable wherever they appear** — with no exceptions
+left. A team chip goes to that team's page and a person's name goes to theirs:
+on the schedule, the teams table, the season page, the rules page, each other's
+pages, the leaderboard, and inside the charts, where the names down the side of
+the head-to-head grid and the codes written into a contribution bar are links
+like everything else.
+
+The leaderboard was the last holdout, and for a real reason: its rows were
+themselves links to an entrant page, and an anchor inside an anchor is not a
+thing HTML has — browsers recover from it by closing the outer link early,
+which would silently cost the row half its click target. So the row stopped
+being a link. The name carries it now, stretched over the whole row by the
+stylesheet, and the four team chips sit above that: tap anywhere and you get
+the entry, tap a chip and you get the team. A test walks every built page and
+asserts anchor nesting depth never exceeds one, and another walks the same
+pages looking for a name that is printed without being a link.
+
+The markup for both lives in `templates/_links.html`, as `team_chip()` and
+`entrant_link()`. It is a macro rather than thirty hand-written anchors because
+thirty copies drift, and these had: one chip wore no club colours, two lost
+their badge, and the "Owned by" column was the only place an entrant link
+forgot its `data-slug` and so never lit up when you said who you were.
+
+Two things are deliberately *not* links, and the code says so where it happens:
+a name at the top of its own page, and the hover readout under the head-to-head
+grid — that sentence is wiped when the pointer leaves the cell, so moving
+towards a link in it is what erases it. Both people are named on the axes just
+above, where they are links.
 
 Two links in the masthead lead off it: **Model**, the arithmetic the forecast
 is built on, [written out in the open][model]; and the GitHub mark, the source

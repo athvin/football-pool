@@ -1,13 +1,16 @@
 {% extends 'base.html' %}
-{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{# 'with context' so the macros can see the glossary dict the build passes in.
+   The link macros need no context — they run on filters, which live on the
+   environment rather than on the template's variables. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% block title %}{{ season.year }} {{ season.pool.name }} · {{ state.phase }}{% endblock %}
 
 {% block description %}
 {%- if state.leader -%}
 {{ state.phase }} — {{ state.leader.name }} leads with {{ state.leader.banked|points }} points
-{%- if state.week_leaders %}, {{ state.week_leaders[0][0] }} scored {{ '%.2f'|format(state.week_leaders[0][1]) }} this week{% endif -%}.
+{%- if state.week_leaders %}, {{ state.week_leaders[0].name }} scored {{ '%.2f'|format(state.week_leaders[0].points) }} this week{% endif -%}.
 {%- else -%}
 {{ season.year }} {{ season.pool.name }} NFL standings.
 {%- endif -%}
@@ -29,7 +32,11 @@
   </div>
   <div class="state-cell">
     <p class="state-label">Leader</p>
-    <p class="state-value sm">{{ state.leader.name if state.leader else '—' }}</p>
+    {# Bare anchor, no class: `a { color: inherit }` means the name keeps the
+       weight and colour the tile gives it and simply becomes reachable. #}
+    <p class="state-value sm">
+      {%- if state.leader %}{{ entrant_link(state.leader.slug, state.leader.name, cls='') }}{% else %}—{% endif -%}
+    </p>
   </div>
 </section>
 
@@ -57,8 +64,8 @@
 </div>
 
 {# Filled client-side with the viewer's own row once "who are you?" is set.
-   Server-rendered pages can't know the viewer, and the strip must never add
-   entrant links of its own — it borrows the board row's. #}
+   Server-rendered pages can't know the viewer, and the strip must never build
+   an entrant URL of its own — it borrows the one on that row's name. #}
 <div class="you-strip" data-you hidden></div>
 
 {# Before a single kickoff every actual total is 0.00, so the model is the only
@@ -74,25 +81,33 @@
 {% else %}
 <div class="board">
   {% for r in rows %}
-  {# view-transition-name pairs this row with the hero on the entrant page, so
+  {# The row is a container, not a link, and that is the whole reason the four
+     chips below can be links at all: an anchor inside an anchor is not a thing
+     HTML has. What used to be the row's own href is now `.row-link` on the
+     name, stretched over the row by the stylesheet — so tapping anywhere still
+     opens the entry, tapping a chip opens that team, and a phone keeps the
+     full-width target it has always had.
+
+     view-transition-name pairs this row with the hero on the entrant page, so
      clicking morphs the name and score into place instead of cross-fading the
      whole document. The names must be unique per document; a slug is. #}
-  <a class="row {% if loop.first and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
+  <div class="row {% if loop.first and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
      style="--i: {{ r.index }}"
-     data-slug="{{ r.slug }}"
-     href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}"
-     aria-label="{{ r.name }}, rank {{ r.rank }}, {{ r.banked|points }} points">
+     data-slug="{{ r.slug }}">
 
     <span class="row-rank">{{ r.rank }}</span>
 
     <span class="row-who">
-      <span class="row-name" style="view-transition-name: name-{{ r.slug }}">{{ r.name }}</span>
+      {# The accessible name of the link is the whole row, because the whole row
+         is what it covers — a link announced as just "Brian" would leave a
+         screen reader no way to know it lands on a page with a rank and a
+         score on it. #}
+      <a class="row-link" href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}"
+         aria-label="{{ r.name }}, rank {{ r.rank }}, {{ r.banked|points }} points"><span
+         class="row-name" style="view-transition-name: name-{{ r.slug }}">{{ r.name }}</span></a>
       <span class="row-teams">
         {% for t in r.teams %}
-          <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-                style="{{ t|chip_style }}"><img class="chip-logo"
-                src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
-                width="14" height="14">{{ t }}</span>
+          {{ team_chip(t, 'scored' if r.contributions.get(t, 0) > 0 else 'dim') }}
         {% endfor %}
         <span class="badge you" data-me-only>you</span>
         {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
@@ -120,7 +135,7 @@
         this week up to {{ r.next_week_max|points }} · best case {{ r.ceiling|points }}
       </span>
     </span>
-  </a>
+  </div>
   {% endfor %}
 </div>
 {% endif %}
@@ -132,11 +147,11 @@
 {% if state.week_leaders %}
 <h2 class="section-title">Best of week {{ state.scored_week }}</h2>
 <div class="stat-grid">
-  {% for name, pts in state.week_leaders %}
+  {% for m in state.week_leaders %}
   <div class="stat">
     <p class="stat-label">{{ loop.index|ordinal }} this week</p>
-    <p class="stat-value live">{{ '%.2f'|format(pts) }}</p>
-    <p class="stat-note">{{ name }}</p>
+    <p class="stat-value live">{{ '%.2f'|format(m.points) }}</p>
+    <p class="stat-note">{{ entrant_link(m.slug, m.name, cls='') }}</p>
   </div>
   {% endfor %}
 </div>

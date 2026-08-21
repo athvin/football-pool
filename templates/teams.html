@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% block title %}Teams · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}Every team's leveling factor, record, points generated, and who in the pool owns them.{% endblock %}
@@ -51,9 +52,7 @@
            the bottom rather than sorting as the empty string, and owner count
            is more useful than the alphabetical order of the first name. #}
         <th scope="row" data-value="{{ t.team }}">
-          <a class="team-chip {% if t.points > 0 %}scored{% else %}dim{% endif %}"
-             href="{{ ('/team/' ~ t.team ~ '/')|url }}"
-             style="{{ t.team|chip_style }}; view-transition-name: chip-{{ t.team }}"><img class="chip-logo chip-logo-lg" src="{{ ('/assets/logos/' ~ t.team ~ '.png')|url }}" alt="" width="18" height="18">{{ t.team }}</a>
+          {{ team_chip(t.team, 'scored' if t.points > 0 else 'dim', large=true, vt=true) }}
         </th>
         <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
         <td data-value="{{ '%.4f'|format(t.win_pct) }}">{{ t.record }}</td>
@@ -66,9 +65,14 @@
         <td data-value="{{ t.owners|length }}">
           {% if t.owners %}
             <span class="row-teams">
+            {# Looked up by name because the ownership map is keyed by name.
+               The macro is what puts `data-slug` on these: they used to be the
+               only entrant links on the site without it, so "who are you?" lit
+               up your name everywhere except the column that says which teams
+               are yours. #}
             {% for owner in t.owners %}
               {% set match = rows | selectattr('name', 'equalto', owner) | first %}
-              <a class="team-chip scored" href="{{ ('/entrant/' ~ match.slug ~ '/')|url }}">{{ owner }}</a>
+              {{ entrant_link(match.slug, owner, cls='team-chip scored') }}
             {% endfor %}
             </span>
             {% if t.owners|length == 1 %}<span class="badge money">unique</span>{% endif %}

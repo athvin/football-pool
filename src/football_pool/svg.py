@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import math
 from html import escape
-from typing import Sequence
+from typing import Mapping, Sequence
 
 # Semantic colour roles. Actual results and model output never share a colour.
 BANKED = "var(--live)"
@@ -26,6 +26,37 @@ HEAT = "var(--heat)"
 def _fmt(value: float) -> str:
     """Trim trailing zeros so the markup stays small and diffs stay readable."""
     return f"{value:.2f}".rstrip("0").rstrip(".")
+
+
+def _linked(markup: str, href: str | None) -> str:
+    """A chart label, wrapped in a link when there is somewhere for it to go.
+
+    The names down the side of a grid and the codes along a stacked bar are the
+    same objects as the chips and the names in the prose around them, so they
+    go to the same places. SVG has carried its own ``<a href>`` since SVG 2 and
+    every browser this site targets honours it inside inline SVG — no
+    ``xlink:href``, which is the deprecated spelling and is only needed for
+    browsers that predate everything else on this page.
+
+    A chart is never *given* a URL by this module. It is handed one, already
+    resolved, because only the renderer knows what prefix this pool is
+    deployed under and there must not be a second implementation of that.
+    """
+    if not href:
+        return markup
+    return f'<a href="{escape(href, quote=True)}">{markup}</a>'
+
+
+def _chart_role(linked: bool) -> str:
+    """``img`` for a chart that is only a picture, ``group`` once it has links.
+
+    ``role="img"`` tells assistive technology to treat the whole subtree as one
+    opaque image and read the ``aria-label`` instead — which is right for a
+    chart, and exactly wrong the moment the chart contains links, because those
+    links then do not exist as far as a screen reader is concerned. ``group``
+    keeps the same one-sentence summary and leaves the children reachable.
+    """
+    return "group" if linked else "img"
 
 
 def sparkline(
@@ -133,11 +164,18 @@ def contribution_bar(
     width: int = 320,
     height: int = 28,
     colors: Sequence[str] | None = None,
+    href_base: str | None = None,
 ) -> str:
     """A stacked bar of how much each of an entrant's teams contributed.
 
     Segments narrower than a readable label are still drawn; the label is simply
     omitted rather than overflowing into its neighbour.
+
+    Args:
+        href_base: Where ``/team/`` lives for this pool, already resolved — the
+            code written in each segment becomes a link to that team's page.
+            ``None`` draws the labels as plain text, which is what every test
+            that predates team pages expects.
     """
     total = sum(max(v, 0.0) for _, v in parts)
     if total <= 0:
@@ -153,7 +191,8 @@ def contribution_bar(
     label = ", ".join(f"{escape(t)} {_fmt(v)}" for t, v in parts)
     out = [
         f'<svg class="contrib" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img" aria-label="{escape(label)}">'
+        f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(href_base))}" '
+        f'aria-label="{escape(label)}">'
     ]
     x = 0.0
     for i, (team, value) in enumerate(parts):
@@ -164,10 +203,11 @@ def contribution_bar(
             f'rx="3" fill="{fill}"/>'
         )
         if seg > 34:  # only label a segment wide enough to hold the text
-            out.append(
+            out.append(_linked(
                 f'<text x="{x + seg / 2:.1f}" y="{height / 2 + 4:.1f}" '
-                f'text-anchor="middle" class="contrib-label">{escape(team)}</text>'
-            )
+                f'text-anchor="middle" class="contrib-label">{escape(team)}</text>',
+                f"{href_base}{team}/" if href_base else None,
+            ))
         x += seg
     out.append("</svg>")
     return "".join(out)
@@ -214,6 +254,7 @@ def emphasis_lines(
     width: int = 900,
     height: int = 360,
     invert: bool = False,
+    hrefs: Mapping[str, str] | None = None,
 ) -> str:
     """Many series in one colour, with only a few labelled.
 
@@ -226,6 +267,10 @@ def emphasis_lines(
     lifts any line, so the quiet ones are still findable.
 
     ``invert`` flips the axis for rank, where 1 belongs at the top.
+
+    ``hrefs`` maps a name to that entrant's page, and is keyed by name rather
+    than by position because only the emphasised handful are labelled at all
+    and ``_spread`` reorders them on the way out.
     """
     series = [(n, list(v)) for n, v in series if len(v) > 0]
     if not series:
@@ -253,7 +298,7 @@ def emphasis_lines(
     highlighted = set(labels)
     out = [
         f'<svg class="trend" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img" '
+        f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(hrefs))}" '
         f'aria-label="{escape(str(len(series)))} entrants over {n_points} weeks" '
         f'preserveAspectRatio="xMidYMid meet">'
     ]
@@ -296,10 +341,11 @@ def emphasis_lines(
     # Close finishes put labels on top of each other, so nudge them apart while
     # leaving the marker dots on the true values.
     for name, ex, label_y in _spread(endpoints, minimum_gap=14.0, top=pad_t, bottom=pad_t + plot_h):
-        out.append(
+        out.append(_linked(
             f'<text x="{ex + 8:.1f}" y="{label_y + 4:.1f}" class="trend-label">'
-            f"{escape(name[:18])}</text>"
-        )
+            f"{escape(name[:18])}</text>",
+            (hrefs or {}).get(name),
+        ))
 
     out.append("</svg>")
     return "".join(out)
@@ -311,6 +357,7 @@ def compare_lines(
     width: int = 900,
     height: int = 340,
     invert: bool = False,
+    href_base: str | None = None,
 ) -> str:
     """Every entrant drawn once, tagged so the viewer can pick who to compare.
 
@@ -327,7 +374,9 @@ def compare_lines(
     simply shows the full field in one colour, which is the honest default.
 
     ``series`` is ``(display name, slug, values)``. The slug is what the picker
-    matches on, so it must be the same slug used in the entrant page URLs.
+    matches on, so it must be the same slug used in the entrant page URLs —
+    which is also why ``href_base`` is all this needs to turn every endpoint
+    label into a link to that entrant's page.
     """
     series = [(n, s, list(v)) for n, s, v in series if len(v) > 0]
     if not series:
@@ -354,7 +403,7 @@ def compare_lines(
 
     out = [
         f'<svg class="compare" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img" '
+        f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(href_base))}" '
         f'aria-label="{escape(str(len(series)))} entrants over {n_points} weeks, '
         f'select entrants to compare" preserveAspectRatio="xMidYMid meet">'
     ]
@@ -381,10 +430,14 @@ def compare_lines(
             f"<title>{escape(name)}</title></polyline>"
         )
         out.append(f'<circle class="cmp-dot" {tag} cx="{ex:.1f}" cy="{ey:.1f}" r="3.5"/>')
-        out.append(
+        # `data-entrant` stays on the <text> and not on the <a> around it: the
+        # picker and the label de-collider both query `.cmp-label[data-entrant]`
+        # and reposition the element they find.
+        out.append(_linked(
             f'<text class="cmp-label" {tag} x="{ex + 8:.1f}" y="{ey + 4:.1f}" '
-            f'data-y="{ey:.1f}">{escape(name[:18])}</text>'
-        )
+            f'data-y="{ey:.1f}">{escape(name[:18])}</text>',
+            f"{href_base}{slug}/" if href_base else None,
+        ))
 
     out.append("</svg>")
     return "".join(out)
@@ -497,6 +550,7 @@ def ridgeline(
     row_height: int = 46,
     curve_height: int = 64,
     label_width: int = 150,
+    hrefs: Mapping[str, str] | None = None,
 ) -> str:
     """Every entrant's score distribution on one shared axis.
 
@@ -505,6 +559,10 @@ def ridgeline(
     pool is close, and two that barely touch means it is over. A shared x-scale
     is what makes that readable, so every row is drawn against the same
     ``centers``.
+
+    ``hrefs`` is keyed by the name in ``rows`` — a mapping rather than a
+    parallel list because rows with no density at all are dropped before
+    anything is drawn.
     """
     rows = [(n, list(v)) for n, v in rows if len(v) > 0]
     if not rows or len(centers) < 2:
@@ -523,7 +581,7 @@ def ridgeline(
 
     out = [
         f'<svg class="ridge" width="{width}" height="{height}" '
-        f'viewBox="0 0 {width} {height}" role="img" '
+        f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(hrefs))}" '
         f'aria-label="Simulated final score distribution for '
         f'{escape(str(len(rows)))} entrants" preserveAspectRatio="xMidYMid meet">'
     ]
@@ -540,8 +598,11 @@ def ridgeline(
         out.append(
             f'<polygon class="ridge-fill" points="{area}"/>'
             f'<polyline class="ridge-line" points="{points}" fill="none"/>'
-            f'<text x="{label_width - 10}" y="{base - 3:.1f}" text-anchor="end" '
-            f'class="ridge-label">{escape(name[:20])}</text>'
+            + _linked(
+                f'<text x="{label_width - 10}" y="{base - 3:.1f}" text-anchor="end" '
+                f'class="ridge-label">{escape(name[:20])}</text>',
+                (hrefs or {}).get(name),
+            )
         )
 
     # A handful of score ticks along the bottom, not one per bin.
@@ -586,6 +647,7 @@ def heatmap(
     label_width: int = 132,
     header_height: int = 46,
     axis_width: int = 22,
+    hrefs: Mapping[str, str] | None = None,
 ) -> str:
     """Pairwise probabilities, with the number printed in every cell.
 
@@ -620,6 +682,11 @@ def heatmap(
     through the axis caption, every cell's title and the image's own
     description, so the chart cannot end up drawn as one question and read as
     the other.
+
+    ``hrefs`` is keyed by the *untruncated* name — the one in ``full_labels`` —
+    because the drawn label has been through :func:`fit_labels` and may be an
+    abbreviation of it. Both axes are the same set of people, so a name is a
+    link whichever edge of the grid you find it on.
     """
     n = len(labels)
     if n == 0:
@@ -654,7 +721,7 @@ def heatmap(
         # and 10px labels at 40 — see `.heat` in site.css.
         f'<svg class="heat" width="{width}" height="{height}" '
         f'style="--heat-w:{width}px" '
-        f'viewBox="0 0 {width} {height}" role="img" '
+        f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(hrefs))}" '
         f'aria-label="How often each entrant {escape(verb)} each other entrant. '
         f'Each row is one entrant; each column is the rival they are measured '
         f'against." '
@@ -681,19 +748,24 @@ def heatmap(
             return ""
         return f' data-win="{float(win_odds[index]):.0f}"'
 
+    # `data-c` / `data-r` and `data-win` stay on the <text>, not on the <a>
+    # around it: the hover readout and the cross-highlight both query
+    # `.heat-head` and read those attributes off the element they matched.
     for j, col in enumerate(cols):
-        out.append(
+        out.append(_linked(
             f'<text x="{grid_left + cell * j + cell / 2:.1f}" y="{header_height - 9}" '
             f'text-anchor="middle" class="heat-head heat-col" data-c="{j}"'
-            f"{win_attr(j)}>{escape(col)}</text>"
-        )
+            f"{win_attr(j)}>{escape(col)}</text>",
+            (hrefs or {}).get(names[j]),
+        ))
 
     for i, row in enumerate(rows_text):
         y = header_height + cell * i
-        out.append(
+        out.append(_linked(
             f'<text x="{grid_left - 10}" y="{y + cell / 2 + 4:.1f}" text-anchor="end" '
-            f'class="heat-head heat-row" data-r="{i}"{win_attr(i)}>{escape(row)}</text>'
-        )
+            f'class="heat-head heat-row" data-r="{i}"{win_attr(i)}>{escape(row)}</text>',
+            (hrefs or {}).get(names[i]),
+        ))
         row_values = matrix[i] if i < len(matrix) else ()
         for j in range(n):
             x = grid_left + cell * j
