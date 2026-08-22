@@ -38,8 +38,9 @@
   {% endfor %}
   {# Where the season is going, at the end of where it has been. Same `:target`
      mechanism as every week, so it is a real URL and works with scripting
-     off. #}
-  <a class="to-bracket" href="#bracket">Bracket</a>
+     off. The id stays `bracket` — links already point at it — but the word on
+     the switcher is the one people actually say. #}
+  <a class="to-bracket" href="#bracket">Playoffs</a>
 </nav>
 
 <div class="weeks">
@@ -157,7 +158,7 @@
      season being played is what the page should open on. #}
   <section class="week bracket-week" id="bracket" aria-labelledby="bracket-title">
     <div class="week-head">
-      <h2 class="section-title" id="bracket-title">The bracket</h2>
+      <h2 class="section-title" id="bracket-title">The playoffs</h2>
       <p class="week-dates">
         {% if bracket.final %}
           Seeded and settled
@@ -212,45 +213,107 @@
     </div>
     {% endif %}
 
-    {# Rounds as columns on a desktop and as a stack on a phone, which is the
-       one layout a thirteen-game bracket can hold at 390px. #}
-    <div class="bracket">
-      {% for r in bracket.rounds %}
-      <div class="bracket-round" data-round="{{ r.round }}">
-        <h3 class="bracket-label">{{ r.label }}</h3>
-        {% for g in r.games %}
-        <div class="tie{% if g.played %} is-final{% endif %}{% if not g.known %} is-open{% endif %}"
-             data-tie="{{ g.round }}">
-          {% if g.conference %}<span class="tie-conf">{{ g.conference }}</span>{% endif %}
-          {% for side in [g.away, g.home] %}
-          <div class="tie-side{% if side.won %} won{% elif g.played %} lost{% endif %}">
-            {% if side.team %}
-            <a class="team-chip {{ 'dim' if g.played and not side.won else 'scored' }}"
-               href="{{ ('/team/' ~ side.team ~ '/')|url }}" style="{{ side.team|chip_style }}">{{ side.team }}</a>
-            {% if side.seed %}<span class="tie-seed">{{ side.seed }}</span>{% endif %}
-            {% else %}
-            <span class="tie-slot">{{ side.label }}</span>
-            {% endif %}
+    {# One game of the bracket. `i` is its distance from the outside edge of
+       its own wing, which is what the arrival wave and the connector rhythm
+       are timed off. The class strings on the tie and its sides are load-
+       bearing — the test suite counts them verbatim. #}
+    {% macro playoff_tie(g, i) %}
+    <div class="tie{% if g.played %} is-final{% endif %}{% if not g.known %} is-open{% endif %}"
+         data-tie="{{ g.round }}" style="--i:{{ i }}">
+      {% for side in [g.away, g.home] %}
+      <div class="tie-side{% if side.won %} won{% elif g.played %} lost{% endif %}"{% if side.team %} data-team="{{ side.team }}"{% endif %}>
+        {% if side.team %}
+        <a class="team-chip {{ 'dim' if g.played and not side.won else 'scored' }}"
+           href="{{ ('/team/' ~ side.team ~ '/')|url }}" style="{{ side.team|chip_style }}"><img
+             class="chip-logo" src="{{ ('/assets/logos/' ~ side.team ~ '.png')|url }}" alt=""
+             width="14" height="14">{{ side.team }}</a>
+        {% if side.seed %}<span class="tie-seed">{{ side.seed }}</span>{% endif %}
+        {% else %}
+        <span class="tie-slot">{{ side.label }}</span>
+        {% endif %}
 
-            {% if side.score is not none %}
-              <span class="game-score">{{ side.score }}</span>
-            {% elif side.stake is not none %}
-              {# What winning this one pays. Zero is the interesting number: a
-                 wild-card host is playing for nothing, because the bonus is
-                 for the upset. #}
-              <span class="stake{% if not side.stake %} is-nil{% endif %}">{{ side.stake|points }}</span>
-            {% endif %}
+        {% if side.score is not none %}
+          <span class="game-score">{{ side.score }}</span>
+        {% elif side.stake is not none %}
+          {# What winning this one pays. Zero is the interesting number: a
+             wild-card host is playing for nothing, because the bonus is
+             for the upset. #}
+          <span class="stake{% if not side.stake %} is-nil{% endif %}">{{ side.stake|points }}</span>
+        {% endif %}
 
-            <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
-          </div>
-          {% endfor %}
-        </div>
-        {% endfor %}
+        <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
       </div>
       {% endfor %}
     </div>
+    {% endmacro %}
+
+    {# Two wings converging on the middle, the way a tournament actually reads:
+       the AFC fights rightward, the NFC leftward, and the winners meet at the
+       trophy. Each wing is its own grid of rounds so the divisional games sit
+       between the wild-card games that feed them and the championship sits
+       between the divisionals — the connective stubs are drawn by the
+       stylesheet off that geometry. On a phone the wings stack and the stubs
+       stand down. #}
+    <div class="bracket" data-bracket>
+      {% for wing in bracket.wings %}
+      <div class="bracket-wing" data-conf="{{ wing.conference }}">
+        <h3 class="bracket-conf">{{ wing.conference }}</h3>
+        <div class="wing-rounds">
+          {% for r in wing.rounds %}
+          <div class="bracket-round" data-round="{{ r.round }}">
+            <h4 class="bracket-label">{{ r.label }}</h4>
+            {% for g in r.games %}
+            {{ playoff_tie(g, {'WC': 0, 'DIV': 3, 'CON': 5}[r.round] + loop.index0) }}
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="bracket-center">
+        <h3 class="bracket-conf">Super Bowl</h3>
+        {# The Lombardi, drawn in chalk. Decoration with a job: it is the point
+           the whole layout converges on. #}
+        <svg class="lombardi" viewBox="0 0 64 104" aria-hidden="true">
+          <g fill="none" stroke="currentColor" stroke-width="2.5"
+             stroke-linecap="round" stroke-linejoin="round">
+            <ellipse cx="32" cy="20" rx="12.5" ry="17.5"/>
+            <path d="M32 11v18M27.5 15h9M27.5 20h9M27.5 25h9" stroke-width="1.5"/>
+            <path d="M32 37.5 24.5 84h15z"/>
+            <rect x="17" y="84" width="30" height="7" rx="1.5"/>
+            <rect x="12" y="91" width="40" height="8" rx="2"/>
+          </g>
+        </svg>
+        {{ playoff_tie(bracket.super_bowl, 6) }}
+        {% if bracket.champion %}
+        {# Fourteen teams walk in and one walks out with confetti on it. Only a
+           played Super Bowl gets this — a projected champion would be the
+           confident-looking lie the empty preseason bracket refuses to tell. #}
+        <div class="champ" style="{{ bracket.champion.team|chip_style }}">
+          <img class="champ-crest"
+               src="{{ ('/assets/logos/' ~ bracket.champion.team ~ '.png')|url }}"
+               alt="" width="76" height="76">
+          <p class="champ-name"><a href="{{ ('/team/' ~ bracket.champion.team ~ '/')|url }}">{{ bracket.champion.team }}</a></p>
+          <p class="champ-label">World champions</p>
+          <p class="champ-owners">
+            {% if bracket.champion.owners %}
+            The {{ bracket.champion.stake|points }} for winning it lands with
+            {% for o in bracket.champion.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}.
+            {% else %}
+            Nobody in this pool held them.
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
 
     <p class="legend">
+      {% if bracket.seeded %}
+      <span>Point at any team and its road to the trophy lights up.</span>
+      <span>·</span>
+      {% endif %}
       <span>A win in January pays the flat bonus plus that team's
         {{ term('lf', 'leveling factor') }} — except the wild-card round, which
         pays the visitor for the upset and the host nothing at all.</span>

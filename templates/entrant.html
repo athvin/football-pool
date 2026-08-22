@@ -39,26 +39,30 @@
 {{ entrant.contrib|safe }}
 
 <div class="cards">
+  {# Each card is the team, so the whole card goes to the team's page — the
+     same place the chip in the hero goes. An anchor rather than a div with a
+     link in it: the card holds no other links, so the full surface can be the
+     click target without nesting anything. #}
   {% for c in entrant.cards %}
-  <div class="card team-card" style="{{ c.team|chip_style }}">
-    <div class="card-head">
+  <a class="card team-card" href="{{ ('/team/' ~ c.team ~ '/')|url }}" style="{{ c.team|chip_style }}">
+    <span class="card-head">
       <span class="card-team"><img class="chip-logo chip-logo-lg" src="{{ ('/assets/logos/' ~ c.team ~ '.png')|url }}" alt="" width="20" height="20">{{ c.team }}</span>
       <span class="card-points">{{ c.points|points }}</span>
-    </div>
-    <p class="card-meta">
+    </span>
+    <span class="card-meta">
       <span>LF {{ '%.2f'|format(c.lf) }}</span>
       <span>{{ c.record }}</span>
       <span>{{ c.division }}</span>
       {% if c.seed %}<span>seed {{ c.seed }}</span>{% endif %}
-    </p>
+    </span>
     {% if c.berth_points or c.playoff_points %}
-    <p class="card-meta">
+    <span class="card-meta">
       <span>{{ c.win_points|points }} from wins</span>
       {% if c.berth_points %}<span>+{{ c.berth_points|points }} berth</span>{% endif %}
       {% if c.playoff_points %}<span>+{{ c.playoff_points|points }} playoffs</span>{% endif %}
-    </p>
+    </span>
     {% endif %}
-  </div>
+  </a>
   {% endfor %}
 </div>
 

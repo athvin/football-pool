@@ -835,8 +835,44 @@ def _bracket(ctx: SiteContext) -> dict[str, Any]:
         for b in bracket_mod.byes(season, ctx.seeds)
     ]
 
+    # The same thirteen games a second way: one wing per conference, each
+    # holding its three rounds, with the Super Bowl pulled out on its own.
+    # This is the shape the page actually draws — two sides of a tournament
+    # converging on the middle — and slicing it here keeps the template from
+    # re-deriving which conference a game belongs to.
+    wings = [
+        {
+            "conference": conference,
+            "rounds": [
+                {
+                    "round": r["round"],
+                    "label": r["label"],
+                    "games": [g for g in r["games"] if g["conference"] == conference],
+                }
+                for r in rounds
+                if r["round"] != "SB"
+            ],
+        }
+        for conference in bracket_mod.CONFERENCES
+    ]
+    super_bowl = next(r for r in rounds if r["round"] == "SB")["games"][0]
+
+    # The one team out of fourteen that ends the season happy. Only a played
+    # Super Bowl crowns anybody — a projected champion would be the exact
+    # confident-looking lie the empty preseason bracket exists to avoid.
+    champion = None
+    if super_bowl["played"]:
+        winner = next(
+            (s for s in (super_bowl["home"], super_bowl["away"]) if s["won"]), None
+        )
+        if winner and winner["team"]:
+            champion = winner
+
     return {
         "rounds": rounds,
+        "wings": wings,
+        "super_bowl": super_bowl,
+        "champion": champion,
         "byes": resting,
         # Whether the field is settled or still a projection. The whole bracket
         # is one or the other and the page has to say which, because a

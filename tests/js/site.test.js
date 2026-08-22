@@ -2322,3 +2322,95 @@ describe('a definition button inside a sortable heading', () => {
     expect(document.querySelectorAll('th')[1].getAttribute('aria-sort')).toBeNull();
   });
 });
+
+describe('tracing a team through the playoffs', () => {
+  const bracketMarkup = () => {
+    document.body.innerHTML = `
+      <div class="bracket" data-bracket>
+        <div class="tie" data-tie="WC">
+          <div class="tie-side" data-team="LAC"><a class="team-chip" href="/team/LAC/">LAC</a></div>
+          <div class="tie-side" data-team="NE"><a class="team-chip" href="/team/NE/">NE</a>
+            <span class="owners"><a class="owner" href="/entrant/carol/">Carol</a></span></div>
+        </div>
+        <div class="tie" data-tie="DIV">
+          <div class="tie-side" data-team="NE"><a class="team-chip" href="/team/NE/">NE</a></div>
+          <div class="tie-side" data-team="DEN"><a class="team-chip" href="/team/DEN/">DEN</a></div>
+        </div>
+        <div class="tie is-open" data-tie="SB">
+          <div class="tie-side"><span class="tie-slot">AFC champion</span></div>
+          <div class="tie-side"><span class="tie-slot">NFC champion</span></div>
+        </div>
+      </div>`;
+  };
+
+  beforeEach(bracketMarkup);
+
+  const over = (el) => el.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+  const chipFor = (round, team) =>
+    document.querySelector(`.tie[data-tie="${round}"] .tie-side[data-team="${team}"] .team-chip`);
+
+  test('pointing at a team lights every game on its road', () => {
+    init(document, fakeWindow());
+    over(chipFor('WC', 'NE'));
+
+    const bracket = document.querySelector('[data-bracket]');
+    expect(bracket.classList.contains('is-tracing')).toBe(true);
+    expect(document.querySelectorAll('.tie-side.is-path')).toHaveLength(2);
+    // The whole game comes forward, not half a card — the game is what pays.
+    expect(document.querySelector('[data-tie="WC"]').classList.contains('has-path')).toBe(true);
+    expect(document.querySelector('[data-tie="DIV"]').classList.contains('has-path')).toBe(true);
+    // A slot with no team yet is on nobody's road.
+    expect(document.querySelector('[data-tie="SB"]').classList.contains('has-path')).toBe(false);
+  });
+
+  test('an owner inside a side traces that side too', () => {
+    // The owners sit inside the side, so pointing at a name is pointing at
+    // the team it is riding on.
+    init(document, fakeWindow());
+    over(document.querySelector('.owner'));
+    expect(document.querySelectorAll('.tie-side.is-path')).toHaveLength(2);
+  });
+
+  test('pointing somewhere that is not a team clears the trace', () => {
+    init(document, fakeWindow());
+    over(chipFor('WC', 'NE'));
+    over(document.querySelector('.tie-slot'));
+
+    expect(document.querySelector('[data-bracket]').classList.contains('is-tracing')).toBe(false);
+    expect(document.querySelectorAll('.is-path')).toHaveLength(0);
+    expect(document.querySelectorAll('.has-path')).toHaveLength(0);
+  });
+
+  test('leaving the bracket clears it too', () => {
+    init(document, fakeWindow());
+    over(chipFor('DIV', 'DEN'));
+    document.querySelector('[data-bracket]')
+      .dispatchEvent(new window.MouseEvent('mouseleave'));
+    expect(document.querySelectorAll('.is-path')).toHaveLength(0);
+  });
+
+  test('keyboard focus walks the same road', () => {
+    init(document, fakeWindow());
+    const chip = chipFor('WC', 'NE');
+    chip.dispatchEvent(new window.FocusEvent('focusin', { bubbles: true }));
+    expect(document.querySelectorAll('.tie-side.is-path')).toHaveLength(2);
+
+    chip.dispatchEvent(new window.FocusEvent('focusout', { bubbles: true }));
+    expect(document.querySelectorAll('.is-path')).toHaveLength(0);
+  });
+
+  test('an empty preseason bracket wires nothing and throws nothing', () => {
+    document.body.innerHTML = `
+      <div class="bracket" data-bracket>
+        <div class="tie is-open" data-tie="WC">
+          <div class="tie-side"><span class="tie-slot">2 seed</span></div>
+        </div>
+      </div>`;
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+
+  test('a page with no bracket is left alone', () => {
+    document.body.innerHTML = '<main><p>standings</p></main>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});

@@ -415,9 +415,22 @@ button is the control, because a row full of links is not something a keyboard
 can usefully "press"; clicking the row is a convenience on top of it, and it
 stands aside for clicks that land on a link or while text is being selected.
 
-**The bracket** sits at the end of the week switcher, after 18. It is a week
-section like any other, so `:target`, the switcher and the back button all work
-on it for free, and the only new markup is one more link.
+**The playoffs** sit at the end of the week switcher, after 18 — the switcher
+says *Playoffs*, because that is the word people actually say, though the
+anchor stays `#bracket` for the links already sent. It is a week section like
+any other, so `:target`, the switcher and the back button all work on it for
+free, and the only new markup is one more link.
+
+The drawing is the tournament shape: the AFC's rounds march rightward down one
+wing, the NFC's leftward down the other, and the two meet at the Lombardi in
+the middle — each wing's later games floated between the games that feed them,
+with connector stubs reaching inward. The stubs deliberately stop at a spine
+rather than joining game to game: reseeding means which winner goes where
+genuinely is not knowable until the round before is done, and a drawn pairing
+would be a guess dressed as a fact. Point at any team and its whole road to
+the trophy comes forward while the rest of the field steps back; once the
+Super Bowl is played, the middle crowns the champion — crest, title, and who
+in the pool collects for it. On a phone the wings stack, chronological again.
 
 A fourteen-team bracket is a fixed shape — three wild-card games a conference,
 two divisional, one championship, one Super Bowl — and the only thing that
