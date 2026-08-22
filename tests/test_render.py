@@ -265,6 +265,20 @@ def test_every_entrant_page_is_reachable_and_names_its_teams(pool, game_data, tm
         assert team in page
 
 
+def test_an_entrants_team_cards_are_links_to_the_team_pages(pool, game_data, tmp_path):
+    """The four cards under "where the points come from", not just the chips.
+
+    The hero chips were already links; the cards are the bigger, more obvious
+    target and used to be dead ends. The whole card is the anchor — it holds
+    no other links, so nothing nests.
+    """
+    render_site(pool, game_data, tmp_path)
+    page = (tmp_path / "entrant" / "cousin-mike" / "index.html").read_text()
+
+    cards = re.findall(r'<a class="card team-card" href="/team/([A-Z]+)/"', page)
+    assert sorted(cards) == sorted(["KC", "CIN", "DAL", "NO"])
+
+
 def test_every_page_carries_the_two_links_off_the_site(pool, game_data, tmp_path):
     """The model the forecast runs on, and the source that builds the page.
 
@@ -1011,6 +1025,68 @@ def test_the_bracket_names_only_this_pool(two_pools, game_data, tmp_path):
     assert 'id="bracket"' in friends
     assert "Cousin Mike" not in friends
     assert "Priya" not in root
+
+
+def test_the_switcher_calls_january_playoffs(pool, game_data, tmp_path):
+    """The word on the switcher is the one people actually say.
+
+    The id stays `bracket` — a season of sent links points at it — but nothing
+    a reader sees calls it that.
+    """
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+
+    assert re.search(r'class="to-bracket"[^>]*>Playoffs</a>', html)
+    assert 'href="#bracket"' in html
+    assert ">Bracket</a>" not in html
+
+
+def test_the_bracket_converges_on_the_super_bowl(pool, game_data, tmp_path):
+    """Two conference wings of six games each, and the one game in the middle.
+
+    The tournament shape, not four lists: the drawing only reads as a bracket
+    because each conference fights toward the centre.
+    """
+    ctx = build_context(pool, game_data)
+    built = _bracket(ctx)
+
+    assert [w["conference"] for w in built["wings"]] == ["AFC", "NFC"]
+    for wing in built["wings"]:
+        assert [r["round"] for r in wing["rounds"]] == ["WC", "DIV", "CON"]
+        assert sum(len(r["games"]) for r in wing["rounds"]) == 6
+        assert all(
+            g["conference"] == wing["conference"]
+            for r in wing["rounds"]
+            for g in r["games"]
+        )
+    assert built["super_bowl"]["round"] == "SB"
+
+    # And the page draws that shape: a wing per conference, the Super Bowl
+    # between them, thirteen ties among the three.
+    render_site(pool, game_data, tmp_path)
+    html = (tmp_path / "schedule" / "index.html").read_text()
+    assert 'data-conf="AFC"' in html
+    assert 'data-conf="NFC"' in html
+    assert html.count('class="bracket-center"') == 1
+
+
+def test_a_played_super_bowl_crowns_a_champion(pool, game_data, preseason_data, tmp_path):
+    """One team out of fourteen ends the season happy, and the middle says so.
+
+    Only a played Super Bowl gets this: a projected champion would be the
+    exact confident-looking lie the empty preseason bracket exists to avoid.
+    """
+    assert _bracket(build_context(pool, game_data))["champion"]["team"]
+    assert _bracket(build_context(pool, preseason_data))["champion"] is None
+
+    render_site(pool, game_data, tmp_path / "february")
+    html = (tmp_path / "february" / "schedule" / "index.html").read_text()
+    assert 'class="champ"' in html
+    assert "World champions" in html
+
+    render_site(pool, preseason_data, tmp_path / "august")
+    html = (tmp_path / "august" / "schedule" / "index.html").read_text()
+    assert 'class="champ"' not in html
 
 
 def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):

@@ -928,6 +928,25 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   background: linear-gradient(90deg, var(--team-bg, var(--rule)), var(--team-edge, var(--rule)));
 }
 
+/* A team card that is a link — an entrant's four picks each go to that team's
+   own page. The whole card is the target, and the hover says so without the
+   text dressing up as a hyperlink. */
+a.team-card {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  /* The entrance properties keep the arrival timing every card gets; only the
+     hover affordances run on their own faster clock. */
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.18s ease, box-shadow 0.18s ease;
+}
+a.team-card:hover, a.team-card:focus-visible {
+  border-color: var(--team-edge, var(--edge));
+  box-shadow: 0 8px 22px rgb(0 0 0 / 0.22);
+  outline: none;
+}
+
 .card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
 
 .card-team {
@@ -1430,22 +1449,60 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   border-color: var(--live);
 }
 
-/* --- the bracket ---------------------------------------------------------
+/* --- the playoffs --------------------------------------------------------
    A week section like any other, so the switcher, `:target` and the back
-   button all work on it for free. Four rounds as four columns that narrow as
-   the field does, and a stack on a phone — the one layout thirteen games can
-   hold at 390px. */
+   button all work on it for free. The drawing is the tournament shape: two
+   conference wings converging on the Super Bowl in the middle, each wing's
+   rounds spaced so a game floats between the games that feed it, with
+   connector stubs reaching inward. On a phone the wings stack, chronological
+   again, and the stubs stand down — the one layout thirteen games can hold
+   at 390px. */
 .to-bracket { font-family: var(--display); letter-spacing: 0.08em; }
 
 .bracket {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
-  align-items: start;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 2fr) minmax(0, 5fr);
+  grid-template-areas: "afc sb nfc";
+  gap: 1rem;
+  align-items: stretch;
   margin-top: 1rem;
 }
 
-.bracket-round { display: flex; flex-direction: column; gap: 0.5rem; }
+.bracket-wing[data-conf="AFC"] { grid-area: afc; }
+.bracket-wing[data-conf="NFC"] { grid-area: nfc; }
+.bracket-center { grid-area: sb; }
+
+.bracket-wing { display: flex; flex-direction: column; }
+
+.bracket-conf {
+  font-family: var(--display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  margin-bottom: 0.5rem;
+}
+
+/* The horizontal gap is the connectors' room: every stub below is drawn into
+   it, so the two numbers move together. */
+.wing-rounds {
+  --stub: 1.1rem;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 var(--stub);
+}
+
+.bracket-round { position: relative; display: flex; flex-direction: column; gap: 0.5rem; }
+
+/* The NFC wing runs right-to-left, so the two conferences fight toward each
+   other. Order, not direction: the cards themselves still read normally. */
+.bracket-wing[data-conf="NFC"] .bracket-round[data-round="WC"] { order: 3; }
+.bracket-wing[data-conf="NFC"] .bracket-round[data-round="DIV"] { order: 2; }
+.bracket-wing[data-conf="NFC"] .bracket-round[data-round="CON"] { order: 1; }
+.bracket-wing[data-conf="NFC"] .bracket-conf,
+.bracket-wing[data-conf="NFC"] .bracket-label { text-align: end; }
 
 .bracket-label {
   font-family: var(--mono);
@@ -1455,6 +1512,13 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   text-transform: uppercase;
   color: var(--chalk-dim);
 }
+
+/* The bracket geometry. The wild-card column sets the wing's height; auto
+   margins float the later rounds' games into the space between their feeders
+   — two divisional games at the quarter points, the championship in the
+   middle — which is the whole reason the shape reads as a tournament rather
+   than as four lists. */
+.bracket-wing .tie { margin-block: auto; }
 
 .tie {
   position: relative;
@@ -1467,24 +1531,73 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   border-radius: var(--radius);
 }
 
+/* Settling in respects the bracket's own order — `--i` is a tie's distance
+   from the outside of its wing, so the rounds arrive as a wave breaking
+   toward the trophy. The delay is only on the entrance properties: tracing a
+   team (filter, below) has to answer the pointer immediately. */
+.bracket .tie {
+  transition: opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 70ms),
+              transform 0.42s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--i, 0) * 70ms),
+              filter 0.22s ease, border-color 0.22s ease;
+}
+
 /* A tie whose teams are not known yet is drawn as an outline, the same way
    everything else on this site draws a thing that has not happened. */
 .tie.is-open { background: none; border-style: dashed; }
 
-/* The conference sits in the corner of the card, so the card has to keep that
-   corner clear — otherwise it lands on top of the first side's score, which is
-   in the same place and much larger. */
-.tie:has(.tie-conf) { padding-top: 1.15rem; }
-
-.tie-conf {
+/* The connectors. Every tie sends a stub toward the middle of the page, and
+   every round past the first carries a faint spine down its receiving edge
+   for those stubs to land on. The spine is deliberately not a game-to-game
+   line: reseeding means which winner goes where genuinely is not knowable
+   until the round before is done, and a drawn pairing would be a guess
+   dressed as a fact. */
+.bracket-wing .tie::after,
+.bracket-center .tie::after {
+  content: '';
   position: absolute;
-  top: 0.35rem;
-  right: 0.5rem;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.14em;
-  color: var(--chalk-dim);
-  opacity: 0.7;
+  top: 50%;
+  width: var(--stub, 1rem);
+  border-top: 2px solid var(--rule);
+  transition: border-color 0.22s ease;
+}
+.bracket-wing[data-conf="AFC"] .tie::after { left: 100%; }
+.bracket-wing[data-conf="NFC"] .tie::after { right: 100%; }
+/* The Super Bowl reaches back into both conferences at once. */
+.bracket-center .tie::after { left: 100%; width: 1rem; }
+.bracket-center .tie::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 100%;
+  width: 1rem;
+  border-top: 2px solid var(--rule);
+  transition: border-color 0.22s ease;
+}
+
+.bracket-wing .bracket-round:not([data-round="WC"])::before {
+  content: '';
+  position: absolute;
+  top: 3.2rem;
+  bottom: 1.2rem;
+  border-left: 2px solid color-mix(in srgb, var(--rule) 60%, transparent);
+}
+.bracket-wing[data-conf="AFC"] .bracket-round:not([data-round="WC"])::before { left: calc(var(--stub) / -2 - 1px); }
+.bracket-wing[data-conf="NFC"] .bracket-round:not([data-round="WC"])::before { right: calc(var(--stub) / -2 - 1px); }
+
+/* Tracing: point at a team anywhere in the bracket and its whole road to the
+   trophy comes forward — every game it is in, stubs included — while the
+   rest of the field steps back. Filter rather than opacity, because opacity
+   is the entrance's property and the two must not queue behind each other. */
+.bracket.is-tracing .tie { filter: saturate(0.3) opacity(0.38); }
+.bracket.is-tracing .tie.has-path {
+  filter: none;
+  border-color: color-mix(in srgb, var(--live) 55%, var(--rule));
+}
+.bracket.is-tracing .tie.has-path::after,
+.bracket.is-tracing .tie.has-path::before { border-color: var(--live); }
+.bracket.is-tracing .tie-side.is-path .team-chip {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--live) 70%, transparent),
+              0 0 14px color-mix(in srgb, var(--live) 30%, transparent);
 }
 
 .tie-side {
@@ -1516,12 +1629,93 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
 .tie .game-score { margin-inline-start: auto; }
 .tie .owners { flex-basis: 100%; }
 
-@media (max-width: 860px) {
-  .bracket { grid-template-columns: 1fr; }
+/* The middle: the trophy the whole drawing converges on, the game that hands
+   it over, and — once it has been played — the one team the season crowned. */
+.bracket-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.6rem;
+}
+.bracket-center .bracket-conf { margin-bottom: 0; }
+.bracket-center .tie { width: 100%; text-align: start; }
+.bracket-center > .lombardi { margin-top: auto; }
+.bracket-center > :last-child { margin-bottom: auto; }
+
+.lombardi {
+  width: 42px;
+  height: auto;
+  color: var(--chalk-dim);
+  opacity: 0.85;
+  transition: color 0.3s ease, filter 0.3s ease;
+}
+/* Somebody actually holds it now. */
+.bracket-center:has(.champ) .lombardi {
+  color: var(--live);
+  opacity: 1;
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--live) 45%, transparent));
+}
+
+.champ {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem 0.8rem;
+  border: 1px solid color-mix(in srgb, var(--team-edge, var(--live)) 55%, var(--rule));
+  border-radius: var(--radius);
+  background:
+    radial-gradient(120% 90% at 50% 0%,
+      color-mix(in srgb, var(--team-bg, transparent) 26%, transparent),
+      transparent 70%),
+    var(--surface);
+}
+.champ-crest { filter: drop-shadow(0 6px 18px rgb(0 0 0 / 0.35)); }
+.champ-name a {
+  font-family: var(--display);
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--chalk);
+  text-decoration: none;
+}
+.champ-name a:hover, .champ-name a:focus-visible { color: var(--live); }
+.champ-label {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--live);
+}
+.champ-owners { font-size: 0.8rem; color: var(--chalk-dim); max-width: 24ch; }
+
+/* Below this the three-column wings have nowhere near the room they need, so
+   the whole drawing becomes a stack: the AFC's rounds in order, then the
+   NFC's, then the Super Bowl — each wing reading chronologically again. */
+@media (max-width: 1099px) {
+  .bracket {
+    grid-template-columns: 1fr;
+    grid-template-areas: "afc" "nfc" "sb";
+  }
+  .wing-rounds { grid-template-columns: 1fr; gap: 0.6rem; }
+  /* Same specificity as the desktop ordering rules, or they win and the NFC
+     wing stacks backwards. */
+  .bracket-wing[data-conf="NFC"] .bracket-round[data-round] { order: 0; }
+  .bracket-wing[data-conf="NFC"] .bracket-conf,
+  .bracket-wing[data-conf="NFC"] .bracket-label { text-align: start; }
+  .bracket-wing .tie { margin-block: 0; }
+  .bracket-wing .tie::after,
+  .bracket-center .tie::after,
+  .bracket-center .tie::before,
+  .bracket-wing .bracket-round::before { display: none; }
   .bracket-round {
     border-top: 1px solid var(--rule);
     padding-top: 0.6rem;
   }
+  .bracket-center { border-top: 1px solid var(--rule); padding-top: 0.8rem; }
 }
 
 .week-head {

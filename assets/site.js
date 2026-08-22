@@ -1169,6 +1169,54 @@ function initHeatView(doc, readout, rest) {
 }
 
 /**
+ * Tracing a team through the playoffs.
+ *
+ * Point at (or tab to) any team in the bracket and every game on its road to
+ * the trophy comes forward while the rest of the field steps back — the same
+ * move a March bracket makes when you follow one line through it. All of it
+ * is classes: the stylesheet owns what "forward" looks like, and with no
+ * script the bracket is simply all there, which is the honest failure mode
+ * for a static page.
+ */
+function initBracket(doc) {
+  const bracket = doc.querySelector('[data-bracket]');
+  if (!bracket) return;
+  // Before anything is seeded every side is an empty slot, and there is
+  // nothing to trace — the listeners would only ever clear.
+  const sides = Array.from(bracket.querySelectorAll('.tie-side[data-team]'));
+  if (!sides.length) return;
+  const ties = Array.from(bracket.querySelectorAll('.tie'));
+
+  const trace = (team) => {
+    bracket.classList.toggle('is-tracing', Boolean(team));
+    for (const side of sides) {
+      side.classList.toggle('is-path', Boolean(team) && side.dataset.team === team);
+    }
+    // A tie is on the path if either of its sides is — highlighting the whole
+    // game rather than half a card, because the game is the unit that pays.
+    for (const tie of ties) {
+      tie.classList.toggle('has-path', Boolean(team) && Boolean(tie.querySelector('.is-path')));
+    }
+  };
+
+  const teamOf = (target) =>
+    target && target.closest
+      ? target.closest('.tie-side[data-team]')?.dataset.team ?? null
+      : null;
+
+  // Delegated, so thirteen games cost two listeners rather than fifty-two.
+  // Pointing anywhere that is not a team — a slot, a label, the gap — clears,
+  // which is what makes the trace feel attached to the pointer.
+  const retrace = (event) => trace(teamOf(event.target));
+  bracket.addEventListener('mouseover', retrace);
+  bracket.addEventListener('mouseleave', () => trace(null));
+  bracket.addEventListener('focusin', retrace);
+  bracket.addEventListener('focusout', (event) => {
+    if (!teamOf(event.relatedTarget)) trace(null);
+  });
+}
+
+/**
  * The definition popovers.
  *
  * Hover and focus open one; a tap toggles it, which is the case that rules out
@@ -1427,6 +1475,7 @@ export const REVEAL_SELECTOR = [
   '.table-scroll',
   '.forecast-row',
   '.heat-wrap',
+  '.tie',
 ].join(', ');
 
 function initReveal(doc, win) {
@@ -1488,6 +1537,7 @@ export function init(doc = document, win = window) {
   initSort(doc, win);
   initOdometer(doc, win);
   initHeatmap(doc);
+  initBracket(doc);
   initGlossary(doc, win);
   initGridiron(doc, win);
   initDrive(doc, win);
