@@ -95,7 +95,8 @@
         {% for b in w.byes %}
         <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
           <a class="team-chip bye" href="{{ ('/team/' ~ b.team ~ '/')|url }}" style="{{ b.team|chip_style }}"><img
-                class="chip-logo" src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
+                class="chip-logo" loading="lazy" decoding="async"
+                src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
                 width="14" height="14">{{ b.team }}</a>
           {% if b.owners %}
           <span class="owners">{% for o in b.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
@@ -198,7 +199,7 @@
           <span class="viewer-label">{{ b.conference }}</span>
           {% if b.team %}
           <a class="team-chip scored" href="{{ ('/team/' ~ b.team ~ '/')|url }}"
-             style="{{ b.team|chip_style }}"><img class="chip-logo"
+             style="{{ b.team|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async"
              src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
              width="14" height="14">{{ b.team }}</a>
           {% else %}
@@ -225,7 +226,8 @@
         {% if side.team %}
         <a class="team-chip {{ 'dim' if g.played and not side.won else 'scored' }}"
            href="{{ ('/team/' ~ side.team ~ '/')|url }}" style="{{ side.team|chip_style }}"><img
-             class="chip-logo" src="{{ ('/assets/logos/' ~ side.team ~ '.png')|url }}" alt=""
+             class="chip-logo" loading="lazy" decoding="async"
+             src="{{ ('/assets/logos/' ~ side.team ~ '.png')|url }}" alt=""
              width="14" height="14">{{ side.team }}</a>
         {% if side.seed %}<span class="tie-seed">{{ side.seed }}</span>{% endif %}
         {% else %}
@@ -291,7 +293,7 @@
            played Super Bowl gets this — a projected champion would be the
            confident-looking lie the empty preseason bracket refuses to tell. #}
         <div class="champ" style="{{ bracket.champion.team|chip_style }}">
-          <img class="champ-crest"
+          <img class="champ-crest" loading="lazy" decoding="async"
                src="{{ ('/assets/logos/' ~ bracket.champion.team ~ '.png')|url }}"
                alt="" width="76" height="76">
           <p class="champ-name"><a href="{{ ('/team/' ~ bracket.champion.team ~ '/')|url }}">{{ bracket.champion.team }}</a></p>

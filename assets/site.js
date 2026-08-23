@@ -1053,11 +1053,35 @@ export function headToHeadReadout({
  * so a bare "62%" leaves the reader to work out whose 62% it is. Lighting up
  * the row and the column, and writing the pair out underneath, answers that
  * without them having to trace two fingers across a chart on a phone.
+ *
+ * A mouse hovers; a finger cannot. On touch, pointerenter and pointerleave
+ * fire in the same instant the tap does, so a highlight wired to hover alone
+ * is a flash the reader never sees. Tapping a cell therefore *pins* it — the
+ * pair stays lit and the readout stays written until the same cell is tapped
+ * again, another cell takes over, the reader taps away, or Escape. A mouse
+ * gets the same hold on click, for carrying a pair down to the readout.
  */
 function initHeatmap(doc) {
   const readout = doc.querySelector('[data-heat-readout]');
   // The prompt the readout carries when nothing is hovered, restored on exit.
   const rest = readout ? readout.textContent : '';
+  // The cell a tap is holding on, or null while the grid is back on hover.
+  let pinned = null;
+
+  /** Put every grid on the page back to rest: no glow, prompt restored. */
+  const release = () => {
+    pinned = null;
+    for (const el of doc.querySelectorAll('svg.heat .is-lit, svg.heat .is-picked')) {
+      el.classList.remove('is-lit', 'is-picked');
+    }
+    for (const chart of doc.querySelectorAll('svg.heat.has-pick')) {
+      chart.classList.remove('has-pick');
+    }
+    if (readout) {
+      readout.textContent = rest;
+      readout.classList.remove('is-live');
+    }
+  };
 
   /** Wire one grid up to the readout. Both are live; only one is on screen. */
   const wire = (panel) => {
@@ -1098,6 +1122,9 @@ function initHeatmap(doc) {
       });
 
       readout.textContent = '';
+      // The stylesheet promotes a live readout on a phone, where it doubles
+      // as the tooltip a hover would have been.
+      readout.classList.add('is-live');
       const claim = doc.createElement('span');
       claim.className = 'heat-claim';
       claim.textContent = parts.claim;
@@ -1109,20 +1136,33 @@ function initHeatmap(doc) {
       readout.append(odds);
     };
 
-    const clear = () => {
-      for (const el of chart.querySelectorAll('.is-lit, .is-picked')) {
-        el.classList.remove('is-lit', 'is-picked');
-      }
-      if (readout) readout.textContent = rest;
+    const show = (cell) => {
+      mark(cell.dataset.r, cell.dataset.c);
+      say(cell);
     };
 
     for (const cell of cells) {
       cell.addEventListener('pointerenter', () => {
-        mark(cell.dataset.r, cell.dataset.c);
-        say(cell);
+        // While a tap holds a pair, a pointer passing over the grid must not
+        // steal it — the reader is mid-sentence in the readout.
+        if (!pinned) show(cell);
+      });
+      cell.addEventListener('click', () => {
+        if (pinned === cell) {
+          release();
+          return;
+        }
+        release();
+        pinned = cell;
+        // The class carries what :hover carries for a mouse — everything off
+        // the picked pair steps back — because a finger has no hover.
+        chart.classList.add('has-pick');
+        show(cell);
       });
     }
-    chart.addEventListener('pointerleave', clear);
+    chart.addEventListener('pointerleave', () => {
+      if (!pinned) release();
+    });
   };
 
   // A page with one unwrapped grid — which is every page but the forecast —
@@ -1131,7 +1171,20 @@ function initHeatmap(doc) {
   if (panels.length) panels.forEach(wire);
   else if (doc.querySelector('svg.heat')) wire(doc);
 
-  initHeatView(doc, readout, rest);
+  if (panels.length || doc.querySelector('svg.heat')) {
+    // Tapping anywhere that is not the grid lets a pinned pair go — the same
+    // gesture that dismisses everything else on a phone. A click on a cell
+    // never lands here with a pin still held: the cell's own handler has
+    // already re-pinned or released by the time the click bubbles this far.
+    doc.addEventListener('click', (e) => {
+      if (pinned && !e.target?.closest?.('svg.heat')) release();
+    });
+    doc.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && pinned) release();
+    });
+  }
+
+  initHeatView(doc, release);
 }
 
 /**
@@ -1144,7 +1197,7 @@ function initHeatmap(doc) {
  * less than 100% and a reader is owed the reason on the same screen as the
  * evidence.
  */
-function initHeatView(doc, readout, rest) {
+function initHeatView(doc, release) {
   const select = doc.querySelector('[data-heat-view]');
   if (!select) return;
 
@@ -1155,8 +1208,9 @@ function initHeatView(doc, readout, rest) {
   const show = (view) => {
     for (const grid of grids) grid.hidden = grid.dataset.heatGrid !== view;
     for (const note of notes) note.hidden = note.dataset.heatNote !== view;
-    // The readout is describing a cell in the grid that just left the screen.
-    if (readout) readout.textContent = rest;
+    // The readout is describing a cell in the grid that just left the screen,
+    // and a pinned pair belongs to it too — let the whole state go together.
+    release();
   };
 
   // Whatever the markup shipped as visible is the truth at load; the select is
