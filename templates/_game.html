@@ -11,6 +11,7 @@
    the biggest game in football would leave a quiet team's page with eighteen
    invisible rails. #}
 {% from '_glossary.html' import term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% macro game_row(g, scale, show_week=false) %}
 <li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
@@ -24,8 +25,7 @@
 
   {% for side in [g.away, g.home] %}
   <div class="game-side {{ 'home' if loop.last else 'away' }}{% if side.outcome %} {{ side.outcome }}{% endif %}">
-    <a class="team-chip {{ side.chip }}" href="{{ ('/team/' ~ side.team ~ '/')|url }}"
-       style="{{ side.team|chip_style }}">{{ side.team }}</a>
+    {{ team_chip(side.team, side.chip, logo=false) }}
     {% if g.played %}
       <span class="game-score">{{ side.score }}</span>
     {% else %}
@@ -36,7 +36,7 @@
     {% endif %}
     {# The people holding this side, each a link to their own page. A name on
        this site is always the same object and always goes to the same place. #}
-    <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+    <span class="owners">{% for o in side.owners %}{{ entrant_link(o.slug, o.name) }}{% endfor %}</span>
   </div>
   {% if not loop.last %}<span class="game-at" aria-hidden="true">at</span>{% endif %}
   {% endfor %}
@@ -62,18 +62,20 @@
         <dt>{{ term('swing', 'Swing') }}</dt>
         <dd>{{ g.swing|points }}</dd>
       </div>
+      {# The same names as the collapsed row above, and so the same links: a
+         reader who opened this panel to find out who gains from a result is
+         one tap from the team and from the entry that gains. A bare anchor for
+         the team rather than a chip — the row overhead is already wearing that
+         team's colours, and a second full chip in a 10px label would shout
+         over the thing it is a footnote to. #}
+      {% for side in [g.away, g.home] %}
       <div>
-        <dt>If {{ g.away.team }} win</dt>
-        <dd>{{ g.away.stake|points }}{% if g.away.owners %} to
-          {% for o in g.away.owners %}{{ o.name }}{% if not loop.last %}, {% endif %}{% endfor %}
+        <dt>If <a href="{{ ('/team/' ~ side.team ~ '/')|url }}">{{ side.team }}</a> win</dt>
+        <dd>{{ side.stake|points }}{% if side.owners %} to
+          {% for o in side.owners %}{{ entrant_link(o.slug, o.name) }}{% if not loop.last %}, {% endif %}{% endfor %}
           {% else %} to nobody here{% endif %}</dd>
       </div>
-      <div>
-        <dt>If {{ g.home.team }} win</dt>
-        <dd>{{ g.home.stake|points }}{% if g.home.owners %} to
-          {% for o in g.home.owners %}{{ o.name }}{% if not loop.last %}, {% endif %}{% endfor %}
-          {% else %} to nobody here{% endif %}</dd>
-      </div>
+      {% endfor %}
     </dl>
 
     {% if g.stakes %}
@@ -81,7 +83,7 @@
       {# Everyone's stake, not only yours. The collapsed row shows you your own
          number; the argument in the group chat is about everyone else's. #}
       On the table for
-      {% for s in g.stakes %}<a class="owner" href="{{ ('/entrant/' ~ s.slug ~ '/')|url }}" data-slug="{{ s.slug }}">{{ s.name }}</a> {% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
+      {% for s in g.stakes %}{{ entrant_link(s.slug, s.name) }} {% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
     </p>
     {% else %}
     <p class="game-note">

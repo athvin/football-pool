@@ -17,6 +17,7 @@ import shutil
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Sequence
 
 import pytest
 
@@ -249,10 +250,17 @@ def test_assets_are_copied(pool, game_data, tmp_path):
 
 
 def test_leaderboard_is_ordered_and_linked(pool, game_data, tmp_path):
+    """Scoped to the board's own rows.
+
+    Counting every entrant link on the page used to work because a row was the
+    only place a name appeared. It is not any more — the leader tile, the
+    week's best and the forecast rows all name people too, and all of them are
+    links now. `.row-link` is the row's own, one per entry, in board order.
+    """
     render_site(pool, game_data, tmp_path)
     html = (tmp_path / "index.html").read_text()
 
-    order = [m for m in re.findall(r'href="/entrant/([a-z-]+)/"', html)]
+    order = re.findall(r'class="row-link" href="/entrant/([a-z-]+)/"', html)
     assert order[0] == "aunt-carol"  # highest scorer in 2025
     assert len(order) == 3
 
@@ -1249,10 +1257,17 @@ def test_every_game_carries_what_it_is_worth_to_everybody(pool, game_data, tmp_p
     html = (tmp_path / "schedule" / "index.html").read_text()
 
     assert html.count('class="game-more"') == len(game_data.games)
-    assert "If KC win" in html
+    # The team named in the fact is a link to that team, like every other place
+    # this site writes a three-letter code.
+    assert 'If <a href="/team/KC/">KC</a> win' in html
     assert "On the table for" in html
     # Both sides priced, whoever is holding them.
     assert "to nobody here" in html
+    # And the people named in the panel are links, not the one place on the
+    # page where a name is only a name.
+    assert re.search(
+        r'<dd>[^<]*<a class="owner" href="/entrant/[a-z-]+/" data-slug=', html
+    )
 
 
 def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(
@@ -1421,12 +1436,16 @@ def test_a_removed_team_page_does_not_survive_a_rebuild(pool, game_data, tmp_pat
 def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(pool, game_data, tmp_path):
     """A team is one object on this site, and it goes to one place.
 
-    The board is the exception and has to be: its rows are already links to an
-    entrant page, and an anchor inside an anchor is not a thing HTML has.
+    The board used to be the exception, because its rows were themselves links
+    to an entrant page and an anchor inside an anchor is not a thing HTML has.
+    It is not an exception any more: the row is a container, the name carries
+    the link, and the chips are links of their own. `index.html` is in this
+    list to keep it that way.
     """
     render_site(pool, game_data, tmp_path)
 
     for name in (
+        "index.html",
         "entrant/brandon/index.html",
         "teams/index.html",
         "schedule/index.html",
@@ -1452,6 +1471,153 @@ def test_no_page_ever_nests_one_link_inside_another(pool, game_data, tmp_path):
         for token in re.findall(r"<a\b|</a>", page.read_text()):
             depth += 1 if token == "<a" else -1
             assert depth in (0, 1), f"{page.name}: nested anchor"
+
+
+# Places that name somebody and are not, and cannot be, a link: an entity's own
+# name at the top of its own page, a form control you pick yourself from, a
+# caption or heading that explains a table rather than pointing at a person,
+# prose about the page's own subject, and an SVG <title>, which is the tooltip
+# on a line whose label is already a link. Everything else that names an
+# entrant has to be a link.
+#
+# Kept deliberately narrow. An earlier draft excused every `<p class=…>` and
+# quietly excused the leader tile, the week's best and the movers — the three
+# things this test was written to hold. A rule here has to name the thing it
+# is letting off.
+_NOT_A_LINK = (
+    r"<title>.*?</title>",
+    r"<h[123][^>]*>.*?</h[123]>",
+    r"<caption>.*?</caption>",
+    r"<option[^>]*>.*?</option>",
+    r"<button[^>]*>.*?</button>",
+    r'<p class="page-sub">.*?</p>',
+    r'<span class="tie-slot">.*?</span>',
+)
+
+
+def _loose_names(html: str, names: Sequence[str]) -> list[str]:
+    """Names left visible on a page once every link and every excuse is gone.
+
+    Attributes go first and wholesale. A name in one is never text a reader
+    sees — it is a sort key, a description for a screen reader, or the label a
+    chart hands its own tooltip — and leaving them in would make this test
+    unfalsifiable in the other direction, flagging `data-value="Aunt Carol"` on
+    a cell whose only content is a link to Aunt Carol.
+    """
+    stripped = re.sub(r"<a\b.*?</a>", " ", html, flags=re.S)
+    stripped = re.sub(r"<!--.*?-->", " ", stripped, flags=re.S)
+    for pattern in _NOT_A_LINK:
+        stripped = re.sub(pattern, " ", stripped, flags=re.S)
+    return [n for n in names if n in re.sub(r'="[^"]*"', "", stripped)]
+
+
+def test_a_name_is_a_link_wherever_the_page_says_it(pool, mid_season, tmp_path):
+    """The whole point, asserted structurally rather than page by page.
+
+    Every place this site prints somebody's name it is naming the same object,
+    and that object has a page. The exceptions are real but small — your own
+    name on your own page, the picker you choose yourself from, prose about the
+    field rather than about a person — and they are listed above rather than
+    left to be rediscovered. Anything outside them is a name that has become a
+    dead end, which is exactly the drift this test exists to catch.
+    """
+    render_site(pool, mid_season, tmp_path, simulations=200)
+    names = [e.name for e in pool.entrants]
+
+    pages = [
+        (tmp_path / p, names)
+        for p in (
+            "index.html",
+            "season/index.html",
+            "forecast/index.html",
+            "schedule/index.html",
+            "teams/index.html",
+            "team/KC/index.html",
+        )
+    ]
+    # An entrant's own page is the one place a name is allowed to be plain —
+    # it is the page you are already on — so theirs comes out of the list and
+    # everybody else's stays in it.
+    pages += [
+        (tmp_path / "entrant" / e.slug / "index.html",
+         [n for n in names if n != e.name])
+        for e in pool.entrants
+    ]
+
+    for page, expected in pages:
+        loose = _loose_names(page.read_text(), expected)
+        assert not loose, f"{page.parent.name}/{page.name}: {loose} named but not linked"
+
+
+def test_the_board_row_stacks_its_three_layers_in_the_right_order():
+    """The one part of this that neither test suite can otherwise see.
+
+    A board row is a container with a link stretched over it and four chips
+    lifted back over that, and the whole thing is held up by three z-indexes in
+    the stylesheet. Get them wrong and nothing fails: the markup is still
+    valid, every href is still correct, and a chip or the score silently stops
+    being tappable in a browser. Found exactly that way — the score carries a
+    `view-transition-name`, which makes it a stacking context that paints over
+    an overlay sitting at zero.
+    """
+    css = (ASSET_DIR / "site.css").read_text()
+
+    def z(selector: str) -> int:
+        start = css.index(selector)
+        block = css[start : css.index("}", start)]
+        found = re.search(r"z-index:\s*(\d+)", block)
+        assert found, f"{selector} has no z-index"
+        return int(found.group(1))
+
+    overlay = z(".row-link::after {")
+    chips = z(".row-teams {")
+    sheen = z(".row::after {")
+
+    assert overlay >= 1, "an overlay at zero loses to the score's own stacking context"
+    assert chips > overlay, "chips under the overlay are links nobody can reach"
+    assert sheen > chips, "the floodlight has to pass over the chips, not behind them"
+
+
+def test_a_link_drawn_inside_a_chart_still_carries_the_deployment_prefix(
+    pool, mid_season, tmp_path
+):
+    """The one failure that only ever shows up in production, now in SVG too.
+
+    Chart markup is built in Python, where the `url` filter is not in scope, so
+    a chart is the easiest place on the site to hand-build a URL that works
+    perfectly on a local preview and 404s once it is deployed under
+    /football-pool/. `render_site` passes the environment's own resolver in
+    for exactly this reason; this is what says so.
+    """
+    render_site(pool, mid_season, tmp_path, base="/football-pool", simulations=200)
+
+    found = 0
+    for page in tmp_path.rglob("*.html"):
+        for chart in re.findall(r"<svg\b.*?</svg>", page.read_text(), re.S):
+            for href in re.findall(r'<a href="([^"]*)"', chart):
+                assert href.startswith("/football-pool/"), f"{page.name}: {href}"
+                found += 1
+    # A chart with no links at all would pass the loop above vacuously.
+    assert found, "no chart drew a link"
+
+
+def test_a_chart_that_carries_links_is_not_sealed_off_from_a_screen_reader(
+    pool, mid_season, tmp_path
+):
+    """`role="img"` makes a subtree opaque, links and all.
+
+    Which is right for a picture and wrong the moment the picture contains
+    somewhere to go — so a chart that gained links has to have given up that
+    role, or it has handed a screen reader a chart with nothing in it.
+    """
+    render_site(pool, mid_season, tmp_path, simulations=200)
+
+    for page in tmp_path.rglob("*.html"):
+        for chart in re.findall(r"<svg\b[^>]*>.*?</svg>", page.read_text(), re.S):
+            if "<a href=" not in chart:
+                continue
+            assert 'role="img"' not in chart, page.name
+            assert 'role="group"' in chart, page.name
 
 
 def test_an_entrant_page_shows_their_own_odds(pool, mid_season, tmp_path):

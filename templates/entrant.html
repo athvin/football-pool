@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% block title %}{{ entrant.name }} · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}{{ entrant.name }} is {{ entrant.rank|ordinal }} with {{ entrant.banked|points }} points from {{ entrant.teams|join(', ') }}.{% endblock %}
@@ -21,8 +22,7 @@
          the document cross-fading — the same move a board row makes on its way
          here. #}
       {% for t in entrant.teams %}
-        <a class="team-chip {% if entrant.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-           href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}; view-transition-name: chip-{{ t }}"><img class="chip-logo" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>
+        {{ team_chip(t, 'scored' if entrant.contributions.get(t, 0) > 0 else 'dim', vt=true) }}
       {% endfor %}
       <span class="badge you" data-me-only>you</span>
       {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
@@ -91,10 +91,7 @@
       {% if entrant.byes %}
       <span class="bye-note">
         {{ term('bye', 'on bye') }}:
-        {% for t in entrant.byes %}<a class="team-chip bye dim" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img
-              class="chip-logo" loading="lazy" decoding="async"
-              src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
-              width="14" height="14">{{ t }}</a>{% endfor %}
+        {% for t in entrant.byes %}{{ team_chip(t, 'bye dim') }}{% endfor %}
       </span>
       {% endif %}
     </p>
@@ -182,7 +179,7 @@
     <tbody>
       {% for r in entrant.projection.rivals %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}">{{ r.name }}</th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         <td class="num model" data-value="{{ r.p }}">{{ '%.0f%%'|format(r.p * 100) }}</td>
         <td>{{ svg.meter(r.p)|safe }}</td>
       </tr>
@@ -230,7 +227,7 @@
       {% for r in rivals %}
       <tr>
         <td class="num">{{ r.rank }}</td>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         <td class="num" data-value="{{ r.banked }}">{{ r.banked|points }}</td>
         <td class="num" data-value="{{ r.banked - entrant.banked }}">{{ '%+.2f'|format(r.banked - entrant.banked) }}</td>
         <td class="num" data-value="{{ r.ceiling }}">

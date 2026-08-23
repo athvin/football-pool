@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 
 {% block title %}Season · {{ season.year }} {{ season.pool.name }}{% endblock %}
 {% block description %}The whole season in one place — your line against anyone's, points and rank week by week, and where the ground is gained.{% endblock %}
@@ -41,12 +42,12 @@
 
 <h3 class="section-title">Points</h3>
 <div class="chart-card compare-card" data-compare>
-  {{ svg.compare_lines(compare_points, weeks, 900, 340)|safe }}
+  {{ svg.compare_lines(compare_points, weeks, 900, 340, href_base=entrant_href_base)|safe }}
 </div>
 
 <h3 class="section-title">Rank</h3>
 <div class="chart-card compare-card" data-compare>
-  {{ svg.compare_lines(compare_ranks, weeks, 900, 300, true)|safe }}
+  {{ svg.compare_lines(compare_ranks, weeks, 900, 300, true, href_base=entrant_href_base)|safe }}
   <p class="card-meta"><span>first place at the top</span></p>
 </div>
 
@@ -73,7 +74,7 @@
     <tbody>
       {% for r in week_rows %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         {# The dot stands for a scoreless week, and it must not sort as text
            above every real score — the sort key says what it means. #}
         {% for v in r.points %}
@@ -105,7 +106,7 @@
     <tbody>
       {% for r in week_rows %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         {% for rank in r.ranks %}
           <td class="num">{{ rank }}</td>
         {% endfor %}
@@ -119,18 +120,18 @@
 {% if state.risers or state.fallers %}
 <h3 class="section-title">Movers in week {{ weeks[-1] }}</h3>
 <div class="stat-grid">
-  {% for name, change in state.risers %}
+  {% for m in state.risers %}
   <div class="stat">
     <p class="stat-label">Riser</p>
-    <p class="stat-value live">▲{{ change|int }}</p>
-    <p class="stat-note">{{ name }}</p>
+    <p class="stat-value live">▲{{ m.change|int }}</p>
+    <p class="stat-note">{{ entrant_link(m.slug, m.name, cls='') }}</p>
   </div>
   {% endfor %}
-  {% for name, change in state.fallers %}
+  {% for m in state.fallers %}
   <div class="stat">
     <p class="stat-label">Faller</p>
-    <p class="stat-value" style="color:var(--heat)">▼{{ (-change)|int }}</p>
-    <p class="stat-note">{{ name }}</p>
+    <p class="stat-value" style="color:var(--heat)">▼{{ (-m.change)|int }}</p>
+    <p class="stat-note">{{ entrant_link(m.slug, m.name, cls='') }}</p>
   </div>
   {% endfor %}
 </div>
@@ -146,12 +147,12 @@
 
 <h3 class="section-title">Points, week by week</h3>
 <div class="chart-card">
-  {{ svg.emphasis_lines(points_series, lead_names, weeks, 900, 340)|safe }}
+  {{ svg.emphasis_lines(points_series, lead_names, weeks, 900, 340, hrefs=entrant_hrefs)|safe }}
 </div>
 
 <h3 class="section-title">Rank, week by week</h3>
 <div class="chart-card">
-  {{ svg.emphasis_lines(rank_series, lead_names, weeks, 900, 300, true)|safe }}
+  {{ svg.emphasis_lines(rank_series, lead_names, weeks, 900, 300, true, hrefs=entrant_hrefs)|safe }}
   <p class="card-meta"><span>first place at the top</span></p>
 </div>
 
@@ -177,17 +178,17 @@
     <tbody>
       {% for r in leverage %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         <td>
           <span class="row-teams">
-            {% for t in r.unique_teams %}<a class="team-chip scored" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>{% endfor %}
+            {% for t in r.unique_teams %}{{ team_chip(t, 'scored') }}{% endfor %}
             {% if not r.unique_teams %}<span class="badge out">none — every team is shared</span>{% endif %}
           </span>
         </td>
         <td class="num" data-value="{{ r.leverage }}">{{ '%.2f'|format(r.leverage) }}</td>
         <td>
           <span class="row-teams">
-            {% for t in r.shared_teams %}<a class="team-chip dim" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="14" height="14">{{ t }}</a>{% endfor %}
+            {% for t in r.shared_teams %}{{ team_chip(t, 'dim') }}{% endfor %}
           </span>
         </td>
       </tr>
@@ -217,10 +218,10 @@
     <tbody>
       {% for r in picks %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
-        <td><a class="team-chip scored" href="{{ ('/team/' ~ r.best_team ~ '/')|url }}" style="{{ r.best_team|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ r.best_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.best_team }}</a> {{ r.best_points|points }}</td>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
+        <td>{{ team_chip(r.best_team, 'scored') }} {{ r.best_points|points }}</td>
         <td class="num" data-value="{{ r.best_share }}">{{ '%.0f%%'|format(r.best_share * 100) }}</td>
-        <td><a class="team-chip dim" href="{{ ('/team/' ~ r.worst_team ~ '/')|url }}" style="{{ r.worst_team|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ r.worst_team ~ '.png')|url }}" alt="" width="14" height="14">{{ r.worst_team }}</a></td>
+        <td>{{ team_chip(r.worst_team, 'dim') }}</td>
         <td class="num" data-value="{{ r.worst_points }}">{{ r.worst_points|points }}</td>
       </tr>
       {% endfor %}
@@ -250,10 +251,17 @@
     <tbody>
       {% for r in rivals %}
       <tr>
-        <th scope="row" data-value="{{ r.name }}"><a href="{{ ('/entrant/' ~ r.slug ~ '/')|url }}">{{ r.name }}</a></th>
+        <th scope="row" data-value="{{ r.name }}">{{ entrant_link(r.slug, r.name, cls='') }}</th>
         <td class="num" data-value="{{ r.gap_to_leader }}">{{ '—' if not r.gap_to_leader else '%.2f'|format(r.gap_to_leader) }}</td>
-        <td>{{ r.chasing ~ ' by ' ~ '%.2f'|format(r.chasing_gap) if r.chasing else '— leading —' }}</td>
-        <td>{{ r.chased_by ~ ' by ' ~ '%.2f'|format(r.chased_gap) if r.chased_by else '— last —' }}</td>
+        {# The person immediately above and below in the table is also a person
+           with a page, so they are named the same way they are named
+           everywhere else on the site. #}
+        <td>
+          {%- if r.chasing %}{{ entrant_link(r.chasing_slug, r.chasing, cls='') }} by {{ '%.2f'|format(r.chasing_gap) }}{% else %}— leading —{% endif -%}
+        </td>
+        <td>
+          {%- if r.chased_by %}{{ entrant_link(r.chased_by_slug, r.chased_by, cls='') }} by {{ '%.2f'|format(r.chased_gap) }}{% else %}— last —{% endif -%}
+        </td>
       </tr>
       {% endfor %}
     </tbody>

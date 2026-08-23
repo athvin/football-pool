@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {# 'with context' so the macros can see the glossary dict the build passes in. #}
 {% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
 {% from '_game.html' import game_row with context %}
 
 {% block title %}Schedule · {{ season.year }} {{ season.pool.name }}{% endblock %}
@@ -94,12 +95,9 @@
            crossed out. #}
         {% for b in w.byes %}
         <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
-          <a class="team-chip bye" href="{{ ('/team/' ~ b.team ~ '/')|url }}" style="{{ b.team|chip_style }}"><img
-                class="chip-logo" loading="lazy" decoding="async"
-                src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
-                width="14" height="14">{{ b.team }}</a>
+          {{ team_chip(b.team, 'bye') }}
           {% if b.owners %}
-          <span class="owners">{% for o in b.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+          <span class="owners">{% for o in b.owners %}{{ entrant_link(o.slug, o.name) }}{% endfor %}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -111,9 +109,9 @@
     <p class="biggest">
       <span class="biggest-label">Biggest game</span>
       <span class="biggest-teams">
-        <a class="team-chip scored" href="{{ ('/team/' ~ w.biggest.away.team ~ '/')|url }}" style="{{ w.biggest.away.team|chip_style }}">{{ w.biggest.away.team }}</a>
+        {{ team_chip(w.biggest.away.team, 'scored') }}
         at
-        <a class="team-chip scored" href="{{ ('/team/' ~ w.biggest.home.team ~ '/')|url }}" style="{{ w.biggest.home.team|chip_style }}">{{ w.biggest.home.team }}</a>
+        {{ team_chip(w.biggest.home.team, 'scored') }}
       </span>
       <span class="biggest-swing">{{ term('swing', 'swing') }} {{ w.biggest.swing|points }}</span>
     </p>
@@ -198,15 +196,12 @@
         <li class="bye-team{% if not b.owners %} is-spare{% endif %}">
           <span class="viewer-label">{{ b.conference }}</span>
           {% if b.team %}
-          <a class="team-chip scored" href="{{ ('/team/' ~ b.team ~ '/')|url }}"
-             style="{{ b.team|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async"
-             src="{{ ('/assets/logos/' ~ b.team ~ '.png')|url }}" alt=""
-             width="14" height="14">{{ b.team }}</a>
+          {{ team_chip(b.team, 'scored') }}
           {% else %}
           <span class="team-chip dim">1 seed</span>
           {% endif %}
           {% if b.owners %}
-          <span class="owners">{% for o in b.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+          <span class="owners">{% for o in b.owners %}{{ entrant_link(o.slug, o.name) }}{% endfor %}</span>
           {% endif %}
         </li>
         {% endfor %}
@@ -224,11 +219,7 @@
       {% for side in [g.away, g.home] %}
       <div class="tie-side{% if side.won %} won{% elif g.played %} lost{% endif %}"{% if side.team %} data-team="{{ side.team }}"{% endif %}>
         {% if side.team %}
-        <a class="team-chip {{ 'dim' if g.played and not side.won else 'scored' }}"
-           href="{{ ('/team/' ~ side.team ~ '/')|url }}" style="{{ side.team|chip_style }}"><img
-             class="chip-logo" loading="lazy" decoding="async"
-             src="{{ ('/assets/logos/' ~ side.team ~ '.png')|url }}" alt=""
-             width="14" height="14">{{ side.team }}</a>
+        {{ team_chip(side.team, 'dim' if g.played and not side.won else 'scored') }}
         {% if side.seed %}<span class="tie-seed">{{ side.seed }}</span>{% endif %}
         {% else %}
         <span class="tie-slot">{{ side.label }}</span>
@@ -243,7 +234,7 @@
           <span class="stake{% if not side.stake %} is-nil{% endif %}">{{ side.stake|points }}</span>
         {% endif %}
 
-        <span class="owners">{% for o in side.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}</span>
+        <span class="owners">{% for o in side.owners %}{{ entrant_link(o.slug, o.name) }}{% endfor %}</span>
       </div>
       {% endfor %}
     </div>
@@ -301,7 +292,7 @@
           <p class="champ-owners">
             {% if bracket.champion.owners %}
             The {{ bracket.champion.stake|points }} for winning it lands with
-            {% for o in bracket.champion.owners %}<a class="owner" href="{{ ('/entrant/' ~ o.slug ~ '/')|url }}" data-slug="{{ o.slug }}">{{ o.name }}</a>{% endfor %}.
+            {% for o in bracket.champion.owners %}{{ entrant_link(o.slug, o.name) }}{% endfor %}.
             {% else %}
             Nobody in this pool held them.
             {% endif %}

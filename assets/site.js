@@ -693,9 +693,15 @@ function paintYouStrip(doc, slug) {
   if (!strip) return;
 
   const row = slug ? doc.querySelector(`.board .row[data-slug="${slug}"]`) : null;
+  // The row itself stopped being an anchor when its team chips became links —
+  // an anchor inside an anchor is not a thing HTML has. The destination moved
+  // one element in, to the name, and the strip still borrows it rather than
+  // rebuilding a URL it has no business knowing how to build. No link, no
+  // strip: an empty bar above the board says less than nothing.
+  const rowLink = row?.querySelector('.row-link');
   strip.textContent = '';
-  strip.hidden = !row;
-  if (!row) return;
+  strip.hidden = !rowLink;
+  if (!rowLink) return;
 
   const grab = (sel) => {
     const el = row.querySelector(sel);
@@ -703,7 +709,7 @@ function paintYouStrip(doc, slug) {
   };
 
   const link = doc.createElement('a');
-  link.href = row.getAttribute('href');
+  link.href = rowLink.getAttribute('href');
 
   const rank = doc.createElement('span');
   rank.className = 'you-rank';
@@ -793,6 +799,17 @@ function initCompare(doc, storage, compareKey = COMPARE_KEY) {
         el.classList.toggle('is-picked', Boolean(color));
         if (color) el.style.setProperty('--pick-color', color);
         else el.style.removeProperty('--pick-color');
+      }
+
+      // Every label is a link to that entrant's page, but a label nobody has
+      // picked is drawn at zero opacity — so the link around it would be a tab
+      // stop over nothing at all. It comes back the moment the name does. The
+      // pointer is handled in the stylesheet, which already knows how to see
+      // an unpicked label.
+      for (const link of chart.querySelectorAll('a')) {
+        const label = link.querySelector('.cmp-label');
+        if (!label) continue;
+        link.setAttribute('tabindex', label.classList.contains('is-picked') ? '0' : '-1');
       }
 
       const labels = Array.from(chart.querySelectorAll('.cmp-label.is-picked'));
@@ -1107,6 +1124,11 @@ function initHeatmap(doc) {
     const winOdds = (axis, index) =>
       chart.querySelector(`.heat-${axis}[data-${axis[0]}="${index}"]`)?.dataset.win ?? null;
 
+    // The two names in this sentence stay plain, and deliberately: the readout
+    // is written on pointer-enter and wiped on pointer-leave, so a link in it
+    // could never be reached — moving towards it is what erases it. Both
+    // people are one row up, on the axes of the grid this sentence is about,
+    // where they are links like everywhere else.
     const say = (cell) => {
       if (!readout) return;
       const { r, c } = cell.dataset;
