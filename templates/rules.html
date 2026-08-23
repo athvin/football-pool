@@ -49,6 +49,7 @@
   {% if season.venmo %}
   <a class="venmo-qr" href="{{ season.venmo }}">
     <img src="{{ '/assets/venmo-qr.svg'|url }}" width="220" height="220"
+         loading="lazy" decoding="async"
          alt="Venmo QR code — scan to pay the entry fee">
     <span class="venmo-qr-caption">@{{ venmo_handle }} on Venmo</span>
   </a>

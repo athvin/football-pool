@@ -166,6 +166,10 @@ body {
 img, svg { display: block; max-width: 100%; }
 a { color: inherit; }
 
+/* Nothing on this site means anything by double-tap, so no tap should wait
+   the 300ms the browser holds back to rule one out. Pinch-zoom still works. */
+a, button, select, summary, label { touch-action: manipulation; }
+
 /* --- the gridiron -------------------------------------------------------
    One end zone at the top of the screen, the other at the bottom, and the
    hundred yards between them drawn to scale — a canvas rather than an SVG or
@@ -768,7 +772,9 @@ a.team-chip:hover { transform: translateY(-1px); filter: brightness(1.12); }
    *down into* the table and sit it on top of the first row. The header
    therefore sticks to `top: 0` — this container's own top edge — and never to
    a viewport-relative offset. */
-.table-scroll { overflow-x: auto; border-radius: var(--radius); }
+/* `overscroll-behavior` keeps a sideways swipe that reaches the edge of the
+   table from turning into the browser's own back-gesture mid-read. */
+.table-scroll { overflow-x: auto; border-radius: var(--radius); overscroll-behavior-x: contain; }
 
 /* Long tables scroll inside themselves so the header can genuinely stay put
    while you read down. Short ones never reach this height, so no inner
@@ -1271,6 +1277,10 @@ a.team-card:hover, a.team-card:focus-visible {
   font-size: 12px;
   fill: var(--chalk-dim);
   font-variant-numeric: tabular-nums;
+  /* The number is painted over the box that owns the events. Without this a
+     tap that lands on the glyphs — the middle of the cell, where taps land —
+     goes to the text and the box never hears it. */
+  pointer-events: none;
 }
 .heat-cell.is-strong { fill: var(--chalk); font-weight: 600; }
 
@@ -1305,7 +1315,16 @@ a.team-card:hover, a.team-card:focus-visible {
   paint-order: stroke;
 }
 
-svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
+/* Everything off the lit pair steps back — on hover for a mouse, and under
+   `has-pick` for the pair a tap is holding, because a finger has no hover. */
+svg.heat:hover .heat-box:not(.is-lit),
+svg.heat.has-pick .heat-box:not(.is-lit) { opacity: 0.28; }
+
+/* Each cell answers a tap, and says so. `touch-action` keeps the browser from
+   holding every tap back while it waits to see if a double-tap zoom is coming
+   — the grid sits in a pinch-zoomable page either way. */
+.heat-box { cursor: pointer; }
+svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
 /* The hovered pair, written out. This is the part that actually removes the
    ambiguity for anyone who is not going to trace two fingers across a grid. */
@@ -1336,6 +1355,31 @@ svg.heat:hover .heat-box:not(.is-lit) { opacity: 0.28; }
   font-family: var(--mono);
   font-size: 0.76rem;
   color: var(--model);
+}
+
+/* On a screen the grid does not fit, the sentence has to come to the thumb:
+   a tapped cell can be two scrolls from where the readout naturally sits, and
+   the names on the axes may be scrolled clean off the screen — the readout is
+   then the only thing saying whose number was just tapped. Sticky to the
+   bottom of the viewport while the grid is on screen, it plays the tooltip a
+   hover would have been; once the reader scrolls past the grid it settles
+   back into the page. Dressed as a card only here — on a desktop it reads
+   fine where it is, and a floating box would just cover the grid. */
+@media (max-width: 900px) {
+  .heat-readout {
+    position: sticky;
+    bottom: 0.6rem;
+    z-index: 6;
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .heat-readout.is-live {
+    border-color: color-mix(in srgb, var(--model) 45%, var(--rule));
+  }
 }
 
 /* The pair on one line, what it is worth to the pool on the next. Reserved
@@ -2182,6 +2226,14 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 .me-picker select:focus-visible,
 .tz select:focus-visible,
 .heat-picker select:focus-visible { outline: 2px solid var(--live); }
+
+/* iOS Safari zooms the whole page into any form control it focuses whose text
+   is under 16px, and then leaves it zoomed — so on touch screens the selects
+   get the one size that never triggers it. Scoped to coarse pointers rather
+   than a width: it is the finger, not the phone, that Safari is reacting to. */
+@media (pointer: coarse) {
+  .me-picker select, .tz select, .heat-picker select { font-size: 16px; }
+}
 
 /* The one select on the site that changes a chart rather than a preference,
    so it is cyan like everything else the model owns. */

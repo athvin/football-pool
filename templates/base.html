@@ -16,6 +16,15 @@
 <meta property="og:description" content="{% block og_description %}{{ self.description() }}{% endblock %}">
 
 <link rel="icon" href="{{ '/assets/favicon.svg'|url }}" type="image/svg+xml">
+{# Every page uses all three faces above the fold, and without a hint the
+   browser only discovers them after fetching and parsing the stylesheet —
+   one round trip late, which is exactly the window where headlines flash in
+   a fallback font on a phone connection. `crossorigin` is not optional:
+   fonts fetch in CORS mode even from the same origin, and a preload that
+   does not match the eventual request is simply thrown away. #}
+<link rel="preload" href="{{ '/assets/fonts/big-shoulders.woff2'|url }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ '/assets/fonts/instrument-sans.woff2'|url }}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="{{ '/assets/fonts/plex-mono.woff2'|url }}" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="{{ '/assets/site.css'|url }}">
 </head>
 <body>

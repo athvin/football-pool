@@ -1593,6 +1593,74 @@ describe('the head-to-head grid', () => {
       .toBe('Point at any cell.');
   });
 
+  // On touch there is no hover to lean on: pointerenter, click and
+  // pointerleave all arrive inside the one tap, so anything hover-only is a
+  // flash the reader never sees. A tap pins the pair instead.
+  test('a tap pins the pair, so the pointer leaving no longer clears it', () => {
+    const chart = document.querySelector('svg.heat');
+    const cell = document.querySelector('[data-r="0"][data-c="1"]');
+    cell.dispatchEvent(new window.Event('pointerenter'));
+    cell.dispatchEvent(new window.Event('click', { bubbles: true }));
+    chart.dispatchEvent(new window.Event('pointerleave'));
+
+    expect(chart.classList.contains('has-pick')).toBe(true);
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(1);
+    const readout = document.querySelector('[data-heat-readout]');
+    expect(readout.classList.contains('is-live')).toBe(true);
+    expect(readout.querySelector('.heat-claim').textContent)
+      .toContain('Brian Moore finishes above Eric Riggs');
+  });
+
+  test('while a pair is held, the pointer passing over other cells does not steal it', () => {
+    const cell = (r, c) => document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+    cell(0, 1).dispatchEvent(new window.Event('click', { bubbles: true }));
+    cell(1, 0).dispatchEvent(new window.Event('pointerenter'));
+
+    expect(document.querySelector('[data-heat-readout] .heat-claim').textContent)
+      .toContain('Brian Moore finishes above Eric Riggs');
+  });
+
+  test('tapping the held cell again lets it go', () => {
+    const cell = document.querySelector('[data-r="0"][data-c="1"]');
+    cell.dispatchEvent(new window.Event('click', { bubbles: true }));
+    cell.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(0);
+    expect(document.querySelector('svg.heat').classList.contains('has-pick')).toBe(false);
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+  });
+
+  test('tapping another cell moves the hold rather than stacking it', () => {
+    const cell = (r, c) => document.querySelector(`[data-r="${r}"][data-c="${c}"]`);
+    cell(0, 1).dispatchEvent(new window.Event('click', { bubbles: true }));
+    cell(1, 0).dispatchEvent(new window.Event('click', { bubbles: true }));
+
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(1);
+    expect(document.querySelector('[data-heat-readout] .heat-claim').textContent)
+      .toContain('Eric Riggs finishes above Brian Moore in 38%');
+  });
+
+  test('tapping away from the grid lets the pair go', () => {
+    document.querySelector('[data-r="0"][data-c="1"]')
+      .dispatchEvent(new window.Event('click', { bubbles: true }));
+    document.body.dispatchEvent(new window.Event('click', { bubbles: true }));
+
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(0);
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+  });
+
+  test('Escape lets the pair go, like every other held thing', () => {
+    document.querySelector('[data-r="0"][data-c="1"]')
+      .dispatchEvent(new window.Event('click', { bubbles: true }));
+    document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(0);
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+  });
+
   test('a page with no grid on it does not throw', () => {
     document.body.innerHTML = '<main><p>nothing here</p></main>';
     expect(() => init(document, fakeWindow())).not.toThrow();
@@ -1719,6 +1787,23 @@ describe('the money grid, and the picker over the two', () => {
     pick('money');
     expect(document.querySelector('[data-heat-readout]').textContent)
       .toBe('Point at any cell.');
+  });
+
+  test('switching lets a pinned pair go with the grid it was pinned in', () => {
+    document.querySelector('[data-heat-grid="order"] .heat-box')
+      .dispatchEvent(new window.Event('click', { bubbles: true }));
+    pick('money');
+
+    expect(document.querySelectorAll('.is-picked')).toHaveLength(0);
+    expect(document.querySelectorAll('svg.heat.has-pick')).toHaveLength(0);
+    expect(document.querySelector('[data-heat-readout]').textContent)
+      .toBe('Point at any cell.');
+
+    // And the freed grid is back on hover, not stuck behind a stale pin.
+    document.querySelector('[data-heat-grid="money"] .heat-box')
+      .dispatchEvent(new window.Event('pointerenter'));
+    expect(document.querySelector('[data-heat-readout] .heat-claim').textContent)
+      .toContain('takes home more');
   });
 
   test('the select is pulled into line with the markup, not the other way round', () => {

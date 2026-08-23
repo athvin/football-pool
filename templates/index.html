@@ -90,7 +90,7 @@
       <span class="row-teams">
         {% for t in r.teams %}
           <span class="team-chip {% if r.contributions.get(t, 0) > 0 %}scored{% else %}dim{% endif %}"
-                style="{{ t|chip_style }}"><img class="chip-logo"
+                style="{{ t|chip_style }}"><img class="chip-logo" loading="lazy" decoding="async"
                 src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt=""
                 width="14" height="14">{{ t }}</span>
         {% endfor %}
