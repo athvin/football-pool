@@ -57,8 +57,8 @@ on:
 
     # Thursday, Friday and Saturday evenings. Thursday night is weekly;
     # Saturday carries the December doubleheaders and the Wild Card and
-    # Divisional rounds; Friday is rarer but real — Thanksgiving Friday, the
-    # Christmas slate, and the Week 1 game in Brazil. Any of the three can
+    # Divisional rounds; Friday is rarer but real — in 2026 it is Thanksgiving
+    # Friday and the three-game Christmas slate. Any of the three can
     # start a game at 13:00, so the sweep opens at 19:37 to publish an
     # afternoon slate the same evening people watched it, rather than the
     # following morning. Thanksgiving is the day this entry is really for.
@@ -83,9 +83,24 @@ on:
     # gap that trips that timer around April, and a disabled schedule does not
     # come back by itself: the site would still be showing February's
     # scoreboard through Week 1, until somebody noticed and pressed the button.
+    #
+    # Worth being precise about what "disabled" takes with it, because it is
+    # more than the name suggests. GitHub holds one `state` per *workflow
+    # file*, with no setting for "schedule off, push on", so the trigger block
+    # above stops responding in its entirety — `push` and `workflow_dispatch`
+    # included. Pushing a fix would not rebuild the site, and neither would
+    # pressing Run workflow. Recovery is `gh workflow enable daily.yml`, by
+    # hand, first. The 60-day clock is also measured from the last commit to
+    # the repository rather than from anything seasonal: if the keepalive push
+    # is not landing, the gap that trips the timer is wherever the last commit
+    # happens to leave it, mid-season as easily as mid-April.
+    #
     # Twice a month rather than monthly so that a failed run, or two, still
     # leaves margin inside the 60 days. The step named "Keep the schedule
-    # alive" is the other half of this, and it fires on this entry alone.
+    # alive" is the other half of this, and it fires on this entry alone —
+    # which is also its weakness, since it can only work once DATA_PUSH_TOKEN
+    # exists. "Keep the workflow enabled", below it, is the arm that needs no
+    # secret and runs on every build.
     - cron: '37 12 1,15 * *'
       timezone: America/New_York
   push:
@@ -125,6 +140,7 @@ jobs:
     permissions:
       contents: write # to commit the day's data snapshot
       pages: read
+      actions: write # to re-enable this workflow before the 60-day timer trips
     env:
       # Whether a push can land at all, decided once and read by both push
       # steps below. Only the boolean crosses into the shell — never the token
@@ -189,11 +205,12 @@ jobs:
       # This push is best-effort, and deliberately cannot fail the run. Two
       # reasons it may be rejected, both expected:
       #
-      #   * main requires a pull request (see the "main" ruleset). Only the
-      #     admin role bypasses that, and github-actions[bot] does not hold it.
-      #     A user-owned repository cannot grant a ruleset bypass to the Actions
-      #     app at all — that option is organisation-only — so there is no
-      #     configuration that lets the default token push here.
+      #   * main requires a pull request (see the "main" ruleset). Its only
+      #     bypass actor is the Admin repository role, and github-actions[bot]
+      #     does not hold it. Nor can it be given it: the bot is a synthetic
+      #     per-run identity rather than an installable GitHub App, so it is not
+      #     nameable as a bypass actor in any repository, user-owned or not.
+      #     There is no configuration that lets the default token push here.
       #   * Pushes made with the default GITHUB_TOKEN are widely reported not to
       #     count as activity against the 60-day timer anyway.
       #
@@ -279,6 +296,42 @@ jobs:
           timer. If no commit reaches this repository before it expires, the \
           schedule is disabled and the site stops rebuilding for the season. \
           Add a fine-grained PAT as the DATA_PUSH_TOKEN secret."
+          fi
+
+      # The belt to the keepalive's braces, and the reason it is worth having
+      # both: the step above depends on DATA_PUSH_TOKEN, a PAT expires, and the
+      # day it does this repository silently returns to the state that made
+      # this step necessary — schedule quietly counting down, every run still
+      # reporting success. This arm needs no secret. It runs on the default
+      # token, which already suffices because enabling a workflow is an Actions
+      # permission rather than a push, so the "main" ruleset never sees it.
+      #
+      # Enabling a workflow that is already enabled is a no-op returning 204,
+      # so this is safe to run every time, and it runs every time on purpose:
+      # unlike the commit, it costs one API call and carries no risk of a
+      # spurious change, so there is no reason to ration it to two runs a month.
+      #
+      # Be honest about the mechanism: that hitting the enable endpoint also
+      # *resets* the inactivity clock is observed behaviour rather than
+      # documented behaviour. It is what the keepalive actions in the wild rely
+      # on, and it costs nothing if it turns out not to hold. So this does not
+      # replace the PAT — it only ensures that when the PAT lapses, the failure
+      # is a stale data snapshot rather than a dead site. Best-effort by the
+      # same logic as the pushes above: a season must not be lost to a run that
+      # failed on its way past.
+      - name: Keep the workflow enabled
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh api -X PUT \
+            "repos/${{ github.repository }}/actions/workflows/daily.yml/enable"; then
+            echo 'workflow confirmed enabled'
+          else
+            echo "::warning title=Could not confirm the workflow is enabled::The \
+          enable endpoint was rejected. This is the backstop for DATA_PUSH_TOKEN \
+          expiring, so nothing is broken yet, but check that the job still grants \
+          actions: write. The site itself deployed normally."
           fi
 
   deploy:

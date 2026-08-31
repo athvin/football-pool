@@ -740,16 +740,42 @@ gh api --method PUT /repos/athvin/football-pool/rulesets/<id> \
 ### The one wrinkle
 
 Requiring pull requests means the daily job can no longer push its data
-snapshot: `github-actions[bot]` does not hold the admin role, and a user-owned
-repository cannot grant a ruleset bypass to the Actions app — that option is
-organisation-only. The push is therefore best-effort and logs a warning instead
-of failing the run; **the site still builds and deploys from freshly fetched
-data every time**, since nothing on the page comes from the committed snapshot.
+snapshot: `github-actions[bot]` does not hold the admin role, and cannot be
+given it, because the bot is a synthetic per-run identity rather than an
+installable GitHub App and so is not nameable as a bypass actor at all. The
+push is therefore best-effort and logs a warning instead of failing the run;
+**the site still builds and deploys from freshly fetched data every time**,
+since nothing on the page comes from the committed snapshot.
 
-Adding a fine-grained PAT with contents:write as the `DATA_PUSH_TOKEN` secret
-restores it, and is worth doing anyway — it inherits your admin bypass *and*
-counts as real repository activity against the 60-day timer below, which the
-default token does not.
+**Set `DATA_PUSH_TOKEN`.** A fine-grained PAT with contents:write, held as that
+secret, is what restores the push — it inherits your admin bypass *and* counts
+as real repository activity against the 60-day timer below, which the default
+token does not. Treat it as required rather than optional: the keepalive
+described under Deploying is the whole defence against the schedule being
+switched off mid-season, and without this secret it does not work at all. It
+runs, it writes its stamp, it commits — and the push is refused every time, so
+nothing ever reaches the repository. Two details worth getting right when you
+create it:
+
+* **Put it on an account holding the admin role.** The bypass is granted to the
+  role, not to the token, so a collaborator's PAT with contents:write is still
+  refused by the ruleset.
+* **Set the expiry past the end of the season.** The default is 30 days, which
+  would lapse in October and take the keepalive down with it, silently — every
+  run still reports success. `daily.yml` carries a PAT-free backstop for
+  exactly that day, but the backstop only keeps the site building; restoring
+  the snapshot needs the secret renewed.
+
+Verify it without waiting for the 1st or the 15th:
+
+```sh
+gh secret set DATA_PUSH_TOKEN -R athvin/football-pool
+gh workflow run daily.yml -R athvin/football-pool -f keepalive=true
+```
+
+The run should log `keepalive committed — the 60-day inactivity timer is reset`
+and leave a `data/last-keepalive` stamp on `main`. If it does not, the PAT is
+not on an admin account.
 
 ## Deploying
 
@@ -786,5 +812,30 @@ public repository after 60 days with no **commit** to it — runs, issues and
 tags do not count — and a season-only schedule leaves a March-to-September gap
 that trips it. So a run on the 1st and 15th commits a stamp to
 `data/last-keepalive` whether or not the data moved, and does it even when the
-build failed. Without it the schedule dies quietly in April and the site is
-still showing February's scoreboard on opening weekend.
+build failed.
+
+The 60 days are counted from the last commit to the repository, though, not
+from anything seasonal — so the offseason gap is the case that motivates the
+keepalive, not the only one it covers. If the stamp is not landing, the clock
+simply runs from whatever commit happened last, and the deadline lands wherever
+that puts it. A quiet fortnight in October is enough, and October is a worse
+place to lose the site than April.
+
+Worth knowing what being disabled actually costs, because it is more than the
+schedule. GitHub holds one state per workflow *file*, so `push` and
+`workflow_dispatch` stop firing along with the cron: pushing a fix would not
+rebuild the site, and neither would pressing **Run workflow**. It has to be
+switched back on by hand first:
+
+```sh
+gh workflow enable daily.yml -R athvin/football-pool
+gh workflow run daily.yml -R athvin/football-pool
+```
+
+Two mechanisms defend against that, and they fail in different ways on purpose.
+`DATA_PUSH_TOKEN` above is the real one, and it also keeps the data snapshot.
+The `Keep the workflow enabled` step is the backstop for the day that PAT
+expires: it re-enables the workflow on the default token, needs no secret, and
+runs on every build. That the enable endpoint also resets the inactivity clock
+is observed rather than documented behaviour, which is why it is the backstop
+and not the plan.
