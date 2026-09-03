@@ -54,6 +54,9 @@ entrants:
   - name: Rob Desz
     teams: ["TB", "TEN", "WAS", "CIN"]
 
+  - name: Jay
+    teams: ["CIN", "NO", "DAL", "TB"]
+
   # As friends send in their picks and their $50, add them here — nothing else
   # in the project needs to change. The pot, the payouts, and every
   # pool-relative metric recompute from however many entrants are in this list.
