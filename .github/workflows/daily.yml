@@ -166,17 +166,32 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # Same node_modules cache as ci.yml, and for the same reason: `cache: npm`
+      # restores the download cache but still leaves `npm ci` relinking 156
+      # packages, which costs minutes against seconds of tests. Keyed on the
+      # lockfile plus the platform, since some packages ship native binaries.
+      - name: Cache node_modules
+        id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
         run: |
           uv sync --frozen
-          npm ci
+          if [ "${{ steps.node-modules.outputs.cache-hit }}" != "true" ]; then npm ci; fi
 
       # The deploy is gated on this. If nflverse renames a column or a scoring
       # rule regresses, the build stops here and yesterday's good site stays
       # live — strictly better than publishing a wrong leaderboard, and the next
       # scheduled run self-heals once the fix lands.
+      #
+      # `-n auto` for the same reason as ci.yml: the render tests are CPU-bound
+      # and independent, so they fan out across the runner's vCPUs. pytest-cov
+      # still combines the workers' data, so the coverage gate is unchanged.
       - name: Python tests
-        run: uv run pytest
+        run: uv run pytest -n auto
 
       - name: JavaScript tests
         run: npx vitest run --coverage
