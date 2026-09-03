@@ -86,6 +86,37 @@ entrants:
   - name: Dave Moore
     teams: ["KC", "BAL", "DAL", "NYG"]
 
+  # One entry for the grandparents, like the Zac + Sammy entries above.
+  - name: JuJu Grands
+    teams: ["BAL", "TB", "CHI", "MIN"]
+
+  - name: Julie
+    teams: ["JAX", "CIN", "NYG", "HOU"]
+
+  - name: Danny
+    teams: ["KC", "CIN", "CAR", "DAL"]
+
+  - name: Laura Seeley
+    teams: ["CHI", "CIN", "BUF", "DEN"]
+
+  - name: Mark Seeley
+    teams: ["WAS", "ARI", "CIN", "KC"]
+
+  - name: Ben
+    teams: ["BAL", "CIN", "CHI", "PHI"]
+
+  - name: Madison
+    teams: ["KC", "CHI", "BAL", "TB"]
+
+  - name: Leah
+    teams: ["ATL", "BAL", "CIN", "LAR"]
+
+  - name: Blaine
+    teams: ["BUF", "BAL", "TEN", "IND"]
+
+  - name: Bob Seeley
+    teams: ["KC", "NYG", "TB", "CIN"]
+
   # As family members send in their picks, add them here — nothing else in the
   # project needs to change. The pot, the payouts, and every pool-relative
   # metric recompute from however many entrants are in this list.
