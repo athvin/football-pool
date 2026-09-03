@@ -44,8 +44,21 @@ jobs:
 
       # pyproject sets --cov-fail-under=95, so this fails on a coverage drop as
       # well as on a broken test.
+      #
+      # `-n auto` is the whole reason this job is minutes rather than tens of
+      # minutes. The suite is ~800 tests, but 87% of the wall clock is
+      # test_render.py, where each of ~150 tests renders a complete site — work
+      # that is CPU-bound and shares nothing between tests, since every one gets
+      # its own tmp_path. xdist hands them out one at a time across the runner's
+      # four vCPUs, which is why `--dist load` (the default) is right here: the
+      # per-test cost ranges from milliseconds to seconds, so splitting by file
+      # or by chunk would leave workers idle waiting on the render tests.
+      #
+      # pytest-cov combines the per-worker coverage data itself, so the
+      # threshold above still sees the whole suite — the reported number is
+      # identical to a serial run.
       - name: Tests and coverage
-        run: uv run pytest
+        run: uv run pytest -n auto
 
   javascript:
     name: javascript
@@ -58,7 +71,25 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # `cache: npm` above only restores ~/.npm, the download cache. That saves
+      # the network but not the install: npm still has to relink 156 packages
+      # into node_modules, which measured at 3m34s on a warm cache against 3s of
+      # actual tests. Caching the built node_modules instead skips that entirely.
+      #
+      # package-lock.json pins every version, so it alone determines the tree —
+      # but only for a fixed platform, because some of these packages ship
+      # prebuilt native binaries. Hence the os and node version in the key: bump
+      # node-version above without them and the cache would hand this job
+      # binaries built for the old runtime.
+      - name: Cache node_modules
+        id: node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
+        if: steps.node-modules.outputs.cache-hit != 'true'
         run: npm ci
 
       - name: Tests and coverage
