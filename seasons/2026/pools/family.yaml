@@ -83,6 +83,9 @@ entrants:
   - name: Linda
     teams: ["LAR", "PHI", "DEN", "BAL"]
 
+  - name: Dave Moore
+    teams: ["KC", "BAL", "DAL", "NYG"]
+
   # As family members send in their picks, add them here — nothing else in the
   # project needs to change. The pot, the payouts, and every pool-relative
   # metric recompute from however many entrants are in this list.
