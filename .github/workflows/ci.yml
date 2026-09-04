@@ -31,13 +31,22 @@ concurrency:
 jobs:
   python:
     name: python
-    runs-on: ubuntu-latest
+    # ubuntu-24.04-arm rather than ubuntu-latest: free for public repos, and
+    # its 4 vCPUs are 4 physical Cobalt 100 cores where ubuntu-latest's are 2
+    # SMT'd x64 cores — this suite's 4-worker speedup measured only 2.2x on
+    # x64, the SMT signature. Pure uv job, and every dependency ships aarch64
+    # wheels. The javascript job stays on x64: at 9 seconds warm there is
+    # nothing to win.
+    runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      # cache-python keeps the managed CPython that .python-version pins from
+      # being re-downloaded every run.
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
+          cache-python: true
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -46,27 +55,36 @@ jobs:
       # well as on a broken test.
       #
       # `-n auto` is the whole reason this job is minutes rather than tens of
-      # minutes. The suite is ~800 tests, but 87% of the wall clock is
-      # test_render.py, where each of ~150 tests renders a complete site — work
-      # that is CPU-bound and shares nothing between tests, since every one gets
-      # its own tmp_path. xdist hands them out one at a time across the runner's
-      # four vCPUs, which is why `--dist load` (the default) is right here: the
-      # per-test cost ranges from milliseconds to seconds, so splitting by file
-      # or by chunk would leave workers idle waiting on the render tests.
+      # minutes: most of the wall clock is test_render.py, whose tests each
+      # render a complete site — CPU-bound work xdist fans out across the
+      # runner's four vCPUs. `--dist worksteal` over the default `load` because
+      # per-test cost ranges from milliseconds to seconds and the observed
+      # straggler tail means an idle worker should steal from a loaded one.
+      #
+      # `--no-sync` because sync already ran two steps up — re-verifying the
+      # lock inside `uv run` measured 2.3 seconds of nothing.
       #
       # pytest-cov combines the per-worker coverage data itself, so the
       # threshold above still sees the whole suite — the reported number is
       # identical to a serial run.
       - name: Tests and coverage
-        run: uv run pytest -n auto
+        env:
+          # coverage 7.15+ picks the fast sys.monitoring core on 3.14+ by
+          # default (.python-version pins 3.14). Naming it explicitly turns any
+          # regression loud: an interpreter that can't do branch coverage under
+          # sysmon prints "Can't use core=sysmon" instead of silently falling
+          # back to the ~2x-slower ctrace core — which is exactly what CI was
+          # doing on the runner's system 3.12 before the pin.
+          COVERAGE_CORE: sysmon
+        run: uv run --no-sync pytest -n auto --dist worksteal
 
   javascript:
     name: javascript
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -78,15 +96,16 @@ jobs:
       #
       # package-lock.json pins every version, so it alone determines the tree —
       # but only for a fixed platform, because some of these packages ship
-      # prebuilt native binaries. Hence the os and node version in the key: bump
-      # node-version above without them and the cache would hand this job
-      # binaries built for the old runtime.
+      # prebuilt native binaries. Hence os, arch and node version in the key:
+      # runner.os says "Linux" on both the x64 and arm runners, so os alone
+      # would hand an arm job x64 binaries, and a bumped node-version would
+      # hand this job binaries built for the old runtime.
       - name: Cache node_modules
         id: node-modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         if: steps.node-modules.outputs.cache-hit != 'true'
@@ -99,11 +118,12 @@ jobs:
     name: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
+          cache-python: true
 
       - name: Install dependencies
         run: uv sync --frozen
@@ -117,10 +137,10 @@ jobs:
       # deployed under /football-pool/, which is exactly the bug a local
       # preview cannot show you.
       - name: Build at the site root
-        run: uv run pool build --out ./public-root --base "" --offline
+        run: uv run --no-sync pool build --out ./public-root --base "" --offline
 
       - name: Build at the project path
-        run: uv run pool build --out ./public-project --base "/football-pool" --offline
+        run: uv run --no-sync pool build --out ./public-project --base "/football-pool" --offline
 
       # The regex, rather than a plain substring, so a malformed or missing
       # cache-busting stamp fails here too — an asset URL is only correct if it

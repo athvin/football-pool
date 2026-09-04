@@ -151,17 +151,18 @@ jobs:
       # you in a circle: told to add a secret you have already added.
       HAS_PUSH_TOKEN: ${{ secrets.DATA_PUSH_TOKEN != '' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # DATA_PUSH_TOKEN is optional. Without it the data commit below is
           # simply skipped — see that step for why you may want to add it.
           token: ${{ secrets.DATA_PUSH_TOKEN || github.token }}
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v10
         with:
           enable-cache: true
+          cache-python: true
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -169,13 +170,14 @@ jobs:
       # Same node_modules cache as ci.yml, and for the same reason: `cache: npm`
       # restores the download cache but still leaves `npm ci` relinking 156
       # packages, which costs minutes against seconds of tests. Keyed on the
-      # lockfile plus the platform, since some packages ship native binaries.
+      # lockfile plus os AND arch — runner.os says "Linux" on both the x64 and
+      # arm runners, and native binaries in node_modules are arch-specific.
       - name: Cache node_modules
         id: node-modules
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: node_modules
-          key: node-modules-${{ runner.os }}-node22-${{ hashFiles('package-lock.json') }}
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
         run: |
@@ -187,11 +189,18 @@ jobs:
       # live — strictly better than publishing a wrong leaderboard, and the next
       # scheduled run self-heals once the fix lands.
       #
-      # `-n auto` for the same reason as ci.yml: the render tests are CPU-bound
-      # and independent, so they fan out across the runner's vCPUs. pytest-cov
-      # still combines the workers' data, so the coverage gate is unchanged.
+      # This looks redundant with ci.yml on push events — it is not. The branch
+      # ruleset's admin bypass means a direct push to main never passes through
+      # ci.yml (the data commit below rides exactly that path), so this step is
+      # the only thing standing between such a push and a live deploy.
+      #
+      # `-n auto --dist worksteal`, `--no-sync` and COVERAGE_CORE for the same
+      # reasons as ci.yml — see the comments there. pytest-cov still combines
+      # the workers' data, so the coverage gate is unchanged.
       - name: Python tests
-        run: uv run pytest -n auto
+        env:
+          COVERAGE_CORE: sysmon
+        run: uv run --no-sync pytest -n auto --dist worksteal
 
       - name: JavaScript tests
         run: npx vitest run --coverage
@@ -201,13 +210,13 @@ jobs:
       # that prefix or it 404s in production while working fine locally.
       - name: Configure Pages
         id: pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Fetch results and build the site
         run: |
-          uv run pool build --out ./public --base "${{ steps.pages.outputs.base_path }}"
+          uv run --no-sync pool build --out ./public --base "${{ steps.pages.outputs.base_path }}"
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: ./public
 
@@ -360,4 +369,4 @@ jobs:
       id-token: write
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
