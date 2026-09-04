@@ -1446,6 +1446,90 @@ def test_a_team_nobody_holds_still_has_a_page(pool, game_data, site_final):
     assert "Nobody in this pool holds" in html
 
 
+def test_a_team_page_names_the_coach_when_the_data_has_one(pool, games_2025, tmp_path):
+    g = games_2025.copy()
+    g["home_coach"] = "Somebody Else"
+    g["away_coach"] = "Somebody Else"
+    g.loc[g["home_team"] == "KC", "home_coach"] = "Andy Reid"
+    g.loc[g["away_team"] == "KC", "away_coach"] = "Andy Reid"
+    data = GameData(g, 2025, NOW, None, "cache")
+
+    assert _team_page(build_context(pool, data), "KC")["coach"] == "Andy Reid"
+
+    render_site(pool, data, tmp_path)
+    html = (tmp_path / "team" / "KC" / "index.html").read_text()
+    assert "Coached by <strong>Andy Reid</strong>" in html
+
+
+def test_the_coach_is_read_off_the_next_game_not_the_last(pool, games_2025):
+    """Upstream fills future rows with whoever holds the job today, so a
+    midseason firing shows up on the next build rather than after the season."""
+    g = games_2025.copy()
+    g.loc[g["week"] > 11, "played"] = False
+    g.loc[g["game_type"] != "REG", "played"] = False
+    for side in ("home", "away"):
+        g.loc[g[f"{side}_team"] == "KC", f"{side}_coach"] = "Old Coach"
+        g.loc[(g[f"{side}_team"] == "KC") & (~g["played"]), f"{side}_coach"] = "New Coach"
+    g[["home_coach", "away_coach"]] = g[["home_coach", "away_coach"]].fillna("Somebody")
+    data = GameData(g, 2025, NOW, None, "cache")
+
+    assert _team_page(build_context(pool, data), "KC")["coach"] == "New Coach"
+
+
+def test_a_frame_without_coach_columns_renders_a_coachless_page(pool, game_data, site_final):
+    """The committed fixture predates the coach columns, which is useful in
+    itself: every other render test is asserting they are optional."""
+    assert _team_page(build_context(pool, game_data), "KC")["coach"] is None
+    assert "Coached by" not in (site_final.path / "team" / "KC" / "index.html").read_text()
+
+
+@pytest.fixture
+def roster_data(games_2025):
+    """A roster for two teams, exercising every bucket the page draws."""
+    from football_pool.rosters import RosterData, parse_roster
+
+    from helpers import mkroster_csv
+
+    csv = mkroster_csv(
+        [
+            {"team": "KC", "name": "Starter QB", "pos": "QB", "jersey": 15, "pfr": "MahoPa00"},
+            {"team": "KC", "name": "Big Blocker", "pos": "OL", "jersey": 76},
+            {"team": "KC", "name": "Hurt Guy", "pos": "WR", "status": "RES"},
+            {"team": "KC", "name": "Camp Leg", "pos": "K", "status": "DEV", "years": 0},
+            {"team": "SEA", "name": "Loud Corner", "pos": "DB", "jersey": 25},
+        ]
+    )
+    return RosterData(parse_roster(csv, 2025), 2025, NOW, "network")
+
+
+def test_the_roster_section_renders_every_bucket(pool, game_data, roster_data, tmp_path):
+    render_site(pool, game_data, tmp_path, roster=roster_data)
+    html = (tmp_path / "team" / "KC" / "index.html").read_text()
+
+    assert "The roster" in html
+    assert "Starter QB" in html and "Big Blocker" in html
+    # A pfr id is a link out; its absence is plain text.
+    assert 'href="https://www.pro-football-reference.com/players/M/MahoPa00.htm"' in html
+    # The reserve list names the reason, and the stash is a footnote.
+    assert "Sidelined" in html and "injured reserve" in html
+    assert "Practice squad:" in html and "Camp Leg (K)" in html
+
+
+def test_a_team_the_roster_misses_renders_without_the_section(
+    pool, game_data, roster_data, tmp_path
+):
+    """A partial feed degrades team by team, not all or nothing."""
+    render_site(pool, game_data, tmp_path, roster=roster_data)
+
+    assert "The roster" not in (tmp_path / "team" / "DAL" / "index.html").read_text()
+    assert "Loud Corner" in (tmp_path / "team" / "SEA" / "index.html").read_text()
+
+
+def test_no_roster_data_renders_no_roster_section(site_final):
+    """The default every other test in this file runs under, made explicit."""
+    assert "The roster" not in (site_final.path / "team" / "KC" / "index.html").read_text()
+
+
 def test_team_pages_are_scoped_to_their_own_pool(pair_site):
     """Same football, different people — and the people are the pool's own.
 

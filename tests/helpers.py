@@ -48,3 +48,34 @@ def mkgames(rows: list[dict]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(out)
+
+
+def mkroster_csv(rows: list[dict], season: int = 2025) -> bytes:
+    """CSV bytes shaped like the upstream roster file, one player per row.
+
+    Each row takes ``team`` and ``name``; everything else defaults to an
+    ordinary veteran — ``pos`` QB, ``status`` ACT, ``jersey`` 10, ``years`` 3,
+    ``college`` State, ``pfr`` blank — so a test only spells out the fact it is
+    about. Values go through the real ``rosters.parse_roster``, aliases and
+    all, which is the point of building bytes rather than a frame.
+    """
+    header = "season,team,position,jersey_number,status,full_name,years_exp,college,pfr_id"
+    lines = [header]
+    for r in rows:
+        lines.append(
+            ",".join(
+                str(v)
+                for v in (
+                    r.get("season", season),
+                    r["team"],
+                    r.get("pos", "QB"),
+                    r.get("jersey", 10),
+                    r.get("status", "ACT"),
+                    r["name"],
+                    r.get("years", 3),
+                    r.get("college", "State"),
+                    r.get("pfr", ""),
+                )
+            )
+        )
+    return "\n".join(lines).encode()
