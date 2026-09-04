@@ -78,6 +78,17 @@ MARKET_COLUMNS = [
 INFO_COLUMNS = [
     "away_coach",
     "home_coach",
+    "away_rest",
+    "home_rest",
+    "roof",
+    "surface",
+    "temp",
+    "wind",
+    "away_qb_name",
+    "home_qb_name",
+    "referee",
+    "stadium_id",
+    "stadium",
 ]
 
 # Playoff rounds, in bracket order. These rows do not exist until the bracket is

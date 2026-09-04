@@ -259,7 +259,7 @@ def test_wins_are_zero_sum(season, preseason, cfg, forecast_inputs):
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, preseason)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    points, stats, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
+    points, stats, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
 
     assert points.shape == (SIMS, 32)
     assert stats["sim_wins"].sum() == pytest.approx(272, abs=0.5)
@@ -274,7 +274,7 @@ def test_a_completed_season_simulates_to_its_actual_result(season, games_2025, c
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, games_2025)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    points, stats, _ = simulate(season, schedule, elo, cfg, mean, sd, n=50)
+    points, stats, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=50)
 
     actual = score_teams(season, games_2025)
     for team in season.teams:
@@ -292,7 +292,7 @@ def test_conditioning_freezes_decided_games(season, games_2025, cfg, forecast_in
 
     schedule = build_schedule(season, g)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    points, stats, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
+    points, stats, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
 
     banked = score_teams(season, g)
     for team in season.teams:
@@ -309,7 +309,7 @@ def test_a_real_tie_keeps_its_half_win(season, games_2025, cfg, forecast_inputs)
     assert schedule.tied.sum() == 1
 
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    _, stats, _ = simulate(season, schedule, elo, cfg, mean, sd, n=100)
+    _, stats, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=100)
 
     actual = score_teams(season, games_2025)
     for team in ("GB", "DAL"):
@@ -323,8 +323,8 @@ def test_the_same_seed_reproduces_the_same_season(season, preseason, cfg, foreca
     schedule = build_schedule(season, preseason)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
 
-    a, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=200)
-    b, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=200)
+    a, _, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=200)
+    b, _, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=200)
     assert np.array_equal(a, b)
 
 
@@ -332,7 +332,7 @@ def test_probabilities_are_coherent(season, preseason, cfg, forecast_inputs):
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, preseason)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    _, stats, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
+    _, stats, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
 
     # Exactly eight division winners and six wild cards, every season.
     assert stats["p_division"].sum() == pytest.approx(8.0, abs=0.02)
@@ -345,7 +345,7 @@ def test_points_respect_the_per_team_maximum(season, preseason, cfg, forecast_in
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, preseason)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    points, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
+    points, _, _, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
 
     ceiling = 20 * season.lf + 7.5
     assert (points <= ceiling + 1e-9).all()
@@ -357,7 +357,7 @@ def test_the_home_win_rate_covers_every_scheduled_game(season, preseason, cfg, f
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, preseason)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    _, _, home_rate = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
+    _, _, home_rate, _ = simulate(season, schedule, elo, cfg, mean, sd, n=SIMS)
 
     assert home_rate.shape == (schedule.n_games,)
     assert ((home_rate >= 0.0) & (home_rate <= 1.0)).all()
@@ -375,7 +375,7 @@ def test_a_decided_game_is_certain_not_estimated(season, games_2025, cfg, foreca
     win_totals, mean, sd = forecast_inputs
     schedule = build_schedule(season, games_2025)
     elo, _ = fit_elo(season, schedule, cfg, win_totals, sd)
-    _, _, home_rate = simulate(season, schedule, elo, cfg, mean, sd, n=50)
+    _, _, home_rate, _ = simulate(season, schedule, elo, cfg, mean, sd, n=50)
 
     assert set(np.unique(home_rate)) <= {0.0, 0.5, 1.0}
     np.testing.assert_array_equal(home_rate[schedule.home_won], 1.0)

@@ -57,6 +57,7 @@ from .project import Projections, project
 from .scoring import entrant_scores, money_if_season_ended, score_teams
 from .season import REPO_ROOT, Season
 from .standings import final_seeds, playoff_seeds, regular_season_complete, standings_table
+from .weather import ATTRIBUTION_TEXT, ATTRIBUTION_URL, KickoffWeather
 
 TEMPLATE_DIR = REPO_ROOT / "templates"
 ASSET_DIR = REPO_ROOT / "assets"
@@ -127,6 +128,7 @@ class SiteContext:
     seeds: dict[str, int]
     seeds_final: bool
     projections: Projections | None
+    weather: dict[str, KickoffWeather]
     # Who is actually wearing the shirts — optional the way projections are.
     # None renders team pages without a roster section, never a failed build.
     roster: rosters_mod.RosterData | None = None
@@ -137,6 +139,7 @@ def build_context(
     data: GameData,
     simulations: int | None = None,
     roster: rosters_mod.RosterData | None = None,
+    weather: dict[str, KickoffWeather] | None = None,
 ) -> SiteContext:
     """Run the whole pipeline once and hand the results to the templates.
 
@@ -155,8 +158,21 @@ def build_context(
     )
     outlook["money"] = money_if_season_ended(season, scores).to_numpy()
 
+    window, active_slate = _active_slate(games, data.fetched_at)
+    impact_ids = (
+        active_slate.loc[
+            (active_slate["game_type"] == "REG") & ~active_slate["played"], "game_id"
+        ].astype(str).tolist()
+        if window is not None
+        else []
+    )
     try:
-        projections = project(season, games, simulations=simulations)
+        projections = project(
+            season,
+            games,
+            simulations=simulations,
+            impact_game_ids=impact_ids,
+        )
     except Exception as e:  # noqa: BLE001 - a model failure must not break the site
         warnings.warn(f"projections unavailable: {e}", RuntimeWarning, stacklevel=2)
         projections = None
@@ -172,8 +188,21 @@ def build_context(
         seeds=seeds if seeds is not None else playoff_seeds(season, games),
         seeds_final=regular_season_complete(games),
         projections=projections,
+        weather=weather or {},
         roster=roster,
     )
+
+
+def _active_slate(
+    games: pd.DataFrame, instant: datetime
+) -> tuple[schedule_mod.WeekWindow | None, pd.DataFrame]:
+    """The current or next schedule window, keeping round and week together."""
+    windows = schedule_mod.week_windows(games)
+    if not windows:
+        return None, games.iloc[0:0]
+    window = next((w for w in windows if w.closes > instant), windows[-1])
+    slate = games[(games["week"] == window.week) & (games["game_type"] == window.game_type)]
+    return window, slate
 
 
 def make_environment(base: str = "", pool_base: str | None = None) -> Environment:
@@ -1122,6 +1151,229 @@ def _schedule(ctx: SiteContext) -> dict[str, Any]:
     }
 
 
+def _scenario_gains(season: Season, row: Any) -> dict[str, dict[str, float]]:
+    """Immediate pool points for every entrant under every legal outcome."""
+    home, away, kind = row.home_team, row.away_team, row.game_type
+    out: dict[str, dict[str, float]] = {}
+    for entrant in season.entrants:
+        held = set(entrant.teams)
+        gains = {
+            away: (
+                schedule_mod.side_points(season, kind, away) if away in held else 0.0
+            ),
+            home: (
+                schedule_mod.side_points(season, kind, home, is_home=True)
+                if home in held
+                else 0.0
+            ),
+        }
+        if kind == "REG":
+            gains["TIE"] = round(
+                season.tie_multiplier
+                * sum(season.lf_of(team) for team in (away, home) if team in held),
+                2,
+            )
+        out[entrant.slug] = gains
+    return out
+
+
+def _optional(row: Any, name: str) -> Any | None:
+    value = getattr(row, name, None)
+    return None if value is None or pd.isna(value) else value
+
+
+def _game_context(row: Any) -> list[str]:
+    """Compact, optional nflverse facts that make a matchup feel specific."""
+    facts: list[str] = []
+    spread = _optional(row, "spread_line")
+    if spread is not None:
+        spread = float(spread)
+        favorite = row.home_team if spread >= 0 else row.away_team
+        facts.append(f"{favorite} −{abs(spread):g}")
+    total = _optional(row, "total_line")
+    if total is not None:
+        facts.append(f"O/U {float(total):g}")
+    stadium = _optional(row, "stadium")
+    if stadium:
+        facts.append(str(stadium))
+    roof = _optional(row, "roof")
+    surface = _optional(row, "surface")
+    if roof or surface:
+        label = " · ".join(str(v).replace("_", " ").title() for v in (roof, surface) if v)
+        facts.append(label)
+    away_rest, home_rest = _optional(row, "away_rest"), _optional(row, "home_rest")
+    if away_rest is not None and home_rest is not None and int(away_rest) != int(home_rest):
+        better = row.away_team if int(away_rest) > int(home_rest) else row.home_team
+        edge = abs(int(away_rest) - int(home_rest))
+        facts.append(f"{better} +{edge} rest day{'s' if edge != 1 else ''}")
+    away_qb, home_qb = _optional(row, "away_qb_name"), _optional(row, "home_qb_name")
+    if away_qb or home_qb:
+        facts.append("QBs " + " / ".join(str(v) for v in (away_qb, home_qb) if v))
+    return facts
+
+
+def _gameday(ctx: SiteContext) -> dict[str, Any]:
+    """The current slate, ranked and priced through this pool's field."""
+    season = ctx.season
+    window, slate = _active_slate(ctx.games, ctx.data.fetched_at)
+    complete = bool(
+        ((ctx.games["game_type"] == "SB") & ctx.games["played"]).any()
+    )
+
+    # After the final, keep the tab useful: the ten games that separated this
+    # field most are the season's natural highlight reel.
+    source = ctx.games[ctx.games["played"]].copy() if complete else slate.copy()
+    if source.empty:
+        return {
+            "label": "No slate yet",
+            "cards": [],
+            "scenario": None,
+            "rewind": complete,
+            "weather_attribution": False,
+        }
+
+    owners = {t: o.owners for t, o in metrics.ownership(season).items()}
+    slugs = {e.name: e.slug for e in season.entrants}
+    short = _short_names([e.name for e in season.entrants])
+    impacts = ctx.projections.game_impacts if ctx.projections is not None else pd.DataFrame()
+    impact_lookup = (
+        impacts.set_index(["game_id", "slug"]) if not impacts.empty else None
+    )
+
+    cards = []
+    scenario_games = []
+    for raw in source.itertuples():
+        game = _game_row(ctx, raw, owners, slugs, short)
+        p_home = game["home"]["p_win"]
+        uncertainty = 4.0 * p_home * (1.0 - p_home) if p_home is not None else 1.0
+        gains = _scenario_gains(season, raw)
+
+        rooting = []
+        outcome_edges: dict[str, dict[str, float]] = {}
+        for outcome in (raw.away_team, raw.home_team):
+            values = [gains[e.slug][outcome] for e in season.entrants]
+            mean = sum(values) / len(values) if values else 0.0
+            outcome_edges[outcome] = {
+                e.slug: round(gains[e.slug][outcome] - mean, 2) for e in season.entrants
+            }
+
+        for entrant in season.entrants:
+            impact = None
+            if impact_lookup is not None and (str(raw.game_id), entrant.slug) in impact_lookup.index:
+                impact = impact_lookup.loc[(str(raw.game_id), entrant.slug)]
+            if impact is not None:
+                away_value = float(impact["away_expected_payout"])
+                home_value = float(impact["home_expected_payout"])
+                difference = home_value - away_value
+                threshold = season.pot * 0.005
+                preferred = (
+                    "neutral"
+                    if abs(difference) < threshold
+                    else (raw.home_team if difference > 0 else raw.away_team)
+                )
+                priority = abs(difference) * uncertainty
+                detail = {
+                    "away_first": float(impact["away_p_first"]),
+                    "home_first": float(impact["home_p_first"]),
+                    "away_cash": float(impact["away_p_cash"]),
+                    "home_cash": float(impact["home_p_cash"]),
+                    "away_payout": away_value,
+                    "home_payout": home_value,
+                }
+            else:
+                away_value = outcome_edges[raw.away_team][entrant.slug]
+                home_value = outcome_edges[raw.home_team][entrant.slug]
+                difference = home_value - away_value
+                preferred = (
+                    "neutral"
+                    if abs(difference) < 0.01
+                    else (raw.home_team if difference > 0 else raw.away_team)
+                )
+                priority = abs(difference) * uncertainty
+                detail = None
+            rooting.append(
+                {
+                    "slug": entrant.slug,
+                    "name": short[entrant.name],
+                    "preferred": preferred,
+                    "priority": round(priority, 3),
+                    "difference": round(abs(difference), 2),
+                    "model": detail,
+                }
+            )
+
+        weather = ctx.weather.get(str(raw.game_id))
+        card = {
+            **game,
+            "drama_raw": game["swing"] * uncertainty,
+            "drama": 0,
+            "context": _game_context(raw),
+            "weather": weather.to_dict() if weather else None,
+            "rooting": rooting,
+            "gains": gains,
+        }
+        cards.append(card)
+
+        if not game["played"]:
+            if p_home is not None:
+                favorite = raw.home_team if p_home >= 0.5 else raw.away_team
+            else:
+                spread = _optional(raw, "spread_line")
+                favorite = raw.home_team if spread is None or float(spread) >= 0 else raw.away_team
+            dreams = {
+                e.slug: max(
+                    (raw.away_team, raw.home_team),
+                    key=lambda outcome: outcome_edges[outcome][e.slug],
+                )
+                for e in season.entrants
+            }
+            scenario_games.append(
+                {
+                    "id": str(raw.game_id),
+                    "away": raw.away_team,
+                    "home": raw.home_team,
+                    "tie": raw.game_type == "REG",
+                    "favorite": favorite,
+                    "chaos": raw.away_team if favorite == raw.home_team else raw.home_team,
+                    "dream": dreams,
+                    "points": gains,
+                }
+            )
+
+    ceiling = max((c["drama_raw"] for c in cards), default=0.0) or 1.0
+    for card in cards:
+        card["drama"] = round(100 * card["drama_raw"] / ceiling)
+    cards.sort(key=lambda c: (-c["drama_raw"], c["kickoff"]))
+    if complete:
+        cards = cards[:10]
+
+    banked = ctx.outlook.set_index("name")["banked"].to_dict()
+    scenario = (
+        {
+            "entrants": [
+                {
+                    "slug": e.slug,
+                    "name": e.name,
+                    "banked": float(banked.get(e.name, 0.0)),
+                }
+                for e in season.entrants
+            ],
+            "games": scenario_games,
+        }
+        if scenario_games
+        else None
+    )
+    return {
+        "label": "Season rewind" if complete else (window.label if window else "Next slate"),
+        "cards": cards,
+        "scenario": scenario,
+        "rewind": complete,
+        "weather_attribution": any(c["weather"] for c in cards),
+        "weather_attribution_text": ATTRIBUTION_TEXT,
+        "weather_attribution_url": ATTRIBUTION_URL,
+    }
+
+
 def _deadlines(ctx: SiteContext) -> dict[str, Any] | None:
     """When picks and money are due, read off the schedule itself.
 
@@ -1188,6 +1440,7 @@ def render_site(
     site_base: str | None = None,
     copy_assets: bool = True,
     roster: rosters_mod.RosterData | None = None,
+    weather: dict[str, KickoffWeather] | None = None,
 ) -> list[Path]:
     """Render one pool's every page into ``out_dir``. Returns the files written.
 
@@ -1202,7 +1455,13 @@ def render_site(
         roster: Player-level context for the team pages, or ``None`` to render
             them without it. Optional by design — see :mod:`rosters`.
     """
-    ctx = build_context(season, data, simulations=simulations, roster=roster)
+    ctx = build_context(
+        season,
+        data,
+        simulations=simulations,
+        roster=roster,
+        weather=weather,
+    )
     env = _environment_for(site_base if site_base is not None else base, base)
 
     # The templates reach the same function through the `url` filter. The charts
@@ -1260,6 +1519,12 @@ def render_site(
         page="schedule",
         schedule=_schedule(ctx),
         bracket=_bracket(ctx),
+    )
+    write(
+        "gameday/index.html",
+        "gameday.html",
+        page="gameday",
+        gameday=_gameday(ctx),
     )
     write("forecast/index.html", "forecast.html", page="forecast")
     write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
@@ -1391,6 +1656,7 @@ def render_pools(
     base: str = "",
     simulations: int | None = None,
     roster: rosters_mod.RosterData | None = None,
+    weather: dict[str, KickoffWeather] | None = None,
 ) -> list[Path]:
     """Render every pool into one site. The root pool owns the site root.
 
@@ -1418,6 +1684,7 @@ def render_pools(
             site_base=site_base,
             copy_assets=False,
             roster=roster,
+            weather=weather,
         )
 
     written.extend(_copy_assets(out_dir))

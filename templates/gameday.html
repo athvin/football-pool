@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% from '_links.html' import team_chip %}
+
+{% block title %}Gameday · {{ season.year }} {{ season.pool.name }}{% endblock %}
+{% block description %}A personalized rooting guide and what-if scoreboard for the games that can move {{ season.pool.name }}.{% endblock %}
+
+{% block content %}
+<div class="page-head gameday-head">
+  <p class="eyebrow">{{ gameday.label }}</p>
+  <h1 class="page-title">Gameday</h1>
+  <p class="page-sub">
+    {% if gameday.rewind %}
+      The ten games that separated this field most. Drama measures how far a
+      result moved entrants apart, not how close the NFL score happened to be.
+    {% else %}
+      Your war room for the slate: which games can shake the pool, who helps
+      you most, and how every result redraws the standings. Choose yourself
+      above to turn the field-wide view into your rooting guide.
+    {% endif %}
+  </p>
+</div>
+
+{% if not gameday.cards %}
+<p class="empty">The schedule has not produced a gameday slate yet.</p>
+{% else %}
+<section aria-labelledby="rooting-title">
+  <div class="section-head gameday-section-head">
+    <div>
+      <p class="eyebrow">Signal, not noise</p>
+      <h2 class="section-title" id="rooting-title">Rooting board</h2>
+    </div>
+    <p class="section-note">Drama = pool swing × outcome uncertainty</p>
+  </div>
+
+  <div class="gameday-grid{% if gameday.rewind %} is-rewind{% endif %}" data-gameday-cards>
+    {% for g in gameday.cards %}
+    <article class="gameday-card{% if g.played %} is-final{% endif %}"
+             data-gameday-card="{{ g.game_id }}" data-away="{{ g.away.team }}"
+             data-home="{{ g.home.team }}" data-drama="{{ g.drama_raw }}">
+      <header class="gameday-card-head">
+        <div>
+          <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
+          {% if g.played %}<span class="badge">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
+        </div>
+        <div class="drama-score" aria-label="Drama index {{ g.drama }} out of 100">
+          <span>Drama</span><strong>{{ g.drama }}</strong>
+        </div>
+      </header>
+
+      <div class="drama-track" aria-hidden="true"><span style="--drama:{{ g.drama / 100 }}"></span></div>
+
+      <div class="live-strip" data-live-game hidden>
+        <span class="live-pulse" aria-hidden="true"></span>
+        <strong data-live-status>Live</strong>
+        <span data-live-score></span>
+        <span data-live-situation></span>
+      </div>
+
+      <div class="gameday-matchup">
+        {% for side in [g.away, g.home] %}
+        <div class="gameday-side{% if side.outcome %} {{ side.outcome }}{% endif %}">
+          {{ team_chip(side.team, side.chip, large=true) }}
+          {% if g.played %}
+            <strong class="gameday-score">{{ side.score }}</strong>
+          {% else %}
+            <strong>{{ side.stake|points }} <span>pts</span></strong>
+            {% if side.p_win is not none %}<small class="model">{{ '%.0f%%'|format(side.p_win * 100) }} win</small>{% endif %}
+          {% endif %}
+          {% if side.owners %}<small>{{ side.owners|map(attribute='name')|join(', ') }}</small>{% else %}<small>unowned</small>{% endif %}
+        </div>
+        {% if not loop.last %}<span class="gameday-at">at</span>{% endif %}
+        {% endfor %}
+      </div>
+
+      {% if g.context or g.weather %}
+      <ul class="game-context" aria-label="Game conditions">
+        {% for fact in g.context %}<li>{{ fact }}</li>{% endfor %}
+        {% if g.weather %}
+        <li class="weather-chip">
+          {{ g.weather.label }} · {{ g.weather.temperature }}°F
+          {% if g.weather.feels_like != g.weather.temperature %}(feels {{ g.weather.feels_like }}°){% endif %}
+          · {{ g.weather.precipitation }}% rain · {{ g.weather.wind }} mph wind
+          {% if g.weather.gust > g.weather.wind %}(gusts {{ g.weather.gust }}){% endif %}
+        </li>
+        {% endif %}
+      </ul>
+      {% endif %}
+
+      <div class="live-detail" data-live-detail hidden>
+        <p data-live-last-play></p>
+      </div>
+
+      <div class="rooting-anon">
+        <strong>{{ g.swing|points }} swing</strong>
+        <span>{% if g.derby %}Pool picks on both sidelines{% elif g.idle %}No direct pool points{% else %}The pool has one side{% endif %}</span>
+      </div>
+
+      {% for r in g.rooting %}
+      <div class="rooting-readout" data-slug="{{ r.slug }}" data-priority="{{ r.priority }}">
+        <p class="rooting-call">
+          {% if r.preferred == 'neutral' %}
+            <span class="rooting-verb">No real rooting edge</span>
+            <strong>Enjoy the football</strong>
+          {% else %}
+            <span class="rooting-verb">Root for</span>
+            {{ team_chip(r.preferred, 'scored', large=true) }}
+          {% endif %}
+        </p>
+        {% if r.model %}
+        <div class="rooting-odds model">
+          <span><b>{{ g.away.team }}</b> {{ '%.0f%%'|format(r.model.away_first * 100) }} win pool · {{ '%.0f%%'|format(r.model.away_cash * 100) }} cash · ${{ '%.0f'|format(r.model.away_payout) }} EV</span>
+          <span><b>{{ g.home.team }}</b> {{ '%.0f%%'|format(r.model.home_first * 100) }} win pool · {{ '%.0f%%'|format(r.model.home_cash * 100) }} cash · ${{ '%.0f'|format(r.model.home_payout) }} EV</span>
+        </div>
+        {% else %}
+        <p class="rooting-fallback">Based on the immediate points this result gives you versus the field; the season model is unavailable.</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </article>
+    {% endfor %}
+  </div>
+
+  {% if gameday.weather_attribution %}
+  <p class="attribution"><a href="{{ gameday.weather_attribution_url }}" target="_blank" rel="noopener">{{ gameday.weather_attribution_text }}</a> · kickoff-hour forecast, optional and not used in projections.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% if gameday.scenario %}
+<section class="scenario" data-scenario aria-labelledby="scenario-title">
+  <div class="section-head gameday-section-head">
+    <div>
+      <p class="eyebrow">Call the slate</p>
+      <h2 class="section-title" id="scenario-title">What-if scoreboard</h2>
+    </div>
+    <div class="scenario-presets" aria-label="Scenario presets">
+      <button type="button" data-scenario-preset="likely">Likeliest</button>
+      <button type="button" data-scenario-preset="chaos">Chaos</button>
+      <button type="button" data-scenario-preset="dream">My dream slate</button>
+      <button type="button" data-scenario-preset="reset">Reset</button>
+    </div>
+  </div>
+  <p class="scenario-note">This adds only this slate's pool points to the banked board. It is a scenario, not a season forecast.</p>
+  <noscript><p class="empty">Turn on JavaScript to call outcomes and recalculate this scoreboard. The rooting board above is fully readable without it.</p></noscript>
+
+  <div class="scenario-layout">
+    <div class="scenario-games">
+      {% for g in gameday.scenario.games %}
+      <fieldset class="scenario-game" data-scenario-game="{{ g.id }}">
+        <legend>{{ g.away }} at {{ g.home }}</legend>
+        <button type="button" data-scenario-choice="{{ g.away }}">{{ g.away }}</button>
+        {% if g.tie %}<button type="button" data-scenario-choice="TIE">Tie</button>{% endif %}
+        <button type="button" data-scenario-choice="{{ g.home }}">{{ g.home }}</button>
+      </fieldset>
+      {% endfor %}
+    </div>
+
+    <div class="scenario-board-wrap">
+      <ol class="scenario-board" data-scenario-board aria-live="polite">
+        {% for e in gameday.scenario.entrants|sort(attribute='banked', reverse=true) %}
+        <li data-slug="{{ e.slug }}">
+          <span class="scenario-rank">{{ loop.index }}</span>
+          <span class="scenario-name">{{ e.name }}</span>
+          <strong class="scenario-total">{{ e.banked|points }}</strong>
+        </li>
+        {% endfor %}
+      </ol>
+      <button class="share-scenario" type="button" data-scenario-share>Copy this scenario</button>
+      <p class="scenario-status" data-scenario-status aria-live="polite"></p>
+    </div>
+  </div>
+  <script type="application/json" id="gameday-data">{{ gameday.scenario|tojson }}</script>
+</section>
+{% endif %}
+
+<details class="live-lab" data-live-harness data-espn-season="{{ season.year }}">
+  <summary>
+    <span><b>Live-feed test bench</b> · {{ season.year }} preseason</span>
+    <span data-live-feed-state>Open to load ESPN</span>
+  </summary>
+  <div class="live-lab-body">
+    <p class="scenario-note">These games do not score pool points. They are here so the browser-only score, clock, down, possession, red-zone, and last-play feed can be exercised on the deployed static site before Week 1.</p>
+    <div class="live-lab-weeks" aria-label="Preseason week">
+      <button type="button" data-espn-week="1">HOF</button>
+      <button type="button" data-espn-week="2">Week 1</button>
+      <button type="button" data-espn-week="3">Week 2</button>
+      <button type="button" data-espn-week="4" aria-pressed="true">Week 3</button>
+    </div>
+    <div class="live-lab-games" data-live-harness-games aria-live="polite"></div>
+    <noscript><p class="empty">This test bench reads the live feed in your browser, so it needs JavaScript.</p></noscript>
+  </div>
+</details>
+{% endblock %}

@@ -183,6 +183,25 @@ def test_the_cache_keeps_the_coaches_it_was_built_from(
     assert (parse_games(cache, 2025)["home_coach"] == "Home Coach").all()
 
 
+def test_gameday_context_columns_are_optional_but_preserved(csv_bytes):
+    rows = csv_bytes.decode().splitlines()
+    extras = [
+        "away_rest", "home_rest", "roof", "surface", "temp", "wind",
+        "away_qb_name", "home_qb_name", "referee", "stadium_id", "stadium",
+    ]
+    values = ["7", "10", "outdoors", "grass", "61", "12", "Road QB", "Home QB",
+              "Ref Name", "SEA00", "Lumen Field"]
+    csv = "\n".join(
+        [rows[0] + "," + ",".join(extras), *(r + "," + ",".join(values) for r in rows[1:])]
+    )
+
+    games = parse_games(csv, 2025)
+    assert games.loc[0, "stadium"] == "Lumen Field"
+    assert games.loc[0, "roof"] == "outdoors"
+    assert games.loc[0, "home_rest"] == 10
+    assert games.loc[0, "home_qb_name"] == "Home QB"
+
+
 # -- validation -------------------------------------------------------------
 def test_validate_teams_accepts_a_matching_set(season, games_2025):
     validate_teams(games_2025, season.teams)
