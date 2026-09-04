@@ -541,9 +541,9 @@ export function safeStorage(store) {
 // ---------------------------------------------------------------------------
 
 export const ESPN_SCOREBOARD =
-  'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
-export const ESPN_SCOREBOARD_WEB =
   'https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+export const ESPN_SCOREBOARD_LEGACY =
+  'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
 export const LIVE_POLL_MS = 20_000;
 export const PREGAME_POLL_MS = 180_000;
 
@@ -799,12 +799,21 @@ function paintLiveGames(doc, games) {
 }
 
 async function fetchEspnGames(win, url = ESPN_SCOREBOARD) {
-  let response = await win.fetch(url, { cache: 'no-store' });
-  // ESPN has occasionally rejected non-browser-shaped traffic on the older
-  // host while serving the same public response from site.web.api. Keep that
-  // narrowly scoped fallback here rather than making every caller know it.
+  let response;
+  try {
+    response = await win.fetch(url, { cache: 'no-store' });
+  } catch (error) {
+    // A CORS-blocked 403 is deliberately opaque to JavaScript: fetch rejects
+    // before exposing its status. The `.web` host is primary because it is the
+    // one ESPN currently permits browsers to read; this legacy retry covers a
+    // transient failure on that host without weakening the static fallback.
+    if (!url.startsWith(ESPN_SCOREBOARD)) throw error;
+    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_LEGACY), {
+      cache: 'no-store',
+    });
+  }
   if (response.status === 403 && url.startsWith(ESPN_SCOREBOARD)) {
-    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_WEB), {
+    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_LEGACY), {
       cache: 'no-store',
     });
   }

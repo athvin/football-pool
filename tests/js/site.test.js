@@ -342,7 +342,7 @@ describe('ESPN live scoreboard adapter', () => {
   };
 
   test('normalizes team codes and extracts the live situation', () => {
-    expect(ESPN_SCOREBOARD).toContain('espn.com');
+    expect(ESPN_SCOREBOARD).toContain('site.web.api.espn.com');
     expect(normalizeEspnTeam('LA')).toBe('LAR');
     expect(normalizeEspnTeam('BUF')).toBe('BUF');
     expect(parseEspnScoreboard({ events: [{ competitions: [] }] })).toEqual([]);
@@ -400,7 +400,7 @@ describe('Gameday DOM wiring', () => {
     expect(document.querySelector('[data-live-score]').textContent).toContain('KC 24');
   });
 
-  test('a 403 retries against ESPN\'s web host', async () => {
+  test('a 403 on the browser host retries the legacy host', async () => {
     document.body.innerHTML = `
       <article data-gameday-card="g" data-away="KC" data-home="SEA">
         <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
@@ -413,7 +413,24 @@ describe('Gameday DOM wiring', () => {
     await settle();
 
     expect(win.fetch).toHaveBeenCalledTimes(2);
-    expect(win.fetch.mock.calls[1][0]).toContain('site.web.api.espn.com');
+    expect(win.fetch.mock.calls[0][0]).toContain('site.web.api.espn.com');
+    expect(win.fetch.mock.calls[1][0]).toContain('site.api.espn.com');
+  });
+
+  test('an opaque fetch rejection can still try the alternate host', async () => {
+    document.body.innerHTML = `
+      <article data-gameday-card="g" data-away="KC" data-home="SEA">
+        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
+      </article>`;
+    const win = fakeWindow();
+    win.fetch = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(response());
+    init(document, win);
+    await settle();
+
+    expect(win.fetch).toHaveBeenCalledTimes(2);
+    expect(document.querySelector('[data-live-status]').textContent).toBe('Final');
   });
 
   test('the deployed preseason bench loads a chosen week on demand', async () => {
