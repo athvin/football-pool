@@ -62,8 +62,10 @@ def test_outlook_bar_segments_are_ordered_and_nested():
 
 def test_outlook_bar_describes_itself():
     markup = svg.outlook_bar(40, 10, 100, 100)
-    assert parse(markup).get("role") == "img"
-    assert "banked 40" in parse(markup).get("aria-label")
+    el = parse(markup)
+    assert el.get("role") == "img"
+    assert "banked 40" in el.get("aria-label")
+    assert "banked 40" in el.find("title").text
 
 
 def test_outlook_bar_clamps_beyond_the_scale():
@@ -101,6 +103,13 @@ def test_contribution_bar_omits_labels_on_slivers():
     assert "SEA" not in labels
 
 
+def test_contribution_bar_tooltips_do_not_drop_slivers():
+    """A hover target can explain a segment too narrow to print inside."""
+    el = parse(svg.contribution_bar([("KC", 100.0), ("SEA", 0.5)]))
+    titles = [title.text for title in el.findall(".//rect/title")]
+    assert titles == ["KC: 100 points", "SEA: 0.5 points"]
+
+
 def test_contribution_bar_ignores_negative_values():
     el = parse(svg.contribution_bar([("KC", 10.0), ("SEA", -5.0)]))
     assert el is not None
@@ -124,6 +133,11 @@ def test_range_bar_uses_the_model_colour_not_the_actual_colour():
     markup = svg.range_bar(20, 80, 50, 0, 100)
     assert svg.MODEL in markup
     assert svg.BANKED not in markup
+
+
+def test_range_bar_repeats_its_exact_values_in_a_hover_tooltip():
+    el = parse(svg.range_bar(20, 80, 50, 0, 100))
+    assert el.find("title").text == "projected 20 to 80, expected 50"
 
 
 def test_range_bar_with_a_degenerate_scale():
@@ -412,6 +426,10 @@ def test_ridgeline_draws_a_curve_and_a_label_per_entrant():
     assert len(el.findall(".//polygon")) == 2
     assert len(el.findall(".//polyline")) == 2
     assert {t.text for t in el.findall(".//text[@class='ridge-label']")} == {"A", "B"}
+    assert {t.text for t in el.findall(".//polygon/title")} == {
+        "A projected score distribution",
+        "B projected score distribution",
+    }
 
 
 def test_ridgeline_puts_every_row_on_the_same_x_scale():

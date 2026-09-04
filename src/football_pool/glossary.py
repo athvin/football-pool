@@ -58,6 +58,12 @@ def terms(season: Season) -> dict[str, Term]:
             "Points already scored, from games that have finished. Nothing "
             "here is projected, and nothing here can be taken away.",
         ),
+        "team_points": Term(
+            "Points generated",
+            "Everything this team has scored for each entry holding it: "
+            "leveling-factor points from wins, a division or wild-card berth "
+            "bonus, and any playoff-win points already earned.",
+        ),
         "floor": Term(
             "Floor",
             "The lowest this entry can still finish on: everything banked, "
@@ -98,11 +104,23 @@ def terms(season: Season) -> dict[str, Term]:
             "barely changes — so swing measures only the part that separates "
             "people. A game the whole field is on one side of scores zero.",
         ),
+        "drama": Term(
+            "Drama",
+            "Pool swing multiplied by how uncertain the NFL result is, then "
+            "scaled so the slate's biggest game is 100. A close game matters "
+            "only when its result can separate the pool.",
+        ),
         "leverage": Term(
             "Leverage",
             "The leveling factor this entry holds that nobody else does. "
             "Shared teams lift everyone at once; you only gain ground on the "
             "field with teams nobody else has.",
+        ),
+        "share": Term(
+            "Share",
+            "How much of an entry's banked total came from the team shown. It "
+            "is that team's points divided by all the points the entry has "
+            "banked so far.",
         ),
         "bye": Term(
             "Bye",
@@ -165,5 +183,11 @@ def terms(season: Season) -> dict[str, Term]:
             "holding every completed game fixed, and counts how often each "
             "thing happens. Anything drawn from it is cyan, so a forecast is "
             "never mistaken for something that already happened.",
+        ),
+        "game_win_chance": Term(
+            "Game win chance",
+            "How often this team wins this game in the model's simulated "
+            "seasons. It is an NFL outcome forecast, not the chance that an "
+            "entry wins the pool.",
         ),
     }

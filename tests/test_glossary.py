@@ -73,6 +73,7 @@ def _keys_used_in_templates() -> set[str]:
     for path in TEMPLATE_DIR.glob("*.html"):
         text = Path(path).read_text()
         used |= set(re.findall(r"\b(?:info|term)\(\s*'([a-z_]+)'", text))
+        used |= set(re.findall(r"\bglossary\[['\"]([a-z_]+)['\"]\]", text))
     return used
 
 
@@ -95,3 +96,6 @@ def test_the_templates_actually_use_the_glossary():
     assert len(used) >= 10
     # The three the whole complaint was about.
     assert {"on_the_table", "p_first", "expected_payout"} <= used
+    # The follow-up audit: Gameday, team totals, and dense status badges should
+    # not fall back to unexplained shorthand as those pages evolve.
+    assert {"drama", "game_win_chance", "team_points", "share", "eliminated"} <= used

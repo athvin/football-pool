@@ -141,6 +141,7 @@ def outlook_bar(
     return (
         f'<svg class="outlook" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img" aria-label="{escape(label)}">'
+        f'<title>{escape(label)}</title>'
         f'<defs><pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" '
         f'patternTransform="rotate(45)">'
         f'<rect width="4" height="4" fill="none"/>'
@@ -200,7 +201,7 @@ def contribution_bar(
         fill = palette[i % len(palette)]
         out.append(
             f'<rect x="{x:.1f}" y="0" width="{max(seg - 1, 0):.1f}" height="{height}" '
-            f'rx="3" fill="{fill}"/>'
+            f'rx="3" fill="{fill}"><title>{escape(team)}: {_fmt(value)} points</title></rect>'
         )
         if seg > 34:  # only label a segment wide enough to hold the text
             out.append(_linked(
@@ -239,6 +240,7 @@ def range_bar(
     return (
         f'<svg class="range" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img" aria-label="{escape(label)}">'
+        f'<title>{escape(label)}</title>'
         f'<line x1="0" y1="{mid}" x2="{width}" y2="{mid}" stroke="var(--rule)" stroke-width="1"/>'
         f'<rect x="{x_lo:.1f}" y="{mid - 4}" width="{max(x_hi - x_lo, 1):.1f}" height="8" '
         f'rx="4" fill="{MODEL}" opacity="0.35"/>'
@@ -596,7 +598,8 @@ def ridgeline(
         )
         area = f"{label_width:.1f},{base:.1f} {points} {x_at(len(density) - 1):.1f},{base:.1f}"
         out.append(
-            f'<polygon class="ridge-fill" points="{area}"/>'
+            f'<polygon class="ridge-fill" points="{area}">'
+            f'<title>{escape(name)} projected score distribution</title></polygon>'
             f'<polyline class="ridge-line" points="{points}" fill="none"/>'
             + _linked(
                 f'<text x="{label_width - 10}" y="{base - 3:.1f}" text-anchor="end" '

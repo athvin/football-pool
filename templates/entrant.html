@@ -25,7 +25,7 @@
         {{ team_chip(t, 'scored' if entrant.contributions.get(t, 0) > 0 else 'dim', vt=true) }}
       {% endfor %}
       <span class="badge you" data-me-only>you</span>
-      {% if entrant.eliminated %}<span class="badge out">eliminated</span>{% endif %}
+      {% if entrant.eliminated %}<span class="badge out" title="{{ glossary['eliminated'].definition }}">eliminated</span>{% endif %}
       {% if entrant.money %}<span class="badge money">{{ entrant.money|money }} if it ended today</span>{% endif %}
     </div>
   </div>
@@ -110,7 +110,7 @@
 
 {% if entrant.projection %}
 {% set p = entrant.projection %}
-<h2 class="section-title">Projected finish <span class="model-tag">modelled</span></h2>
+<h2 class="section-title">Projected finish <span class="model-tag" title="Forecast-model output, not a scored result">modelled</span></h2>
 {# Two different questions, kept apart on purpose. "How likely am I to win" and
    "what is this entry worth" are not the same number and routinely disagree —
    the steady entry that finishes second half the time is worth more money than

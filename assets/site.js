@@ -664,9 +664,10 @@ export function scenarioStandings(data, selections) {
  * combination is visited, so the likeliest slate is one of the candidates and
  * a dream slate can never rank the entrant worse than chalk did. Manual ties
  * remain available, but a preset called "dream" should call winners rather
- * than manufacture sixteen fantastically convenient NFL ties.
+ * than manufacture sixteen fantastically convenient NFL ties. Callers can
+ * force a subset of those winners before the remaining slate is optimised.
  */
-export function dreamScenario(data, meSlug = '') {
+function optimizedScenario(data, meSlug = '', forced = {}) {
   const entrants = data?.entrants || [];
   const games = data?.games || [];
   const me = entrants.findIndex((entrant) => entrant.slug === meSlug);
@@ -675,7 +676,9 @@ export function dreamScenario(data, meSlug = '') {
   // A real NFL slate tops out at sixteen games. Keep malformed input from
   // turning an interactive button into an exponential browser lock-up.
   if (games.length > 16) {
-    return Object.fromEntries(games.map((game) => [game.id, game.favorite || game.home]));
+    return Object.fromEntries(games.map((game) => [
+      game.id, forced[String(game.id)] || game.favorite || game.home,
+    ]));
   }
 
   const totals = entrants.map((entrant) => Number(entrant.banked));
@@ -717,7 +720,9 @@ export function dreamScenario(data, meSlug = '') {
     }
     const game = games[index];
     // Favourite first makes a perfectly level optimum deterministic and calm.
-    const outcomes = [game.favorite, game.away, game.home]
+    const outcomes = (forced[String(game.id)]
+      ? [forced[String(game.id)]]
+      : [game.favorite, game.away, game.home])
       .filter((outcome, i, all) => outcome && all.indexOf(outcome) === i);
     for (const outcome of outcomes) {
       for (let entrant = 0; entrant < entrants.length; entrant += 1) {
@@ -734,9 +739,50 @@ export function dreamScenario(data, meSlug = '') {
   return Object.fromEntries(games.map((game, index) => [game.id, bestCalls[index]]));
 }
 
+export function dreamScenario(data, meSlug = '') {
+  return optimizedScenario(data, meSlug);
+}
+
+/** Best full slate after forcing the selected entrant's own sides to win. */
+export function outsideHelpScenario(data, meSlug = '') {
+  const entrant = (data?.entrants || []).find((candidate) => candidate.slug === meSlug);
+  if (!entrant) return {};
+  const mine = new Set(entrant.teams || []);
+  const forced = {};
+  for (const game of data?.games || []) {
+    const owned = [game.away, game.home].filter((team) => mine.has(team));
+    // When two of your teams meet, both cannot win. Leave that one to the
+    // optimizer; either result still satisfies the spirit of backing your own.
+    if (owned.length === 1) forced[String(game.id)] = owned[0];
+  }
+  return optimizedScenario(data, meSlug, forced);
+}
+
+/** Non-owned winners in the help slate whose result changes somebody's points. */
+export function outsideHelpTeams(data, selections, meSlug = '') {
+  const entrants = data?.entrants || [];
+  const entrant = entrants.find((candidate) => candidate.slug === meSlug);
+  if (!entrant) return [];
+  const mine = new Set(entrant.teams || []);
+  const helpers = [];
+  for (const game of data?.games || []) {
+    const chosen = selections?.[String(game.id)];
+    if (!chosen || chosen === 'TIE' || mine.has(chosen)) continue;
+    // A completely unowned matchup is filled with chalk only to make the
+    // scenario complete. Do not call that winner someone the viewer needs.
+    const matters = entrants.some((candidate) => (
+      Number(game.points?.[candidate.slug]?.[game.away] || 0)
+      !== Number(game.points?.[candidate.slug]?.[game.home] || 0)
+    ));
+    if (matters && !helpers.includes(chosen)) helpers.push(chosen);
+  }
+  return helpers;
+}
+
 export function scenarioPreset(data, preset, meSlug = '') {
   if (preset === 'reset') return {};
   if (preset === 'dream') return dreamScenario(data, meSlug);
+  if (preset === 'help') return outsideHelpScenario(data, meSlug);
   const out = {};
   for (const game of data.games) {
     if (preset === 'likely') out[game.id] = game.favorite;
@@ -829,6 +875,10 @@ function initScenario(doc, win) {
 
   const paint = () => {
     const standings = scenarioStandings(data, selections);
+    const me = doc.documentElement.dataset.me || '';
+    const helping = new Set(
+      activePreset === 'help' ? outsideHelpTeams(data, selections, me) : [],
+    );
     const board = root.querySelector('[data-scenario-board]');
     const rows = new Map(Array.from(board?.children || [], (row) => [row.dataset.slug, row]));
     for (const entrant of standings) {
@@ -842,6 +892,11 @@ function initScenario(doc, win) {
       const chosen = selections[fieldset.dataset.scenarioGame];
       for (const button of fieldset.querySelectorAll('[data-scenario-choice]')) {
         button.setAttribute('aria-pressed', String(button.dataset.scenarioChoice === chosen));
+        button.classList.toggle(
+          'is-outside-help',
+          button.dataset.scenarioChoice === chosen
+            && helping.has(button.dataset.scenarioChoice),
+        );
       }
       const game = data.games.find((candidate) => String(candidate.id) === fieldset.dataset.scenarioGame);
       if (game) paintScenarioDrilldown(doc, root, data, game, chosen);
@@ -849,7 +904,6 @@ function initScenario(doc, win) {
     for (const button of root.querySelectorAll('[data-scenario-preset]')) {
       button.setAttribute('aria-pressed', String(button.dataset.scenarioPreset === activePreset));
     }
-    const me = doc.documentElement.dataset.me || '';
     const meRank = standings.find((entrant) => entrant.slug === me)?.rank ?? null;
     if (previousMeRank !== null && previousMeRank > 1 && meRank === 1
         && !win.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -875,6 +929,16 @@ function initScenario(doc, win) {
     return mine ? `${mine.name}'s best slate lands at #${mine.rank}${finish}.` : '';
   };
 
+  const describeHelp = (standings, me) => {
+    const mine = standings.find((entrant) => entrant.slug === me);
+    if (!mine) return '';
+    const helpers = outsideHelpTeams(data, selections, me);
+    const help = helpers.length
+      ? `root for ${helpers.join(', ')} in the other games`
+      : 'no other game changes your best finish';
+    return `Assuming your teams win, ${help}. ${mine.name} lands at #${mine.rank}.`;
+  };
+
   root.addEventListener('click', (event) => {
     const choice = event.target.closest?.('[data-scenario-choice]');
     if (choice) {
@@ -892,8 +956,12 @@ function initScenario(doc, win) {
     if (preset) {
       const me = doc.documentElement.dataset.me || '';
       const status = root.querySelector('[data-scenario-status]');
-      if (preset === 'dream' && !me) {
-        if (status) status.textContent = 'Choose who you are above to build your dream slate.';
+      if ((preset === 'dream' || preset === 'help') && !me) {
+        if (status) {
+          status.textContent = preset === 'dream'
+            ? 'Choose who you are above to build your dream slate.'
+            : 'Choose who you are above to find the other teams that help you.';
+        }
         return;
       }
       activePreset = preset;
@@ -901,6 +969,8 @@ function initScenario(doc, win) {
       const standings = paint();
       if (status && preset === 'dream') {
         status.textContent = describeDream(standings, me);
+      } else if (status && preset === 'help') {
+        status.textContent = describeHelp(standings, me);
       } else if (status) {
         status.textContent = preset === 'reset' ? 'Scenario cleared.' : `${preset === 'likely' ? 'Likeliest' : 'Chaos'} slate called.`;
       }
@@ -926,15 +996,24 @@ function initScenario(doc, win) {
   doc.querySelector('[data-me-select]')?.addEventListener('change', () => {
     previousMeRank = null;
     const status = root.querySelector('[data-scenario-status]');
-    if (activePreset === 'dream') {
+    if (activePreset === 'dream' || activePreset === 'help') {
       const me = doc.documentElement.dataset.me || '';
-      selections = scenarioPreset(data, 'dream', me);
+      selections = scenarioPreset(data, activePreset, me);
       if (!me) {
+        const was = activePreset;
         activePreset = '';
-        if (status) status.textContent = 'Choose who you are above to build your dream slate.';
+        if (status) {
+          status.textContent = was === 'dream'
+            ? 'Choose who you are above to build your dream slate.'
+            : 'Choose who you are above to find the other teams that help you.';
+        }
       } else {
         const standings = paint();
-        if (status) status.textContent = describeDream(standings, me);
+        if (status) {
+          status.textContent = activePreset === 'dream'
+            ? describeDream(standings, me)
+            : describeHelp(standings, me);
+        }
         return;
       }
     }
@@ -994,6 +1073,18 @@ async function fetchEspnGames(win, url = ESPN_SCOREBOARD) {
   return parseEspnScoreboard(await response.json());
 }
 
+/** Clone one of the server-rendered canonical team chips into live markup. */
+function liveTeamChip(doc, root, team, templateAttribute) {
+  const original = root.querySelector(`[${templateAttribute}="${team}"] .team-chip`);
+  const chip = original?.cloneNode(true) || doc.createElement('a');
+  if (!original) {
+    chip.className = 'team-chip is-large scored';
+    chip.href = `${root.dataset.teamBase || '/team/'}${team}/`;
+    chip.textContent = team;
+  }
+  return chip;
+}
+
 function renderLiveHarness(doc, root, games) {
   const list = root.querySelector('[data-live-harness-games]');
   if (!list) return;
@@ -1001,8 +1092,31 @@ function renderLiveHarness(doc, root, games) {
   for (const game of games) {
     const row = doc.createElement('article');
     row.className = `live-lab-game is-${game.state}`;
-    const matchup = doc.createElement('strong');
-    matchup.textContent = `${game.away} ${game.awayScore} · ${game.home} ${game.homeScore}`;
+    const matchup = doc.createElement('div');
+    matchup.className = 'live-lab-matchup';
+    matchup.setAttribute(
+      'aria-label',
+      `${game.away} ${game.awayScore} at ${game.home} ${game.homeScore}`,
+    );
+    for (const [team, score, winner] of [
+      [game.away, game.awayScore, game.awayWinner],
+      [game.home, game.homeScore, game.homeWinner],
+    ]) {
+      const side = doc.createElement('span');
+      side.className = `live-lab-side${winner ? ' is-winner' : ''}`;
+      const chip = liveTeamChip(doc, root, team, 'data-live-team');
+      const points = doc.createElement('strong');
+      points.textContent = game.state === 'pre' ? '—' : score;
+      side.append(chip, ' ', points);
+      matchup.append(side);
+      if (team === game.away) {
+        const at = doc.createElement('span');
+        at.className = 'live-lab-at';
+        at.setAttribute('aria-hidden', 'true');
+        at.textContent = 'at';
+        matchup.append(at);
+      }
+    }
     const state = doc.createElement('span');
     state.textContent = game.state === 'post' ? 'Final' : (game.state === 'in' ? game.clock : 'Scheduled');
     const situation = doc.createElement('span');
@@ -1033,7 +1147,9 @@ function initLiveHarness(doc, win) {
   const load = async (week) => {
     const mine = ++request;
     const state = root.querySelector('[data-live-feed-state]');
-    if (state) state.textContent = 'Loading…';
+    const label = root.querySelector(`[data-espn-week="${week}"]`)?.textContent.trim()
+      || `Preseason week ${week}`;
+    if (state) state.textContent = `Loading ${label}…`;
     try {
       const season = root.dataset.espnSeason || new Date().getFullYear();
       const url = `${ESPN_SCOREBOARD}?seasontype=1&week=${week}&dates=${season}`;
@@ -1042,13 +1158,15 @@ function initLiveHarness(doc, win) {
       renderLiveHarness(doc, root, games);
       if (state) {
         const live = games.filter((game) => game.state === 'in').length;
-        state.textContent = live ? `${live} live · refreshes automatically` : `${games.length} games loaded`;
+        state.textContent = live
+          ? `${label} · ${live} live · refreshes automatically`
+          : `${label} · ${games.length} game${games.length === 1 ? '' : 's'} loaded`;
       }
       const delay = livePollDelay(games);
       if (delay && root.open) win.setTimeout(() => load(week), delay);
     } catch {
       if (mine !== request) return;
-      if (state) state.textContent = 'Feed unavailable · try again';
+      if (state) state.textContent = `${label} feed unavailable · try again`;
     }
   };
   root.addEventListener('toggle', () => {
@@ -1074,7 +1192,6 @@ function renderPreseasonSchedule(doc, root, games, week) {
     : games.filter((game) => game.week === Number(week));
   wanted.sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id));
   list.textContent = '';
-  const teamBase = root.dataset.teamBase || '/team/';
   const zone = doc.querySelector('[data-tz-select]')?.value || DEFAULT_TZ;
 
   for (const game of wanted) {
@@ -1101,13 +1218,7 @@ function renderPreseasonSchedule(doc, root, games, week) {
     ]) {
       const side = doc.createElement('div');
       side.className = `preseason-side${winner ? ' is-winner' : ''}`;
-      const original = root.querySelector(`[data-preseason-team="${team}"] .team-chip`);
-      const chip = original?.cloneNode(true) || doc.createElement('a');
-      if (!original) {
-        chip.className = 'team-chip is-large scored';
-        chip.href = `${teamBase}${team}/`;
-        chip.textContent = team;
-      }
+      const chip = liveTeamChip(doc, root, team, 'data-preseason-team');
       const points = doc.createElement('strong');
       points.textContent = game.state === 'pre' ? '—' : score;
       side.append(chip, points);
@@ -1249,11 +1360,20 @@ function initTheme(doc, storage, win) {
   if (!button) return;
 
   const root = doc.documentElement;
+  const paintLabel = () => {
+    const theme = nextTheme(root.dataset.theme);
+    const label = `Switch to ${theme} theme`;
+    button.setAttribute('aria-label', label);
+    button.title = label;
+  };
+  paintLabel();
+
   button.addEventListener('click', () => {
     const theme = nextTheme(root.dataset.theme);
     const apply = () => {
       root.dataset.theme = theme;
       storage.set(THEME_KEY, theme);
+      paintLabel();
     };
 
     // The floodlights come on from the switch that turned them on: the new
@@ -1357,6 +1477,17 @@ function initSlate(doc) {
  * stands aside whenever the click landed on a link or on the button itself.
  */
 function initGameDetail(doc) {
+  const paintButton = (button, open) => {
+    button.setAttribute('aria-expanded', String(open));
+    const current = button.title.replace(/^(Show|Hide) /, '');
+    const subject = current || 'what this game is worth';
+    button.title = `${open ? 'Hide' : 'Show'} ${subject}`;
+  };
+
+  for (const button of doc.querySelectorAll('[data-game-open]')) {
+    paintButton(button, button.getAttribute('aria-expanded') === 'true');
+  }
+
   // One listener per list rather than two per row: the schedule carries 272
   // games, and 544 listeners to open a panel is not a trade worth making. The
   // list rather than the document, because a listener on the document outlives
@@ -1378,7 +1509,7 @@ function initGameDetail(doc) {
       }
 
       const open = row.classList.toggle('is-open');
-      button.setAttribute('aria-expanded', String(open));
+      paintButton(button, open);
     });
   }
 
@@ -1399,7 +1530,7 @@ function initGameDetail(doc) {
     const button = row?.querySelector('[data-game-open]');
     if (!row || !button) return;
     row.classList.add('is-open');
-    button.setAttribute('aria-expanded', 'true');
+    paintButton(button, true);
   };
   openTarget();
   doc.defaultView?.addEventListener('hashchange', openTarget);
@@ -1602,11 +1733,30 @@ export function firstSortDirection(th) {
 function initSort(doc, win) {
   const still = win.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  const headingLabel = (th) => {
+    if (th.dataset.sortLabel) return th.dataset.sortLabel;
+    const copy = th.cloneNode(true);
+    for (const term of copy.querySelectorAll('.term')) term.remove();
+    return copy.textContent.replace(/\s+/g, ' ').trim();
+  };
+
+  const paintTitle = (th) => {
+    const label = th.dataset.sortLabel || headingLabel(th);
+    th.dataset.sortLabel = label;
+    const current = th.getAttribute('aria-sort');
+    const direction = current === null
+      ? firstSortDirection(th)
+      : (current === 'ascending' ? -1 : 1);
+    th.title = `Sort by ${label}, ${direction === 1 ? 'ascending' : 'descending'}`;
+  };
+
   for (const table of doc.querySelectorAll('table')) {
     const heads = Array.from(table.querySelectorAll('th[data-sort]'));
     if (!heads.length) continue;
 
     for (const th of heads) {
+      th.dataset.sortLabel = th.title || headingLabel(th);
+      paintTitle(th);
       th.tabIndex = 0;
       const activate = () => {
         const index = Array.from(th.parentElement.children).indexOf(th);
@@ -1621,6 +1771,7 @@ function initSort(doc, win) {
 
         for (const other of heads) other.removeAttribute('aria-sort');
         th.setAttribute('aria-sort', direction === 1 ? 'ascending' : 'descending');
+        for (const other of heads) paintTitle(other);
 
         // Read before, sort, then let every row travel from where it was.
         const before = still ? null : rowTops(table);

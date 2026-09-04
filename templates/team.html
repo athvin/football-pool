@@ -29,7 +29,7 @@
     </p>
   </div>
   <div class="hero-score">
-    <p class="state-label">Produced</p>
+    <p class="state-label">{{ term('team_points', 'Produced') }}</p>
     <p class="hero-total">{{ team.points|points }}</p>
     <p class="row-sub">{{ team.played }} of {{ team.games|length }} games played</p>
   </div>
@@ -59,7 +59,7 @@
 {% if team.owners %}
 <p class="page-sub">
   The points are the same number for everybody holding them — a team scores what
-  it scores. The share is not, and that is the part worth reading: the same
+  it scores. The {{ term('share', 'share') }} is not, and that is the part worth reading: the same
   {{ team.points|points }} is a different slice of every entry it is in.
 </p>
 <div class="forecast-rows">
@@ -129,8 +129,8 @@
         {# The rows arrive in field order — offense to special teams — so this
            is the column the table is "sorted by", even though that order is
            positional rather than alphabetical. #}
-        <th scope="col" data-sort aria-sort="ascending">Pos</th>
-        <th scope="col" class="num" data-sort>Yrs</th>
+        <th scope="col" data-sort aria-sort="ascending" title="Position">Pos</th>
+        <th scope="col" class="num" data-sort title="Seasons of NFL experience">Yrs</th>
         <th scope="col" data-sort>College</th>
       </tr>
     </thead>
