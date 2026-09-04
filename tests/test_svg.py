@@ -7,6 +7,7 @@ semantic colours applied to the right marks.
 
 from __future__ import annotations
 
+import math
 import re
 import xml.etree.ElementTree as ET
 
@@ -687,7 +688,11 @@ def test_heatmap_widens_itself_to_hold_its_own_caption():
     assert int(small.get("width")) > grid_right
     # And the drawn size is published to the stylesheet, which uses it to
     # refuse to scale the grid up past life size.
-    assert small.get("style") == f"--heat-w:{small.get('width')}px"
+    width = int(small.get("width"))
+    touch_width = math.ceil(width * 44 / 60)
+    assert small.get("style") == (
+        f"--heat-w:{width}px;--heat-touch-w:{touch_width}px"
+    )
 
     # A field wide enough to hold the caption on its own is not padded at all.
     wide = parse(svg.heatmap([[None] * 8] * 8, [f"E{i}" for i in range(8)]))

@@ -199,6 +199,12 @@
     <nav class="footer-nav" aria-label="Reference">
       <a href="{{ '/teams/'|url }}">Teams</a>
       <a href="{{ '/rules/'|url }}">Rules</a>
+      {# The top-right broadcast links fit down to most phones. At the very
+         narrowest width that group steps out of the masthead to keep the
+         theme control on the first row; these copies become visible here so
+         neither destination disappears. #}
+      <a class="footer-external" href="{{ model_url }}" target="_blank" rel="noopener">Model</a>
+      <a class="footer-external" href="{{ repo_url }}" target="_blank" rel="noopener">Source</a>
     </nav>
   </div>
 </footer>

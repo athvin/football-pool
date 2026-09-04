@@ -270,6 +270,16 @@ export function scrollProgress(scrollTop, scrollMax) {
   return Math.min(Math.max(scrollTop / scrollMax, 0), 1);
 }
 
+/** Centre one item in a horizontal rail, clamped to its scrollable range. */
+export function centeredScrollLeft(itemLeft, itemWidth, viewportWidth, contentWidth) {
+  const values = [itemLeft, itemWidth, viewportWidth, contentWidth];
+  if (!values.every(Number.isFinite) || !(viewportWidth > 0) || !(contentWidth > viewportWidth)) {
+    return 0;
+  }
+  const wanted = itemLeft + itemWidth / 2 - viewportWidth / 2;
+  return Math.min(Math.max(wanted, 0), contentWidth - viewportWidth);
+}
+
 /** The paint tokens, read off the document so the theme owns every colour. */
 export function fieldPalette(styles) {
   const read = (name) => styles.getPropertyValue(name).trim();
@@ -1467,6 +1477,33 @@ function initLiveGames(doc, win) {
   poll();
 }
 
+/**
+ * Bring an active item into the middle of an overflowing horizontal rail.
+ *
+ * `scrollIntoView()` also moves the page vertically in several mobile
+ * browsers, which is particularly disorienting when a schedule hash has just
+ * taken the reader to a week. Computing only `scrollLeft` keeps the two axes
+ * independent.
+ */
+function centerScrollerItem(scroller, item) {
+  if (!scroller || !item || scroller.scrollWidth <= scroller.clientWidth) return;
+  const rail = scroller.getBoundingClientRect();
+  const target = item.getBoundingClientRect();
+  const itemLeft = scroller.scrollLeft + target.left - rail.left;
+  scroller.scrollLeft = centeredScrollLeft(
+    itemLeft,
+    target.width,
+    scroller.clientWidth,
+    scroller.scrollWidth,
+  );
+}
+
+/** The current primary section should never begin off the edge of a phone. */
+function initPrimaryNavigation(doc) {
+  const tabs = doc.querySelector('.tabs');
+  centerScrollerItem(tabs, tabs?.querySelector('[aria-current="page"]'));
+}
+
 /** Keep the status/identity strip tucked directly beneath the sticky masthead. */
 function initStickyChrome(doc, win) {
   const masthead = doc.querySelector('.masthead');
@@ -2028,10 +2065,14 @@ function initSchedule(doc, nowMs) {
   const markVisible = () => {
     const hash = doc.location?.hash || '';
     const shown = hash === '#preseason' ? 'preseason' : (hash.replace('#week-', '') || current);
+    let active = null;
     for (const link of links) {
-      if (link.dataset.weekLink === shown) link.setAttribute('aria-current', 'true');
-      else link.removeAttribute('aria-current');
+      if (link.dataset.weekLink === shown) {
+        link.setAttribute('aria-current', 'true');
+        active = link;
+      } else link.removeAttribute('aria-current');
     }
+    centerScrollerItem(active?.closest('.week-switch'), active);
   };
   markVisible();
   doc.defaultView?.addEventListener('hashchange', markVisible);
@@ -2641,6 +2682,7 @@ export function init(doc = document, win = window) {
     ? gamedayLaunchParams(win.location?.search || '')
     : { me: '', preset: '' };
   initTheme(doc, storage, win);
+  initPrimaryNavigation(doc);
   initStickyChrome(doc, win);
   initDetail(doc, storage);
   initSlate(doc);

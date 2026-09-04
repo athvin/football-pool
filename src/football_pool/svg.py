@@ -723,13 +723,18 @@ def heatmap(
     caption_right = grid_left + cell * n / 2 + len(caption) * 6.6 / 2
     width = max(grid_left + cell * n, math.ceil(caption_right) + 4)
     height = header_height + cell * n
+    # The box itself is two pixels narrower than its cell so adjacent values
+    # retain a gutter. Publish the width at which that clickable box is 44px;
+    # coarse-pointer CSS uses it as a floor while still refusing to enlarge a
+    # naturally smaller chart past its drawn size.
+    touch_width = math.ceil(width * 44 / max(cell - 2, 1))
     out = [
         # The drawn size rides along as a custom property so the stylesheet can
         # refuse to scale the grid up past it. A two-person pool is 278px wide
         # and stretching that across a desktop column draws 62px cells at 250
         # and 10px labels at 40 — see `.heat` in site.css.
         f'<svg class="heat" width="{width}" height="{height}" '
-        f'style="--heat-w:{width}px" '
+        f'style="--heat-w:{width}px;--heat-touch-w:{touch_width}px" '
         f'viewBox="0 0 {width} {height}" role="{_chart_role(bool(hrefs))}" '
         f'aria-label="How often each entrant {escape(verb)} each other entrant. '
         f'Each row is one entrant; each column is the rival they are measured '
