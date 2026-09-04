@@ -513,8 +513,10 @@ describe('Gameday DOM wiring', () => {
       }],
     };
     document.body.innerHTML = `
-      <select data-me-select><option value=""></option><option value="a">Alex</option></select>
+      <select data-me-select><option value=""></option><option value="a">Alex</option><option value="b">Blair</option></select>
       <section data-scenario>
+        <button data-scenario-preset="likely">Likely</button>
+        <button data-scenario-preset="chaos">Chaos</button>
         <button data-scenario-preset="dream">Dream</button>
         <button data-scenario-preset="reset">Reset</button>
         <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button>
@@ -536,6 +538,8 @@ describe('Gameday DOM wiring', () => {
     win.navigator = { clipboard: { writeText: vi.fn(async () => {}) } };
     init(document, win);
 
+    expect(document.querySelector('[data-scenario-preset="reset"]').getAttribute('aria-pressed'))
+      .toBe('true');
     document.querySelector('[data-scenario-preset="dream"]').click();
     expect(document.querySelector('[data-scenario-status]').textContent).toContain('Choose who');
     const select = document.querySelector('[data-me-select]');
@@ -550,11 +554,32 @@ describe('Gameday DOM wiring', () => {
     expect(document.querySelector('[data-scenario-impact]').textContent).toContain('Alex +5.00');
     expect(document.querySelector('[data-scenario-team="SEA"]').classList.contains('is-called')).toBe(true);
     expect(document.querySelector('[data-scenario-status]').textContent).toContain("Alex's best slate lands at #1");
+    expect(document.querySelector('[data-scenario-preset="dream"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    select.value = 'b';
+    select.dispatchEvent(new Event('change'));
+    expect(document.querySelector('[data-scenario-status]').textContent)
+      .toContain("Blair's best slate lands at #1");
+    expect(document.querySelector('[data-scenario-preset="dream"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    select.value = 'a';
+    select.dispatchEvent(new Event('change'));
     document.querySelector('[data-scenario-choice="SEA"]').click();
     expect(document.querySelector('[data-scenario-drilldown]').open).toBe(true);
+    expect(document.querySelectorAll('[data-scenario-preset][aria-pressed="true"]'))
+      .toHaveLength(0);
     document.querySelector('[data-scenario-preset="reset"]').click();
     expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('10.00');
     expect(document.querySelector('[data-scenario-impact]').textContent).toContain('Choose a result');
+    expect(document.querySelector('[data-scenario-preset="reset"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    document.querySelector('[data-scenario-preset="likely"]').click();
+    expect(document.querySelector('[data-scenario-preset="likely"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    document.querySelector('[data-scenario-preset="chaos"]').click();
+    expect(document.querySelector('[data-scenario-preset="chaos"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    document.querySelector('[data-scenario-preset="reset"]').click();
     document.querySelector('[data-scenario-share]').click();
     await settle();
     expect(win.navigator.clipboard.writeText)

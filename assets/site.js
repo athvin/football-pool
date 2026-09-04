@@ -824,6 +824,7 @@ function initScenario(doc, win) {
     return;
   }
   let selections = parseScenarioHash(doc.location?.hash || '', data.games);
+  let activePreset = Object.keys(selections).length ? '' : 'reset';
   let previousMeRank = null;
 
   const paint = () => {
@@ -845,6 +846,9 @@ function initScenario(doc, win) {
       const game = data.games.find((candidate) => String(candidate.id) === fieldset.dataset.scenarioGame);
       if (game) paintScenarioDrilldown(doc, root, data, game, chosen);
     }
+    for (const button of root.querySelectorAll('[data-scenario-preset]')) {
+      button.setAttribute('aria-pressed', String(button.dataset.scenarioPreset === activePreset));
+    }
     const me = doc.documentElement.dataset.me || '';
     const meRank = standings.find((entrant) => entrant.slug === me)?.rank ?? null;
     if (previousMeRank !== null && previousMeRank > 1 && meRank === 1
@@ -861,10 +865,21 @@ function initScenario(doc, win) {
     return standings;
   };
 
+  const describeDream = (standings, me) => {
+    const mine = standings.find((entrant) => entrant.slug === me);
+    const next = standings.find((entrant) => entrant.slug !== me);
+    const margin = mine && next ? mine.total - next.total : 0;
+    const finish = mine?.rank === 1
+      ? (margin > 0.005 ? ` · ${margin.toFixed(2)} pts clear` : ' · tied for first')
+      : '';
+    return mine ? `${mine.name}'s best slate lands at #${mine.rank}${finish}.` : '';
+  };
+
   root.addEventListener('click', (event) => {
     const choice = event.target.closest?.('[data-scenario-choice]');
     if (choice) {
       const game = choice.closest('[data-scenario-game]').dataset.scenarioGame;
+      activePreset = '';
       selections[game] = selections[game] === choice.dataset.scenarioChoice
         ? undefined : choice.dataset.scenarioChoice;
       if (!selections[game]) delete selections[game];
@@ -881,16 +896,11 @@ function initScenario(doc, win) {
         if (status) status.textContent = 'Choose who you are above to build your dream slate.';
         return;
       }
+      activePreset = preset;
       selections = scenarioPreset(data, preset, me);
       const standings = paint();
       if (status && preset === 'dream') {
-        const mine = standings.find((entrant) => entrant.slug === me);
-        const next = standings.find((entrant) => entrant.slug !== me);
-        const margin = mine && next ? mine.total - next.total : 0;
-        const finish = mine?.rank === 1
-          ? (margin > 0.005 ? ` · ${margin.toFixed(2)} pts clear` : ' · tied for first')
-          : '';
-        status.textContent = mine ? `${mine.name}'s best slate lands at #${mine.rank}${finish}.` : '';
+        status.textContent = describeDream(standings, me);
       } else if (status) {
         status.textContent = preset === 'reset' ? 'Scenario cleared.' : `${preset === 'likely' ? 'Likeliest' : 'Chaos'} slate called.`;
       }
@@ -915,6 +925,19 @@ function initScenario(doc, win) {
 
   doc.querySelector('[data-me-select]')?.addEventListener('change', () => {
     previousMeRank = null;
+    const status = root.querySelector('[data-scenario-status]');
+    if (activePreset === 'dream') {
+      const me = doc.documentElement.dataset.me || '';
+      selections = scenarioPreset(data, 'dream', me);
+      if (!me) {
+        activePreset = '';
+        if (status) status.textContent = 'Choose who you are above to build your dream slate.';
+      } else {
+        const standings = paint();
+        if (status) status.textContent = describeDream(standings, me);
+        return;
+      }
+    }
     paint();
   });
   paint();
