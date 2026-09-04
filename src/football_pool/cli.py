@@ -26,6 +26,23 @@ def games_cache(season: int, root: Path | None = None) -> Path:
     return data_dir(season, root) / "games.csv"
 
 
+def roster_cache(season: int, root: Path | None = None) -> Path:
+    return data_dir(season, root) / "roster.csv"
+
+
+def _fetch_roster(year: int, offline: bool):
+    """The roster feed, which is allowed to be missing.
+
+    A thin seam over :func:`rosters.fetch_roster` mostly so it is one thing to
+    stub: the roster is context, not results, and no test of scoring or
+    publishing should need the network to say so. Lives under the same daily
+    ``data/`` commit as the games cache, so the fallback refreshes itself.
+    """
+    from .rosters import fetch_roster
+
+    return fetch_roster(year, cache_path=roster_cache(year), offline=offline)
+
+
 def _load(args) -> tuple:
     """Load season config and games together — the common prologue."""
     from .nflverse import fetch_games, validate_teams
@@ -53,6 +70,15 @@ def cmd_fetch(args) -> int:
     print(f"season {year}: {len(gd.games)} games, {played} played  [{gd.source}]")
     if gd.upstream_modified:
         print(f"upstream last modified: {gd.upstream_modified.isoformat()}")
+
+    rd = _fetch_roster(year, args.offline)
+    if rd is not None:
+        print(f"roster: {len(rd.players)} players  [{rd.source}]")
+    else:
+        # Expected all spring — upstream publishes roster_<year>.csv when the
+        # league year opens — and never a failure: the roster decorates pages,
+        # it does not score them.
+        print("roster: unavailable (the site builds without it)")
     return 0
 
 
@@ -185,8 +211,12 @@ def cmd_build(args) -> int:
     #
     # --pool renders that pool into its real subpath, so a partial build is
     # always a subset of the real site rather than a differently-shaped one.
+    # Fetched after the staleness gate on purpose: a build that is refusing to
+    # publish has no reason to spend a network round-trip decorating it.
+    roster = _fetch_roster(season.year, args.offline)
+
     seasons = (season,) if getattr(args, "pool", None) else (season, *_sibling_pools(season))
-    written = render_pools(seasons, gd, out, base=args.base)
+    written = render_pools(seasons, gd, out, base=args.base, roster=roster)
 
     pages = sum(1 for p in written if p.suffix == ".html")
     print(f"built {pages} pages for {season.year} -> {out}")

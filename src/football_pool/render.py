@@ -47,6 +47,7 @@ from . import bracket as bracket_mod
 from . import glossary as glossary_mod
 from . import history as history_mod
 from . import metrics
+from . import rosters as rosters_mod
 from . import schedule as schedule_mod
 from . import svg
 from . import teamcolors
@@ -126,10 +127,16 @@ class SiteContext:
     seeds: dict[str, int]
     seeds_final: bool
     projections: Projections | None
+    # Who is actually wearing the shirts — optional the way projections are.
+    # None renders team pages without a roster section, never a failed build.
+    roster: rosters_mod.RosterData | None = None
 
 
 def build_context(
-    season: Season, data: GameData, simulations: int | None = None
+    season: Season,
+    data: GameData,
+    simulations: int | None = None,
+    roster: rosters_mod.RosterData | None = None,
 ) -> SiteContext:
     """Run the whole pipeline once and hand the results to the templates.
 
@@ -165,6 +172,7 @@ def build_context(
         seeds=seeds if seeds is not None else playoff_seeds(season, games),
         seeds_final=regular_season_complete(games),
         projections=projections,
+        roster=roster,
     )
 
 
@@ -778,6 +786,29 @@ def _game_row(
     }
 
 
+def _coach_of(games: pd.DataFrame, team: str) -> str | None:
+    """Who is coaching ``team``, read off the games file itself.
+
+    The coach columns are INFO_COLUMNS — optional, so a frame without them
+    (the committed fixture, an upstream that drops them) answers ``None`` and
+    the page simply says nothing about a coach.
+
+    The first *unplayed* game names the current coach — upstream fills future
+    rows with whoever holds the job today, so a midseason firing shows up on
+    the next build. Only a finished season falls back to the last played game,
+    where "current" and "most recent" are the same person.
+    """
+    if "home_coach" not in games.columns or "away_coach" not in games.columns:
+        return None
+    mine = games[(games["home_team"] == team) | (games["away_team"] == team)]
+    if mine.empty:
+        return None
+    pending = mine[~mine["played"]]
+    row = pending.iloc[0] if not pending.empty else mine.iloc[-1]
+    coach = row["home_coach"] if row["home_team"] == team else row["away_coach"]
+    return None if pd.isna(coach) else str(coach)
+
+
 def _team_page(ctx: SiteContext, team: str) -> dict[str, Any]:
     """One team's own page: what it has produced, for whom, and every game.
 
@@ -845,6 +876,15 @@ def _team_page(ctx: SiteContext, team: str) -> dict[str, Any]:
     played = [g for g in rows if g["played"]]
     return {
         **card,
+        "coach": _coach_of(ctx.games, team),
+        # None when there is no roster data at all *or* none for this team —
+        # the page renders the same either way, which is the point: a partial
+        # feed degrades team by team instead of all or nothing.
+        "roster": (
+            rosters_mod.team_roster(ctx.roster.players, team)
+            if ctx.roster is not None
+            else None
+        ),
         # The season as it reads, byes included; and the count of things that
         # are actually games, which is what "3 of 17 played" is counting.
         "season": season_rows,
@@ -1140,6 +1180,7 @@ def render_site(
     *,
     site_base: str | None = None,
     copy_assets: bool = True,
+    roster: rosters_mod.RosterData | None = None,
 ) -> list[Path]:
     """Render one pool's every page into ``out_dir``. Returns the files written.
 
@@ -1151,8 +1192,10 @@ def render_site(
         copy_assets: Whether to copy ``assets/`` alongside the pages. False when
             a caller is rendering several pools and will copy them once, at the
             site root — see :func:`render_pools`.
+        roster: Player-level context for the team pages, or ``None`` to render
+            them without it. Optional by design — see :mod:`rosters`.
     """
-    ctx = build_context(season, data, simulations=simulations)
+    ctx = build_context(season, data, simulations=simulations, roster=roster)
     env = _environment_for(site_base if site_base is not None else base, base)
 
     # The templates reach the same function through the `url` filter. The charts
@@ -1340,6 +1383,7 @@ def render_pools(
     out_dir: Path,
     base: str = "",
     simulations: int | None = None,
+    roster: rosters_mod.RosterData | None = None,
 ) -> list[Path]:
     """Render every pool into one site. The root pool owns the site root.
 
@@ -1366,6 +1410,7 @@ def render_pools(
             simulations=simulations,
             site_base=site_base,
             copy_assets=False,
+            roster=roster,
         )
 
     written.extend(_copy_assets(out_dir))

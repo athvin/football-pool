@@ -69,6 +69,17 @@ MARKET_COLUMNS = [
     "home_moneyline",
 ]
 
+# Who is coaching each side — carried by the same upstream file, filled in for
+# every row including unplayed ones (a future game names the current coach, a
+# played one names whoever actually coached it, which is what makes a midseason
+# firing legible in the data). Optional for the same reason the market columns
+# are: a coach's name decorates a team page and can never reach a score, so its
+# absence must not stop a publish.
+INFO_COLUMNS = [
+    "away_coach",
+    "home_coach",
+]
+
 # Playoff rounds, in bracket order. These rows do not exist until the bracket is
 # actually set — during the regular season the file has only REG rows.
 PLAYOFF_ROUNDS = ("WC", "DIV", "CON", "SB")
@@ -290,10 +301,10 @@ def fetch_games(
         # make the staleness check say everything is fine.
         cache_path.parent.mkdir(parents=True, exist_ok=True)
         partial = cache_path.with_suffix(cache_path.suffix + ".partial")
-        # Market columns are written when upstream had them, so the committed
-        # snapshot stays a faithful record of what the build saw — including
-        # what the lines were that day, which is the part that moves.
-        keep = COLUMNS + [c for c in MARKET_COLUMNS if c in games.columns]
+        # Market and info columns are written when upstream had them, so the
+        # committed snapshot stays a faithful record of what the build saw —
+        # including what the lines were that day, which is the part that moves.
+        keep = COLUMNS + [c for c in MARKET_COLUMNS + INFO_COLUMNS if c in games.columns]
         games[keep].to_csv(partial, index=False)
         partial.replace(cache_path)
 
@@ -301,8 +312,8 @@ def fetch_games(
 
 
 def _wanted(column: str) -> bool:
-    """Column filter for the upstream read: what we score with, plus the market."""
-    return column in COLUMNS or column in MARKET_COLUMNS
+    """Column filter for the upstream read: what we score with, plus the extras."""
+    return column in COLUMNS or column in MARKET_COLUMNS or column in INFO_COLUMNS
 
 
 def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
@@ -317,9 +328,10 @@ def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
         data = raw.encode() if isinstance(raw, str) else raw
         df = pd.read_csv(io.BytesIO(data), usecols=_wanted, low_memory=False)
 
-    # Checked against COLUMNS alone. A missing market column is not an error —
-    # see MARKET_COLUMNS — and anything downstream that reads one must cope
-    # with the column being absent entirely, not merely null.
+    # Checked against COLUMNS alone. A missing market or info column is not an
+    # error — see MARKET_COLUMNS and INFO_COLUMNS — and anything downstream
+    # that reads one must cope with the column being absent entirely, not
+    # merely null.
     missing = [c for c in COLUMNS if c not in df.columns]
     if missing:
         raise DataError(

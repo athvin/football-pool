@@ -13,6 +13,17 @@ from football_pool.nflverse import GameData, parse_games
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
+@pytest.fixture(autouse=True)
+def no_roster_network(monkeypatch):
+    """Every build and fetch asks for the roster; no test here needs it.
+
+    Autouse so the suite stays hermetic by default — the roster is context,
+    not results, and ``None`` is exactly what an unreachable feed produces.
+    The one test about the roster path overrides this with its own stub.
+    """
+    monkeypatch.setattr(cli, "_fetch_roster", lambda year, offline: None)
+
+
 @pytest.fixture
 def wired(monkeypatch, season):
     """Point the CLI at the fixture season and fixture games, no network."""
@@ -100,6 +111,40 @@ def test_build_writes_a_site(wired, capsys, tmp_path):
     report = capsys.readouterr().out
     assert "built" in report and "pages" in report
     assert "through week 18" in report
+
+
+def test_build_passes_the_roster_through_to_the_pages(wired, monkeypatch, tmp_path):
+    from football_pool.rosters import RosterData, parse_roster
+
+    from helpers import mkroster_csv
+
+    csv = mkroster_csv([{"team": "KC", "name": "Starter QB", "jersey": 15}])
+    rd = RosterData(parse_roster(csv, 2025), 2025, datetime.now(timezone.utc), "network")
+    monkeypatch.setattr(cli, "_fetch_roster", lambda year, offline: rd)
+
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out)]) == 0
+    page = (out / "team" / "KC" / "index.html").read_text()
+    assert "The roster" in page and "Starter QB" in page
+
+
+def test_a_missing_roster_never_stops_a_build(wired, tmp_path):
+    """The autouse stub returns None — the unreachable-feed case — and the
+    site must build exactly as it did before rosters existed."""
+    out = tmp_path / "site"
+    assert cli.main(["build", "--out", str(out)]) == 0
+    assert (out / "team" / "KC" / "index.html").exists()
+    assert "The roster" not in (out / "team" / "KC" / "index.html").read_text()
+
+
+def test_fetch_reports_the_roster_alongside_the_games(monkeypatch, capsys):
+    games = parse_games(FIXTURES / "games_2025.csv", 2025)
+    gd = GameData(games, 2025, datetime.now(timezone.utc), None, "network")
+    monkeypatch.setattr("football_pool.nflverse.fetch_games", lambda *a, **k: gd)
+    monkeypatch.setattr(cli, "active_season", lambda: 2025)
+
+    assert cli.main(["fetch"]) == 0
+    assert "roster: unavailable" in capsys.readouterr().out
 
 
 def test_build_applies_the_deployment_base(wired, tmp_path):

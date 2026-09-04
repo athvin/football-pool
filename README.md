@@ -210,6 +210,7 @@ data/<year>/          committed results — an audit trail and offline fallback
 src/football_pool/
   season.py           loads a season's config into a frozen Season object
   nflverse.py         fetches and normalises NFL results
+  rosters.py          fetches team rosters — context for the team pages
   scoring.py          the scoring engine — pure functions, exhaustively tested
   standings.py        NFL tiebreakers → division winners and playoff seeds
   potential.py        next week, ceilings, floors, elimination
@@ -227,6 +228,13 @@ Results come from one file:
 `nflverse-data/releases/download/schedules/games.csv`. Upstream commits every
 15–90 minutes year round and lands within minutes of a game going final, so the
 morning rebuild always has the previous night's scores.
+
+Team pages also show each club's head coach and roster — who is active, who is
+on injured reserve, who is stashed on the practice squad. The coach rides along
+in the same games file; the roster is a second file from the same nflverse
+releases (`rosters/roster_<year>.csv`, refreshed daily in season). Both are
+context, not results: any failure to fetch them renders the site without them,
+and nothing about them can block a publish.
 
 If the fetch fails, the build falls back to the committed copy in `data/` — an
 outage degrades the site to yesterday's numbers rather than breaking it. The

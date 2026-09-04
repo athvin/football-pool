@@ -939,6 +939,41 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   color: var(--chalk-dim);
 }
 
+/* The reserve lists, compact: position, player, and why they are not playing.
+   Two columns where the width allows because the list is scanned, not read —
+   the question it answers is "is my guy on it". */
+.roster-sidelined {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.35rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.88rem;
+}
+
+.roster-sidelined li { display: flex; align-items: baseline; gap: 0.5rem; }
+
+/* The position is an index into the list, set like every other index on the
+   site: muted mono, fixed width so the names line up into a column. */
+.roster-pos {
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  min-width: 2.2em;
+}
+
+/* One paragraph, not a table: the practice squad is a footnote to a roster,
+   and sixteen more table rows would outweigh what they say. */
+.roster-squad {
+  margin-top: 1rem;
+  font-size: 0.83rem;
+  color: var(--chalk-dim);
+  max-width: 72ch;
+}
+
 .cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));

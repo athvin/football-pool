@@ -25,6 +25,7 @@
       {{ team.record }} · a win pays {{ term('lf', 'LF') }}
       <strong>{{ '%.2f'|format(team.lf) }}</strong>{% if team.owners %},
       and {{ team.owners|length }} of you {{ 'is' if team.owners|length == 1 else 'are' }} holding them{% endif %}.
+      {% if team.coach %}Coached by <strong>{{ team.coach }}</strong>.{% endif %}
     </p>
   </div>
   <div class="hero-score">
@@ -105,5 +106,82 @@
   {% endif %}
   {% endfor %}
 </ul>
+
+{# The roster is context, not results, and the build treats it that way: when
+   the feed is down or the season's file does not exist yet, this whole section
+   is simply absent and everything above renders exactly as it always has. #}
+{% if team.roster %}
+<h2 class="section-title">The roster</h2>
+<p class="page-sub">
+  Who is actually earning those points — {{ team.roster.active|length }} on the
+  active roster, refreshed daily from the same
+  <a href="https://github.com/nflverse/nflverse-data" target="_blank" rel="noopener">nflverse</a>
+  data the scores come from. Names link to their Pro Football Reference page
+  where one exists.
+</p>
+<div class="table-scroll is-tall">
+  <table>
+    <caption>{{ team.team }} active roster.</caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num" data-sort>#</th>
+        <th scope="col" data-sort>Player</th>
+        {# The rows arrive in field order — offense to special teams — so this
+           is the column the table is "sorted by", even though that order is
+           positional rather than alphabetical. #}
+        <th scope="col" data-sort aria-sort="ascending">Pos</th>
+        <th scope="col" class="num" data-sort>Yrs</th>
+        <th scope="col" data-sort>College</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in team.roster.active %}
+      <tr>
+        {# data-value carries the sort key wherever the text would sort wrongly:
+           an unnumbered player falls to the bottom rather than sorting as a
+           dash, positions sort by field order rather than alphabetically, and
+           a rookie's R means zero seasons, not the letter. #}
+        <td class="num" data-value="{{ p.jersey if p.jersey is not none else 999 }}">
+          {{ p.jersey if p.jersey is not none else '—' }}</td>
+        <th scope="row" data-value="{{ p.name }}">
+          {% if p.pfr_url %}<a href="{{ p.pfr_url }}" target="_blank" rel="noopener">{{ p.name }}</a>
+          {% else %}{{ p.name }}{% endif %}
+        </th>
+        <td data-value="{{ '%02d'|format(p.pos_order) }}">{{ p.pos }}</td>
+        <td class="num" data-value="{{ p.years if p.years is not none else -1 }}">
+          {% if p.years == 0 %}R{% elif p.years is none %}—{% else %}{{ p.years }}{% endif %}</td>
+        <td>{{ p.college or '—' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<p class="legend"><span>Yrs is seasons of NFL experience; R is a rookie.</span></p>
+
+{% if team.roster.sidelined %}
+<h2 class="section-title">Sidelined</h2>
+<p class="page-sub">
+  On the team but not on the field — and for anyone holding {{ team.team }},
+  the first place a quiet stretch stops being a mystery.
+</p>
+<ul class="roster-sidelined">
+  {% for p in team.roster.sidelined %}
+  <li>
+    <span class="roster-pos">{{ p.pos }}</span>
+    {% if p.pfr_url %}<a href="{{ p.pfr_url }}" target="_blank" rel="noopener">{{ p.name }}</a>
+    {% else %}{{ p.name }}{% endif %}
+    <span class="badge out">{{ p.status }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if team.roster.practice_squad %}
+<p class="roster-squad">
+  <strong>Practice squad:</strong>
+  {% for p in team.roster.practice_squad %}{{ p.name }} ({{ p.pos }}){{ ", " if not loop.last }}{% endfor %}
+</p>
+{% endif %}
+{% endif %}
 
 {% endblock %}

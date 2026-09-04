@@ -150,6 +150,39 @@ def test_a_missing_market_column_is_not_a_schema_change(csv_with_lines):
     assert (df["total_line"] == 44.5).all()  # the rest still arrives
 
 
+# -- the coach columns, held to the same optional posture as the market ------
+@pytest.fixture
+def csv_with_coaches(csv_bytes):
+    """The fixture file plus the coach columns upstream carries alongside it."""
+    rows = csv_bytes.decode().splitlines()
+    header = rows[0] + ",away_coach,home_coach"
+    return "\n".join([header, *(f"{r},Road Coach,Home Coach" for r in rows[1:])]).encode()
+
+
+def test_the_coach_columns_come_through_when_upstream_has_them(csv_with_coaches):
+    df = parse_games(csv_with_coaches, 2025)
+    assert (df["home_coach"] == "Home Coach").all()
+    assert (df["away_coach"] == "Road Coach").all()
+
+
+def test_a_file_with_no_coach_columns_parses_anyway(games_2025):
+    """A coach's name decorates a team page and can never reach a score, so a
+    feed that stops carrying it must build the site exactly as before."""
+    assert "home_coach" not in games_2025.columns
+    assert len(games_2025) == 285
+
+
+def test_the_cache_keeps_the_coaches_it_was_built_from(
+    monkeypatch, tmp_path, csv_with_coaches
+):
+    monkeypatch.setattr("httpx.get", lambda *a, **k: FakeResponse(csv_with_coaches))
+    cache = tmp_path / "games.csv"
+
+    fetch_games(2025, cache_path=cache)
+
+    assert (parse_games(cache, 2025)["home_coach"] == "Home Coach").all()
+
+
 # -- validation -------------------------------------------------------------
 def test_validate_teams_accepts_a_matching_set(season, games_2025):
     validate_teams(games_2025, season.teams)
