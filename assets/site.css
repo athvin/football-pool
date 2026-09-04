@@ -3047,6 +3047,24 @@ html:not([data-detail='on']) .board .row {
 
 .gameday-section-head { align-items: end; justify-content: space-between; }
 .gameday-section-head .eyebrow { margin-bottom: 0.25rem; }
+.rooting-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.45rem 0.75rem; }
+.rooting-filter {
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--chalk-dim);
+  padding: 0.45rem 0.7rem;
+  font: 600 0.62rem var(--mono);
+  cursor: pointer;
+}
+.rooting-filter:hover { color: var(--chalk); border-color: var(--model); }
+.rooting-filter[aria-pressed='true'] {
+  color: var(--model);
+  border-color: var(--model);
+  background: color-mix(in srgb, var(--model) 12%, var(--surface));
+}
+.rooting-filter-status { margin: -0.2rem 0 0.8rem; color: var(--model); font: 0.68rem var(--mono); }
+.rooting-filter-status:empty { display: none; }
 .section-note, .scenario-note, .attribution {
   color: var(--chalk-dim);
   font-size: 0.76rem;
@@ -3059,6 +3077,11 @@ html:not([data-detail='on']) .board .row {
   gap: 0.85rem;
 }
 .gameday-grid:not(.is-rewind) .gameday-card:nth-child(n+6) { display: none; }
+.gameday-grid.is-help-filtered .gameday-card { display: none; }
+.gameday-grid.is-help-filtered .gameday-card.is-help-game {
+  display: block;
+  border-color: color-mix(in srgb, var(--model) 65%, var(--rule));
+}
 
 .gameday-card {
   position: relative;
@@ -3097,6 +3120,17 @@ html:not([data-detail='on']) .board .row {
 .gameday-side > strong { font-family: var(--display); font-size: 1.55rem; line-height: 1; }
 .gameday-side > strong span { font-family: var(--mono); font-size: 0.55rem; color: var(--chalk-dim); }
 .gameday-side small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.68rem; color: var(--chalk-dim); }
+.gameday-side.is-needed .team-chip {
+  outline: 2px solid var(--model);
+  outline-offset: 3px;
+}
+.gameday-side.is-needed::after {
+  content: 'outside help';
+  color: var(--model);
+  font: 600 0.55rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .gameday-side.won > strong { color: var(--live); }
 .gameday-side.lost { opacity: 0.55; }
 .gameday-at { font-family: var(--mono); font-size: 0.65rem; color: var(--chalk-dim); }
