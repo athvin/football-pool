@@ -25,6 +25,7 @@ import {
   THEME_KEY,
   TZ_KEY,
   cellValue,
+  centeredScrollLeft,
   compareValues,
   countUpValue,
   drawField,
@@ -144,6 +145,22 @@ describe('count-up maths', () => {
     expect(countUpValue(42.5, 1)).toBeCloseTo(42.5, 10);
     expect(countUpValue(42.5, 0.5)).toBeGreaterThan(0);
     expect(countUpValue(42.5, 0.5)).toBeLessThan(42.5);
+  });
+});
+
+describe('horizontal navigation placement', () => {
+  test('centres an item when there is room on both sides', () => {
+    expect(centeredScrollLeft(300, 80, 240, 700)).toBe(220);
+  });
+
+  test('clamps the first and last items to the rail edges', () => {
+    expect(centeredScrollLeft(10, 80, 240, 700)).toBe(0);
+    expect(centeredScrollLeft(650, 50, 240, 700)).toBe(460);
+  });
+
+  test('a rail that already fits does not move', () => {
+    expect(centeredScrollLeft(50, 80, 300, 280)).toBe(0);
+    expect(centeredScrollLeft(Number.NaN, 80, 240, 700)).toBe(0);
   });
 });
 
@@ -958,6 +975,26 @@ function fakeWindow({
 describe('init', () => {
   beforeEach(markup);
 
+  test('brings the current primary tab into an overflowing mobile rail', () => {
+    document.body.innerHTML = `
+      <nav class="tabs">
+        <a href="/">Standings</a>
+        <a href="/forecast/" aria-current="page">Forecast</a>
+      </nav>`;
+    const tabs = document.querySelector('.tabs');
+    const current = tabs.querySelector('[aria-current]');
+    Object.defineProperties(tabs, {
+      clientWidth: { configurable: true, value: 240 },
+      scrollWidth: { configurable: true, value: 700 },
+    });
+    tabs.getBoundingClientRect = () => ({ left: 20 });
+    current.getBoundingClientRect = () => ({ left: 420, width: 80 });
+
+    init(document, fakeWindow({ reduceMotion: true }));
+
+    expect(tabs.scrollLeft).toBe(320);
+  });
+
   test('the toggle switches the theme and remembers it', () => {
     const win = fakeWindow({ prefersDark: true });
     init(document, win);
@@ -1686,7 +1723,7 @@ describe('weekForInstant', () => {
 function scheduleMarkup() {
   document.documentElement.removeAttribute('data-me');
   document.body.innerHTML = `
-    <nav>
+    <nav class="week-switch">
       <a href="#preseason" data-week-link="preseason">PRE</a>
       <a href="#week-1" data-week-link="1">1</a>
       <a href="#week-2" data-week-link="2">2</a>
@@ -1756,6 +1793,22 @@ describe('the schedule week switcher', () => {
     init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
 
     expect(document.querySelector('[data-week-link][aria-current]').dataset.weekLink).toBe('2');
+  });
+
+  test('brings a deep-linked week into an overflowing mobile rail', () => {
+    window.location.hash = '#week-3';
+    const rail = document.querySelector('.week-switch');
+    const week = document.querySelector('[data-week-link="3"]');
+    Object.defineProperties(rail, {
+      clientWidth: { configurable: true, value: 100 },
+      scrollWidth: { configurable: true, value: 400 },
+    });
+    rail.getBoundingClientRect = () => ({ left: 10 });
+    week.getBoundingClientRect = () => ({ left: 330, width: 40 });
+
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    expect(rail.scrollLeft).toBe(290);
   });
 
   test('a page with no schedule on it does not throw', () => {

@@ -142,6 +142,7 @@ html { -webkit-text-size-adjust: 100%; }
 
 body {
   min-height: 100vh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   font-family: var(--body);
@@ -828,7 +829,12 @@ a.team-chip:hover { transform: translateY(-1px); filter: brightness(1.12); }
    a viewport-relative offset. */
 /* `overscroll-behavior` keeps a sideways swipe that reaches the edge of the
    table from turning into the browser's own back-gesture mid-read. */
-.table-scroll { overflow-x: auto; border-radius: var(--radius); overscroll-behavior-x: contain; }
+.table-scroll {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Long tables scroll inside themselves so the header can genuinely stay put
    while you read down. Short ones never reach this height, so no inner
@@ -1256,6 +1262,8 @@ a.card-team:hover, a.card-team:focus-visible { filter: brightness(1.15); }
   border-radius: var(--radius);
   padding: 0.9rem 1rem;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chart-card .trend { width: 100%; height: auto; min-width: 520px; }
@@ -1398,9 +1406,10 @@ svg a:focus-visible .contrib-label { text-decoration: underline; }
    the generator, so this holds for a field of any size.
 
    The floor is the same idea from the other end: a wide grid keeps its cells
-   legible and lets `.table-scroll` scroll it sideways on a phone, rather than
-   squashing eleven columns into 358px. A grid narrower than the floor does not
-   need one, hence the min(). */
+   legible and lets `.table-scroll` scroll it sideways, rather than squashing
+   eleven columns into one card. A grid narrower than the floor does not need
+   one, hence the min(). Coarse pointers get a second, generated floor below:
+   it scales with the number of entrants so each interactive box stays 44px. */
 .heat {
   width: 100%;
   height: auto;
@@ -2420,11 +2429,10 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 }
 
 .viewer-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  justify-content: space-between;
   gap: 1.25rem;
-  flex-wrap: wrap;
   padding-block: 0.45rem;
 }
 
@@ -2501,7 +2509,12 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: 6px;
+  max-width: 100%;
 }
+
+/* A long entrant name should widen the option list, not the page chrome. */
+.me-picker select { width: min(15rem, 30vw); }
+.tz select { width: min(9rem, 20vw); }
 .me-picker select:focus-visible,
 .tz select:focus-visible,
 .heat-picker select:focus-visible { outline: 2px solid var(--live); }
@@ -3038,7 +3051,8 @@ html:not([data-detail='on']) .board .row {
 .you-strip .you-pts { margin-left: auto; font-weight: 600; }
 
 /* --- reference lives in the footer -------------------------------------- */
-.footer-nav { display: flex; gap: 0.4rem; }
+.footer-nav { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.footer-external { display: none; }
 .footer-nav a {
   font-family: var(--mono);
   font-size: 0.68rem;
@@ -3315,6 +3329,198 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
   .scenario-board-wrap { position: static; }
   .gameday-card:hover { transform: none; }
   .scenario-presets { margin-inline-start: 0; }
+}
+
+/* --- mobile hardening --------------------------------------------------
+   The header's desktop row needs almost 900px once real labels and controls
+   are present. Between the old phone breakpoint and that width flex-wrap made
+   several accidental arrangements: tabs above the brand at one width, the
+   external links alone on a second row at another, and three sticky rows in a
+   narrow landscape viewport. Give every compact screen the same intentional
+   two-row header instead. Both rows scroll only on their own axis; the page
+   itself never does. */
+@media (max-width: 959px) {
+  .masthead-inner {
+    min-height: 54px;
+    padding-block: 0.35rem;
+    column-gap: 0.6rem;
+    row-gap: 0.25rem;
+  }
+
+  .brand-name { font-size: 1.2rem; }
+  .off-site { margin-inline-start: auto; }
+  .model-link { padding-inline: 0.4rem; letter-spacing: 0.1em; }
+
+  .tabs {
+    order: 3;
+    width: 100%;
+    margin-inline-start: 0;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    scroll-snap-align: center;
+  }
+
+  /* Viewer preferences take one predictable row beneath their timestamps,
+     then scroll away with the opening screen instead of becoming 100px of
+     permanent chrome. */
+  .viewer-bar { position: relative; top: auto; }
+  .viewer-inner {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 0.55rem;
+  }
+  .freshness {
+    grid-column: 1 / -1;
+    width: 100%;
+    gap: 0.25rem 0.9rem;
+    margin-inline-end: 0;
+  }
+  .viewer-inner .me-picker,
+  .viewer-inner .tz {
+    min-width: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.1rem;
+  }
+  .viewer-inner select { width: 100%; }
+}
+
+/* A viewer bar over 100px tall is useful setup and poor permanent chrome.
+   Let it leave with the rest of the opening screen on a phone; the primary
+   section navigation remains available above it. */
+@media (max-width: 640px) {
+  /* Native selects keep their intrinsic text width unless explicitly allowed
+     to shrink. The head-to-head labels are long enough to push a 320px page
+     sideways without this one compact layout. */
+  .heat-picker {
+    width: 100%;
+    margin-inline-start: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.2rem;
+  }
+  .heat-picker select { width: 100%; min-width: 0; max-width: 100%; }
+
+  /* Weeks are another navigation rail, not four rows of tiny buttons. The
+     client brings the current/deep-linked week into view on every change. */
+  .week-switch {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .week-switch::-webkit-scrollbar { display: none; }
+  .week-switch a { flex: 0 0 auto; scroll-snap-align: center; }
+
+  /* The disclosure belongs in the top-right cell rather than on a stray row
+     beneath each matchup. Its visible mark stays small; its button does not. */
+  .game {
+    grid-template-columns: minmax(0, 1fr) auto 2.75rem;
+    grid-template-areas:
+      'when mine open'
+      'away away away'
+      'home home home';
+  }
+  .game-open {
+    grid-area: open;
+    width: 2.75rem;
+    height: 2.75rem;
+    align-self: center;
+  }
+
+  /* In normal flow the page-level control can grow to a thumb-sized target
+     without sitting over the first line of the explanatory copy. */
+  .detail-toggle {
+    position: static;
+    margin-top: 0.7rem;
+  }
+
+  .hero > *, .hero-name { min-width: 0; max-width: 100%; }
+  .hero-name { overflow-wrap: anywhere; }
+}
+
+/* At 320px the brand, two external shortcuts and theme switch are ten pixels
+   wider than the content row. The destinations remain in the footer, where
+   these copies appear only while their masthead versions are absent. */
+@media (max-width: 359px) {
+  .off-site { display: none; }
+  .theme-toggle { margin-inline-start: auto; }
+  .footer-external { display: inline-flex; }
+}
+
+/* A short landscape phone cannot spare half its height for pinned controls.
+   Keep all the controls, but let both bars scroll naturally with the page. */
+@media (max-height: 500px) {
+  .masthead, .viewer-bar { position: relative; top: auto; }
+}
+
+/* Coarse pointers need controls sized for a finger. Dense identity chips use
+   a compact 28px floor because they appear in wrapping score rows; primary
+   actions and navigation use the full 44px target. */
+@media (pointer: coarse) {
+  .brand,
+  .tabs a,
+  .footer-nav a,
+  .week-switch a,
+  .detail-toggle,
+  .rooting-filter,
+  .preseason-controls button,
+  .scenario-presets button,
+  .scenario-game button,
+  .share-scenario,
+  .pick,
+  .live-lab-weeks button,
+  .live-lab summary,
+  .back {
+    min-height: 44px;
+  }
+
+  .theme-toggle, .repo-link { width: 44px; height: 44px; }
+  .me-picker select, .tz select, .heat-picker select { min-height: 44px; }
+  .week-switch a, .scenario-game button { min-width: 44px; }
+  .preseason-side { min-height: 44px; }
+  .scenario-drilldown summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding-block: 0.75rem;
+  }
+  .scenario-drilldown a { min-height: 36px; display: inline-flex; align-items: center; }
+  a.team-chip, a.owner { min-height: 28px; display: inline-flex; align-items: center; }
+  th[data-sort] { padding-block: 0.75rem; }
+  .heat {
+    min-width: min(
+      var(--heat-w, 100%),
+      max(520px, var(--heat-touch-w, 520px))
+    );
+  }
+
+  /* Touch browsers can retain :hover after a tap. Do not leave cards and rows
+     visually lifted after the navigation or disclosure has already fired. */
+  .row:hover, .forecast-row:hover, a.team-chip:hover, .pick:hover,
+  .gameday-card:hover { transform: none; }
+
+  /* Fixed background attachment is both inconsistently supported and costly
+     during a flick on iOS; the fixed canvas still carries the field artwork. */
+  body { background-attachment: scroll; }
+}
+
+/* Keep the visible information dot small while making its hit area match the
+   rest of the controls. This does not reflow table headings or prose. */
+@media (pointer: coarse) {
+  .term > .info::after { inset: -15px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
