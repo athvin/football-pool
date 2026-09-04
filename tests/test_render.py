@@ -762,6 +762,17 @@ def test_every_chip_that_names_a_team_is_coloured(site_solo):
         assert "--team-bg:" in style, f"{team} chip has no colour"
 
 
+def test_team_directory_chips_hold_three_letter_codes_inside_their_border(site_solo):
+    html = (site_solo.path / "teams" / "index.html").read_text()
+    css = (ASSET_DIR / "site.css").read_text()
+
+    assert html.count('class="team-chip is-large') == 32
+    start = css.index(".team-chip.is-large {")
+    block = css[start : css.index("}", start)]
+    assert "min-width:" in block
+    assert "padding-inline:" in block
+
+
 # -- sortable tables ----------------------------------------------------------
 def test_the_teams_table_is_sortable_with_real_sort_keys(site_solo):
     """Every sortable column needs a key that sorts correctly as a number.
@@ -1186,6 +1197,23 @@ def test_the_forecast_ships_both_head_to_head_grids(site_mid_forecast):
     assert 'data-heat-note="money" hidden' in html
 
 
+def test_identical_entries_are_marked_as_ties_in_both_head_to_head_grids(
+    make_season, mid_season
+):
+    twins = make_season(
+        [
+            {"name": "Alice", "teams": ["KC", "SEA", "DAL", "NE"]},
+            {"name": "Bob", "teams": ["NE", "DAL", "SEA", "KC"]},
+        ],
+        year=2025,
+    )
+    forecast = _forecast(build_context(twins, mid_season, simulations=20))
+
+    for grid in (forecast["heatmap"], forecast["money_heatmap"]):
+        assert grid.count('data-same-picks="true"') == 2
+        assert grid.count(">Tie</text>") == 2
+
+
 def test_the_two_grids_carry_the_odds_each_one_is_about(pool, mid_season):
     """Outright is winning under one grid and being paid at all under the other.
 
@@ -1343,6 +1371,8 @@ def test_the_schedule_can_be_cut_to_the_games_the_pool_is_in(site_final):
     # The rows the filter acts on are marked by the build, not found by the
     # client — `is-idle` already existed to dim them.
     assert 'class="game is-idle' in html
+    css = (ASSET_DIR / "site.css").read_text()
+    assert "html[data-slate='pool'] [data-slate-toggle]" in css
 
 
 def test_a_week_the_pool_has_no_side_in_says_so_rather_than_going_blank(
@@ -1697,6 +1727,14 @@ def test_the_board_row_stacks_its_three_layers_in_the_right_order():
     assert overlay >= 1, "an overlay at zero loses to the score's own stacking context"
     assert chips > overlay, "chips under the overlay are links nobody can reach"
     assert sheen > chips, "the floodlight has to pass over the chips, not behind them"
+
+
+def test_selecting_an_entry_replaces_the_leader_highlight():
+    """The picker should highlight Jerry, not leave first-place Brian lit too."""
+    css = (ASSET_DIR / "site.css").read_text()
+
+    assert "html:not([data-me]) .row.is-leader" in css
+    assert ".row.is-me .row-rank" in css
 
 
 def test_a_link_drawn_inside_a_chart_still_carries_the_deployment_prefix(

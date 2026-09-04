@@ -378,6 +378,11 @@ def _forecast(ctx: SiteContext, url: UrlFor = _root_url) -> dict[str, Any] | Non
     h2h = p.head_to_head.reindex(index=order, columns=order)
     money_h2h = p.money_head_to_head.reindex(index=order, columns=order)
     density = p.distribution.density.reindex(order)
+    picks = {e.name: frozenset(e.teams) for e in ctx.season.entrants}
+    same_picks = [
+        [row != col and picks[row] == picks[col] for col in order]
+        for row in order
+    ]
     # One indexed copy, rather than re-indexing the frame per entrant inside
     # the comprehensions below.
     by_name = p.entrants.set_index("name")
@@ -410,6 +415,7 @@ def _forecast(ctx: SiteContext, url: UrlFor = _root_url) -> dict[str, Any] | Non
             # pairwise number means for the pool, not just for the pair.
             [float(by_name.loc[n, "p_first"]) * 100 for n in order],
             hrefs=hrefs,
+            same_picks=same_picks,
         ),
         # The same pairs, priced. Both grids are drawn at build time and the
         # picker only chooses which one is on screen, so the numbers are the
@@ -426,6 +432,7 @@ def _forecast(ctx: SiteContext, url: UrlFor = _root_url) -> dict[str, Any] | Non
             [float(by_name.loc[n, "p_cash"]) * 100 for n in order],
             verb="out-earns",
             hrefs=hrefs,
+            same_picks=same_picks,
         ),
         # How many places the pot actually reaches, which is what decides how
         # often two entrants are level on money. Truncated to the field: a

@@ -526,6 +526,17 @@ def test_heatmap_titles_read_as_a_sentence():
     assert "Alice finishes above Bob 62% of the time" in titles
 
 
+def test_heatmap_calls_identical_picks_a_tie_instead_of_fifty_fifty():
+    same = [[False, True], [True, False]]
+    el = parse(svg.heatmap([[None, 0.5], [0.5, None]], ["Alice", "Bob"], same_picks=same))
+
+    boxes = el.findall(".//rect[@data-same-picks='true']")
+    assert len(boxes) == 2
+    values = [t.text for t in el.findall(".//text[@class='heat-cell is-strong']")]
+    assert values == ["Tie", "Tie"]
+    assert all("always tie because they have the same picks" in b.find("title").text for b in boxes)
+
+
 def test_heatmap_full_names_may_run_short_without_failing_the_build():
     """A caller bug should not cost the family their forecast page."""
     el = parse(svg.heatmap([[None, 0.6], [0.4, None]], ["Alice", "Bob"], ["Alice"]))
