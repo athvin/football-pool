@@ -1,7 +1,7 @@
 game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,home_score,result,overtime,location,spread_line,total_line,away_moneyline,home_moneyline,away_coach,home_coach
 2026_01_NE_SEA,2026,REG,1,2026-09-09,20:20,NE,,SEA,,,,Home,3.5,44.5,154.0,-185.0,Mike Vrabel,Mike Macdonald
 2026_01_SF_LA,2026,REG,1,2026-09-10,20:35,SF,,LAR,,,,Neutral,3.5,48.5,164.0,-198.0,Kyle Shanahan,Sean McVay
-2026_01_ARI_LAC,2026,REG,1,2026-09-13,16:25,ARI,,LAC,,,,Home,10.5,46.5,425.0,-575.0,Jonathan Gannon,Jim Harbaugh
+2026_01_ARI_LAC,2026,REG,1,2026-09-13,16:25,ARI,,LAC,,,,Home,10.5,46.5,440.0,-600.0,Jonathan Gannon,Jim Harbaugh
 2026_01_ATL_PIT,2026,REG,1,2026-09-13,13:00,ATL,,PIT,,,,Home,3.5,42.5,154.0,-185.0,Raheem Morris,Mike McCarthy
 2026_01_BAL_IND,2026,REG,1,2026-09-13,13:00,BAL,,IND,,,,Home,-3.5,48.5,-175.0,145.0,Jesse Minter,Shane Steichen
 2026_01_BUF_HOU,2026,REG,1,2026-09-13,13:00,BUF,,HOU,,,,Home,-1.5,44.5,-118.0,-102.0,Sean McDermott,DeMeco Ryans
