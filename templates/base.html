@@ -52,10 +52,6 @@
     if (me) document.documentElement.dataset.me = me;
     var d = localStorage.getItem('pool-detail');
     if (d === 'on') document.documentElement.dataset.detail = d;
-    // The schedule's own filter, remembered like every other viewer choice.
-    if (localStorage.getItem('pool-slate') === 'pool') {
-      document.documentElement.dataset.slate = 'pool';
-    }
   } catch (e) {}
 </script>
 
@@ -127,8 +123,8 @@
 {# The two viewer preferences live here rather than in the footer. Both change
    what you are looking at — which row is yours, and what clock the timestamps
    are in — so they have to be findable before you have read the page, not
-   after. Deliberately not sticky: the masthead already claims that space, and
-   on a phone a third pinned row costs more than it gives.
+   after. It follows the masthead down the page because identity, clock and
+   freshness qualify almost every number below it.
 
    The freshness stamps share the strip. They used to live in the footer, which
    put the single most important caveat on the whole site — how old are these

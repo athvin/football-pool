@@ -151,6 +151,20 @@
         <button type="button" data-scenario-choice="{{ g.away }}">{{ g.away }}</button>
         {% if g.tie %}<button type="button" data-scenario-choice="TIE">Tie</button>{% endif %}
         <button type="button" data-scenario-choice="{{ g.home }}">{{ g.home }}</button>
+        <details class="scenario-drilldown" data-scenario-drilldown>
+          <summary>Matchup details</summary>
+          <p>
+            <span class="viewer-label">Matchup lens</span>
+            <strong data-scenario-call></strong>
+            <span data-scenario-impact></span>
+          </p>
+          <nav aria-label="Explore this matchup">
+            <a href="{{ ('/team/' ~ g.away ~ '/#game-' ~ g.id)|url }}"
+               data-scenario-team="{{ g.away }}">{{ g.away }} matchup page</a>
+            <a href="{{ ('/team/' ~ g.home ~ '/#game-' ~ g.id)|url }}"
+               data-scenario-team="{{ g.home }}">{{ g.home }} matchup page</a>
+          </nav>
+        </details>
       </fieldset>
       {% endfor %}
     </div>
@@ -165,7 +179,8 @@
         </li>
         {% endfor %}
       </ol>
-      <button class="share-scenario" type="button" data-scenario-share>Copy this scenario</button>
+      <button class="share-scenario" type="button" data-scenario-share>Copy link to these picks</button>
+      <p class="share-scenario-help">Send the copied link in a text or group chat. It opens this page with every called winner and this scoreboard already filled in.</p>
       <p class="scenario-status" data-scenario-status aria-live="polite"></p>
     </div>
   </div>

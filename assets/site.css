@@ -1610,6 +1610,97 @@ svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   border-color: var(--live);
 }
 
+.week-switch .preseason-switch {
+  color: var(--model);
+  border-color: color-mix(in srgb, var(--model) 45%, var(--rule));
+}
+
+.preseason-week .page-sub { max-width: 76ch; }
+.preseason-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 1rem 0 0.55rem;
+}
+.preseason-controls button {
+  padding: 0.4rem 0.7rem;
+  color: var(--chalk-dim);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font: 600 0.62rem var(--mono);
+  cursor: pointer;
+}
+.preseason-controls button:hover,
+.preseason-controls button:focus-visible,
+.preseason-controls button[aria-pressed='true'] {
+  color: var(--model);
+  border-color: var(--model);
+  outline: none;
+}
+.preseason-summary {
+  min-height: 1.2em;
+  margin-bottom: 0.65rem;
+  color: var(--chalk-dim);
+  font: 0.68rem var(--mono);
+}
+.preseason-games {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+.preseason-game {
+  min-width: 0;
+  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+.preseason-game.is-in {
+  border-color: color-mix(in srgb, var(--heat) 60%, var(--rule));
+  box-shadow: 0 0 18px color-mix(in srgb, var(--heat) 10%, transparent);
+}
+.preseason-when,
+.preseason-matchup,
+.preseason-side {
+  display: flex;
+  align-items: center;
+}
+.preseason-when {
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.55rem;
+  color: var(--chalk-dim);
+  font: 0.61rem var(--mono);
+}
+.preseason-status { color: var(--model); text-align: right; }
+.preseason-game.is-in .preseason-status { color: var(--heat); }
+.preseason-matchup { gap: 0.55rem; }
+.preseason-side {
+  flex: 1;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.42rem 0.55rem;
+  color: var(--chalk-dim);
+  background: var(--surface-2);
+  border-radius: 5px;
+  text-decoration: none;
+  font: 700 0.72rem var(--mono);
+}
+.preseason-side:hover,
+.preseason-side:focus-visible,
+.preseason-side.is-winner { color: var(--chalk); }
+.preseason-side.is-winner strong { color: var(--live); }
+.preseason-side strong { font-family: var(--display); font-size: 1.35rem; }
+.preseason-meta {
+  margin-top: 0.55rem;
+  overflow: hidden;
+  color: var(--chalk-dim);
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --- the playoffs --------------------------------------------------------
    A week section like any other, so the switcher, `:target` and the back
    button all work on it for free. The drawing is the tournament shape: two
@@ -1937,6 +2028,12 @@ svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   overflow: hidden;
 }
 
+.game:target {
+  scroll-margin-top: calc(var(--masthead-height, 60px) + var(--viewer-height, 90px) + 1rem);
+  border-color: var(--model);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--model) 22%, transparent), var(--shadow);
+}
+
 /* Swing as a rail rather than a chart: a custom property and no extra elements,
    on a page that already carries 272 rows. It runs the full height and encodes
    the value in colour, because a part-height bar on a 40px row is too small a
@@ -2066,9 +2163,9 @@ html[data-slate='pool'] .slate-empty { display: block; }
    picked most of the league. Make the toggle itself confirm that the filter is
    on, even when only one row disappears below the fold. */
 html[data-slate='pool'] [data-slate-toggle] {
-  color: var(--live);
-  border-color: color-mix(in srgb, var(--live) 40%, var(--rule));
-  background: color-mix(in srgb, var(--live) 8%, transparent);
+  color: var(--field);
+  border-color: var(--live);
+  background: var(--live);
 }
 
 .game-when {
@@ -2146,7 +2243,18 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 /* Every entrant's stake is in the markup; exactly the one that is yours is
    revealed, by the same mechanism as the "you" badge. */
 .mine { display: none; }
-.mine.is-me { display: inline-block; }
+.mine.is-me { display: inline-grid; justify-items: end; gap: 0.08rem; }
+.mine-locked {
+  padding: 0.08rem 0.28rem;
+  color: var(--field);
+  background: var(--live);
+  border-radius: 999px;
+  font-size: 0.48rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1.25;
+  text-transform: uppercase;
+}
 
 @supports selector(:has(*)) {
   .game:has(.mine.is-me) { --accent: var(--live); border-color: color-mix(in srgb, var(--live) 28%, var(--rule)); }
@@ -2274,16 +2382,15 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
    see. It has to read as chrome rather than as content, or it competes with
    the standings for the top of the page — hence the muted surface, the small
    type, and the right alignment that tucks it under the nav. */
-/* Positioned so its own background survives the field. The gridiron is a
-   fixed, positioned canvas at z-index 0, and a positioned element paints above
-   the backgrounds of every unpositioned block in the same stacking context —
-   so without this the strip's tint and its rule are drawn and then painted
-   straight over. The content inside was never at risk: `.wrap` is already
-   z-index 1. */
+/* Sticky directly beneath a masthead whose measured height can change when the
+   phone nav wraps. Its denser background keeps the field legible through it;
+   the masthead stays one layer above so the two pieces of chrome never cross. */
 .viewer-bar {
-  position: relative;
-  z-index: 1;
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  position: sticky;
+  top: var(--masthead-height, 60px);
+  z-index: 19;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -3063,7 +3170,35 @@ html[data-me] .rooting-anon { display: none; }
 .scenario-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
 .scenario-game { display: flex; justify-content: center; gap: 0.35rem; min-width: 0; padding: 0.7rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
 .scenario-game legend { width: 100%; padding: 0 0.3rem; font-family: var(--mono); font-size: 0.62rem; color: var(--chalk-dim); text-align: center; }
-.scenario-board-wrap { position: sticky; top: 8.5rem; padding: 0.8rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
+.scenario-game { flex-wrap: wrap; }
+.scenario-drilldown {
+  width: 100%;
+  margin-top: 0.35rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--rule);
+}
+.scenario-drilldown summary {
+  color: var(--model);
+  cursor: pointer;
+  font: 0.59rem var(--mono);
+}
+.scenario-drilldown[open] { display: grid; gap: 0.5rem; }
+.scenario-drilldown p { display: grid; gap: 0.2rem; }
+.scenario-drilldown p strong { color: var(--chalk); font-family: var(--display); font-size: 1.15rem; }
+.scenario-drilldown [data-scenario-impact] { color: var(--chalk-dim); font-size: 0.65rem; line-height: 1.4; }
+.scenario-drilldown nav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.scenario-drilldown a {
+  padding: 0.3rem 0.5rem;
+  color: var(--chalk-dim);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  font: 0.58rem var(--mono);
+  text-decoration: none;
+}
+.scenario-drilldown a:hover,
+.scenario-drilldown a:focus-visible,
+.scenario-drilldown a.is-called { color: var(--model); border-color: var(--model); }
+.scenario-board-wrap { position: sticky; top: calc(var(--masthead-height, 60px) + var(--viewer-height, 90px) + 1rem); padding: 0.8rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }
 .scenario-board { display: grid; gap: 0.3rem; padding: 0; list-style: none; counter-reset: none; }
 .scenario-board li { display: grid; grid-template-columns: 2rem minmax(0, 1fr) auto; align-items: baseline; gap: 0.55rem; padding: 0.35rem 0.45rem; border-radius: 5px; transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.2s; }
 .scenario-board li.is-me { background: color-mix(in srgb, var(--live) 10%, transparent); }
@@ -3071,6 +3206,13 @@ html[data-me] .rooting-anon { display: none; }
 .scenario-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scenario-total { font-family: var(--mono); color: var(--live); }
 .share-scenario { margin-top: 0.8rem; width: 100%; color: var(--model); }
+.share-scenario-help {
+  margin-top: 0.45rem;
+  color: var(--chalk-dim);
+  font-size: 0.62rem;
+  line-height: 1.45;
+  text-align: center;
+}
 .scenario-status { min-height: 1.4em; margin-top: 0.35rem; color: var(--chalk-dim); font-size: 0.65rem; text-align: center; }
 html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-shadow: 0 0 0 2px var(--live), 0 0 34px color-mix(in srgb, var(--live) 32%, transparent); }
 @keyframes goal-line { 50% { transform: scale(1.018); } }
@@ -3092,7 +3234,8 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
 .live-lab-game.is-in > span:first-of-type { color: var(--heat); }
 
 @media (max-width: 760px) {
-  .gameday-grid, .scenario-layout, .scenario-games, .live-lab-games { grid-template-columns: 1fr; }
+  .gameday-grid, .scenario-layout, .scenario-games, .live-lab-games,
+  .preseason-games { grid-template-columns: 1fr; }
   .scenario-board-wrap { position: static; }
   .gameday-card:hover { transform: none; }
   .scenario-presets { margin-inline-start: 0; }
@@ -3108,7 +3251,7 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
 }
 
 @media print {
-  .masthead, .footer, .grain, .gridiron, .drive { display: none; }
+  .masthead, .viewer-bar, .footer, .grain, .gridiron, .drive { display: none; }
   body { background: none; color: #000; }
   /* Whatever the reveal observer had not got to yet must still print. */
   .will-reveal { opacity: 1; transform: none; }

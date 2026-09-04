@@ -789,7 +789,16 @@ def _game_row(
             # The name rides along for the expanded panel, which lists everyone
             # with something on this game rather than only the reader.
             stakes.append(
-                {"slug": e.slug, "name": short[e.name], "max": best, "min": worst}
+                {
+                    "slug": e.slug,
+                    "name": short[e.name],
+                    "max": best,
+                    "min": worst,
+                    # Equal floor and ceiling means every outcome pays exactly
+                    # the same amount. Showing "1.10–1.10" makes certainty
+                    # look like a range, so the template collapses it.
+                    "fixed": best == worst,
+                }
             )
 
     kick = schedule_mod.kickoff(row.gameday, row.gametime)
@@ -1320,13 +1329,6 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
             else:
                 spread = _optional(raw, "spread_line")
                 favorite = raw.home_team if spread is None or float(spread) >= 0 else raw.away_team
-            dreams = {
-                e.slug: max(
-                    (raw.away_team, raw.home_team),
-                    key=lambda outcome: outcome_edges[outcome][e.slug],
-                )
-                for e in season.entrants
-            }
             scenario_games.append(
                 {
                     "id": str(raw.game_id),
@@ -1335,7 +1337,10 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
                     "tie": raw.game_type == "REG",
                     "favorite": favorite,
                     "chaos": raw.away_team if favorite == raw.home_team else raw.home_team,
-                    "dream": dreams,
+                    # The client optimizes the *whole* slate for the selected
+                    # entrant. A per-game "best" outcome is not composable: it
+                    # can hand one particular rival even more points and turn
+                    # a first-place likely slate into a second-place dream.
                     "points": gains,
                 }
             )

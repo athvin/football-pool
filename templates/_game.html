@@ -15,7 +15,8 @@
 
 {% macro game_row(g, scale, show_week=false) %}
 <li class="game{% if g.idle %} is-idle{% endif %}{% if g.derby %} is-derby{% endif %}{% if g.played %} is-final{% endif %}"
-    data-game="{{ g.game_id }}" style="--swing:{{ '%.3f'|format(g.swing / (scale or 1)) }}">
+    id="game-{{ g.game_id }}" data-game="{{ g.game_id }}"
+    style="--swing:{{ '%.3f'|format(g.swing / (scale or 1)) }}">
   <div class="game-when">
     {% if show_week %}<span class="game-week">{{ g.kind if g.kind != 'REG' else 'Week ' ~ g.week }}</span>{% endif %}
     <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
@@ -42,9 +43,10 @@
   {% endfor %}
 
   {# At most one of these is ever visible — `initMe` reveals the one whose slug
-     matches you. Holding both sides means you score either way, so it reads as
-     a range rather than a single number. #}
-  <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}">{% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% endfor %}</div>
+     matches you. A positive floor means the reader owns both sides and banks
+     points whatever happens. If floor and ceiling match, print one number:
+     "1.10–1.10" disguises a guarantee as uncertainty. #}
+  <div class="game-mine">{% for s in g.stakes %}<span class="mine" data-slug="{{ s.slug }}"><span class="mine-value">{% if s.fixed %}{{ s.min|points }}{% elif s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}</span>{% if s.min %}<span class="mine-locked" aria-hidden="true">locked</span><span class="visually-hidden"> points guaranteed regardless of the winner</span>{% endif %}</span>{% endfor %}</div>
 
   {# The rest of what the build already knows about this game. Open in the
      markup and collapsed by the stylesheet only when there is a client to open
@@ -83,7 +85,7 @@
       {# Everyone's stake, not only yours. The collapsed row shows you your own
          number; the argument in the group chat is about everyone else's. #}
       On the table for
-      {% for s in g.stakes %}{{ entrant_link(s.slug, s.name) }} {% if s.min %}{{ s.min|points }}–{{ s.max|points }}{% else %}+{{ s.max|points }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
+      {% for s in g.stakes %}{{ entrant_link(s.slug, s.name) }} {% if s.fixed %}{{ s.min|points }} locked{% elif s.min %}{{ s.min|points }}–{{ s.max|points }} locked{% else %}+{{ s.max|points }}{% endif %}{% if not loop.last %}, {% endif %}{% endfor %}.
     </p>
     {% else %}
     <p class="game-note">

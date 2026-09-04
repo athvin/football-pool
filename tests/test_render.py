@@ -1948,6 +1948,25 @@ def test_the_schedule_offers_every_entrant_their_own_stake(site_final):
         assert f'<span class="mine" data-slug="{slug}">' in html
 
 
+def test_a_fixed_two_team_stake_reads_as_one_locked_value(site_mid_forecast):
+    """A guarantee is not rendered as a zero-width range such as 1.10–1.10."""
+    html = (site_mid_forecast.path / "schedule" / "index.html").read_text()
+
+    assert not re.search(r'(\d+\.\d{2})–\1', html)
+    assert '<span class="mine-locked" aria-hidden="true">locked</span>' in html
+    assert "points guaranteed regardless of the winner" in html
+
+
+def test_the_schedule_carries_a_browser_live_preseason_section(site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
+
+    assert 'href="#preseason"' in html
+    assert 'data-preseason-schedule data-espn-season="2025"' in html
+    assert 'data-team-base="/team/"' in html
+    assert "Preseason never scores pool points" in html
+    assert 'data-preseason-week="4" aria-pressed="true"' in html
+
+
 def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):
     written = site_final.written
     for page, text in _real_pages(written):
@@ -1962,6 +1981,9 @@ def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     assert "What-if scoreboard" in html
     assert 'id="gameday-data"' in html
     assert "Drama = pool swing" in html
+    assert 'data-scenario-drilldown' in html
+    assert "matchup page" in html
+    assert '"dream":' not in html
     for output, text in _real_pages(site_mid_forecast.written):
         assert 'href="/gameday/"' in text, output
 

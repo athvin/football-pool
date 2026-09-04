@@ -31,6 +31,7 @@
 {# Plain anchors, so the switcher works with scripting off and every week is a
    real URL you can send someone. #}
 <nav class="week-switch" aria-label="Jump to a week">
+  <a class="preseason-switch" href="#preseason" data-week-link="preseason">PRE</a>
   {% for w in schedule.weeks %}
   <a href="#week-{{ w.week }}" data-week-link="{{ w.week }}"
      {% if w.week == schedule.default_week %}class="is-now"{% endif %}>
@@ -45,6 +46,38 @@
 </nav>
 
 <div class="weeks">
+  <section class="week preseason-week" id="preseason"
+           data-preseason-schedule data-espn-season="{{ season.year }}"
+           data-team-base="{{ '/team/'|url }}"
+           aria-labelledby="preseason-title">
+    <div class="week-head">
+      <div>
+        <p class="eyebrow">Live from the browser</p>
+        <h2 class="section-title" id="preseason-title">Preseason</h2>
+      </div>
+      <p class="week-dates" data-preseason-state>Open PRE to load scores</p>
+    </div>
+    <p class="page-sub">
+      Every warm-up game, from Canton through Week 3. Scores and status come
+      straight to this browser, so they can update without waiting for this
+      static site to rebuild. Preseason never scores pool points.
+    </p>
+    <div class="preseason-controls" aria-label="Choose a preseason week">
+      <button type="button" data-preseason-week="all">All</button>
+      <button type="button" data-preseason-week="1">HOF</button>
+      <button type="button" data-preseason-week="2">Week 1</button>
+      <button type="button" data-preseason-week="3">Week 2</button>
+      <button type="button" data-preseason-week="4" aria-pressed="true">Week 3</button>
+    </div>
+    <p class="preseason-summary" data-preseason-summary aria-live="polite"></p>
+    <div class="preseason-games" data-preseason-games aria-live="polite">
+      <p class="empty">Choose PRE above to load the live preseason schedule.</p>
+    </div>
+    <p class="attribution">
+      Scores via <a href="https://www.espn.com/nfl/scoreboard" target="_blank" rel="noopener">ESPN</a>.
+    </p>
+    <noscript><p class="empty">This section reads ESPN directly and needs JavaScript.</p></noscript>
+  </section>
   {% for w in schedule.weeks %}
   <section class="week{% if w.week == schedule.default_week %} is-default{% endif %}"
            id="week-{{ w.week }}" data-week="{{ w.week }}"
