@@ -1318,6 +1318,14 @@ describe('opening a game up', () => {
     window.location.hash = '';
   });
 
+  test('a malformed matchup hash cannot break the schedule', () => {
+    window.location.hash = '#game-%E0%A4%A';
+    gameMarkup();
+    expect(() => init(document, fakeWindow())).not.toThrow();
+    expect(document.querySelectorAll('.game.is-open')).toHaveLength(0);
+    window.location.hash = '';
+  });
+
   test('clicking the row anywhere else opens it too', () => {
     const [row] = rows();
     click(row.querySelector('.game-when time'));

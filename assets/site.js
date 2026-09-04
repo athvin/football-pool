@@ -1359,7 +1359,16 @@ function initGameDetail(doc) {
   // still-collapsed row is not a drill-down, so reveal its full head-to-head
   // facts immediately and keep direct hash changes in step too.
   const openTarget = () => {
-    const row = doc.querySelector('.game:target');
+    let id;
+    try {
+      id = decodeURIComponent((doc.location?.hash || '').slice(1));
+    } catch {
+      return;
+    }
+    // Chrome may not expose :target to selectors until just after a deferred
+    // script runs on initial navigation. The URL's id is already definitive.
+    const candidate = id.startsWith('game-') ? doc.getElementById(id) : null;
+    const row = candidate?.matches('.game') ? candidate : null;
     const button = row?.querySelector('[data-game-open]');
     if (!row || !button) return;
     row.classList.add('is-open');
