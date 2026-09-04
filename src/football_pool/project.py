@@ -15,6 +15,7 @@ anyway.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Sequence
 
 import numpy as np
 import pandas as pd
@@ -60,6 +61,10 @@ class Projections:
     money_head_to_head: pd.DataFrame  # same pairs, P(row is paid more)
     distribution: Distribution
     home_win_rate: pd.Series  # index=game_id, P(the home side wins)
+    # One row per requested game/entrant pair. These are conditionals from the
+    # exact same simulated seasons as the forecast: what that entrant's odds
+    # become in the worlds where the home or away side wins this game.
+    game_impacts: pd.DataFrame
     # Which market the ratings were fitted to: "market" for this week's posted
     # spreads, "win totals" for the preseason numbers in forecast.yaml. Shown
     # on the forecast page, because the two answer subtly different questions
@@ -104,7 +109,10 @@ def _win_totals(season: Season) -> dict[str, float] | None:
 
 
 def project(
-    season: Season, games: pd.DataFrame, simulations: int | None = None
+    season: Season,
+    games: pd.DataFrame,
+    simulations: int | None = None,
+    impact_game_ids: Sequence[str] | None = None,
 ) -> Projections | None:
     """Simulate the rest of the season and score the real field against it.
 
@@ -140,7 +148,7 @@ def project(
             )
         elo, _ = fit_elo(season, schedule, cfg, win_totals, qual_sd)
         basis, market_games = "win totals", 0
-    points, team_stats, home_win_rate = simulate(
+    points, team_stats, home_win_rate, home_wins = simulate(
         season, schedule, elo, cfg, qual_mean, qual_sd, n=simulations
     )
 
@@ -151,6 +159,13 @@ def project(
     game_ids = games.loc[games["game_type"] == "REG", "game_id"]
 
     entrants, finish, h2h, money_h2h, dist = _score_field(season, points)
+    impacts = conditional_game_impacts(
+        season,
+        points,
+        home_wins,
+        game_ids.to_numpy(),
+        () if impact_game_ids is None else impact_game_ids,
+    )
     return Projections(
         entrants=entrants,
         teams=team_stats,
@@ -161,9 +176,88 @@ def project(
         money_head_to_head=money_h2h,
         distribution=dist,
         home_win_rate=pd.Series(home_win_rate, index=game_ids.to_numpy(), name="home_win_rate"),
+        game_impacts=impacts,
         basis=basis,
         market_games=market_games,
     )
+
+
+IMPACT_COLUMNS = [
+    "game_id",
+    "name",
+    "slug",
+    "away_p_first",
+    "home_p_first",
+    "away_p_cash",
+    "home_p_cash",
+    "away_expected_payout",
+    "home_expected_payout",
+]
+
+
+def conditional_game_impacts(
+    season: Season,
+    points: np.ndarray,
+    home_wins: np.ndarray,
+    game_ids: Sequence[str],
+    selected_game_ids: Sequence[str],
+) -> pd.DataFrame:
+    """Price selected game outcomes against every entrant's finish.
+
+    The outcome matrix is intentionally consumed here and never stored on
+    :class:`Projections`. A 25,000 by 272 boolean matrix is cheap while the
+    simulation is running but wasteful to retain for a static page. The small
+    conditional summary is all Gameday needs.
+
+    A condition with no samples is represented by ``NaN``. That only happens
+    for a decided game (which the caller does not request) or a tiny synthetic
+    test; it is more honest than manufacturing certainty for an outcome the
+    simulation never saw.
+    """
+    wanted = set(selected_game_ids)
+    if not wanted:
+        return pd.DataFrame(columns=IMPACT_COLUMNS)
+
+    names = [e.name for e in season.entrants]
+    slugs = [e.slug for e in season.entrants]
+    totals = points @ season.picks_matrix().T
+    rank = (totals[:, None, :] > totals[:, :, None]).sum(axis=2) + 1
+    paid = min(len(season.payouts), len(names))
+    payouts = np.asarray(season.payouts[:paid])
+    place = np.clip(rank - 1, 0, paid - 1)
+    took = np.where(rank <= paid, payouts[place], 0.0)
+
+    def metrics(mask: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if not mask.any():
+            empty = np.full(len(names), np.nan)
+            return empty, empty.copy(), empty.copy()
+        return (
+            (rank[mask] == 1).mean(axis=0),
+            (rank[mask] <= paid).mean(axis=0),
+            took[mask].mean(axis=0),
+        )
+
+    rows: list[dict[str, object]] = []
+    for col, game_id in enumerate(game_ids):
+        if game_id not in wanted:
+            continue
+        away_first, away_cash, away_payout = metrics(~home_wins[:, col])
+        home_first, home_cash, home_payout = metrics(home_wins[:, col])
+        for i, (name, slug) in enumerate(zip(names, slugs)):
+            rows.append(
+                {
+                    "game_id": game_id,
+                    "name": name,
+                    "slug": slug,
+                    "away_p_first": away_first[i],
+                    "home_p_first": home_first[i],
+                    "away_p_cash": away_cash[i],
+                    "home_p_cash": home_cash[i],
+                    "away_expected_payout": away_payout[i],
+                    "home_expected_payout": home_payout[i],
+                }
+            )
+    return pd.DataFrame(rows, columns=IMPACT_COLUMNS)
 
 
 def _score_field(

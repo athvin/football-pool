@@ -537,6 +537,370 @@ export function safeStorage(store) {
 }
 
 // ---------------------------------------------------------------------------
+// Gameday: scenario maths and the optional live ESPN overlay
+// ---------------------------------------------------------------------------
+
+export const ESPN_SCOREBOARD =
+  'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+export const ESPN_SCOREBOARD_WEB =
+  'https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
+export const LIVE_POLL_MS = 20_000;
+export const PREGAME_POLL_MS = 180_000;
+
+/** ESPN and nflverse use different abbreviations for two clubs. */
+export function normalizeEspnTeam(team) {
+  return ({ WSH: 'WAS', JAC: 'JAX', LA: 'LAR' })[team] || team;
+}
+
+/** Reduce the large scoreboard response to the live facts this page can show. */
+export function parseEspnScoreboard(payload) {
+  const games = [];
+  for (const event of payload?.events || []) {
+    const competition = event?.competitions?.[0];
+    if (!competition) continue;
+    const home = competition.competitors?.find((team) => team.homeAway === 'home');
+    const away = competition.competitors?.find((team) => team.homeAway === 'away');
+    if (!home || !away) continue;
+    const situation = competition.situation || {};
+    const possession = competition.competitors?.find(
+      (team) => String(team.id) === String(situation.possession),
+    );
+    const state = event?.status?.type?.state || 'pre';
+    const period = Number(event?.status?.period || 0);
+    const displayClock = event?.status?.displayClock || '';
+    games.push({
+      id: String(event.id),
+      away: normalizeEspnTeam(away.team?.abbreviation),
+      home: normalizeEspnTeam(home.team?.abbreviation),
+      awayScore: String(away.score ?? '0'),
+      homeScore: String(home.score ?? '0'),
+      state,
+      clock: state === 'in' ? `Q${period} ${displayClock}`.trim() : '',
+      down: situation.downDistanceText || '',
+      possession: possession ? normalizeEspnTeam(possession.team?.abbreviation) : '',
+      redZone: Boolean(situation.isRedZone),
+      lastPlay: situation.lastPlay?.text || '',
+    });
+  }
+  return games;
+}
+
+/** Poll fast only during live football, gently while the week's games wait. */
+export function livePollDelay(games) {
+  if (games.some((game) => game.state === 'in')) return LIVE_POLL_MS;
+  if (games.some((game) => game.state === 'pre')) return PREGAME_POLL_MS;
+  return 0;
+}
+
+/** Parse only choices that still name a game and legal outcome in this build. */
+export function parseScenarioHash(hash, games) {
+  const selections = {};
+  if (!String(hash).startsWith('#scenario=')) return selections;
+  const legal = new Map(games.map((game) => [
+    String(game.id),
+    new Set([game.away, game.home, ...(game.tie ? ['TIE'] : [])]),
+  ]));
+  let decoded;
+  try {
+    decoded = decodeURIComponent(String(hash).slice('#scenario='.length));
+  } catch {
+    return selections;
+  }
+  for (const token of decoded.split(',')) {
+    const split = token.lastIndexOf(':');
+    if (split <= 0) continue;
+    const id = token.slice(0, split);
+    const outcome = token.slice(split + 1);
+    if (legal.get(id)?.has(outcome)) selections[id] = outcome;
+  }
+  return selections;
+}
+
+export function serializeScenario(selections, games) {
+  const calls = games
+    .filter((game) => selections[String(game.id)])
+    .map((game) => `${game.id}:${selections[String(game.id)]}`);
+  return calls.length ? `#scenario=${calls.join(',')}` : '';
+}
+
+/** Add called outcomes to banked points, then apply competition ranking. */
+export function scenarioStandings(data, selections) {
+  const totals = new Map(data.entrants.map((entrant) => [entrant.slug, Number(entrant.banked)]));
+  for (const game of data.games) {
+    const outcome = selections[String(game.id)];
+    if (!outcome) continue;
+    for (const entrant of data.entrants) {
+      const gain = Number(game.points?.[entrant.slug]?.[outcome] || 0);
+      totals.set(entrant.slug, totals.get(entrant.slug) + gain);
+    }
+  }
+  return data.entrants
+    .map((entrant) => ({ ...entrant, total: totals.get(entrant.slug) }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+    .map((entrant, _index, all) => ({
+      ...entrant,
+      rank: 1 + all.filter((other) => other.total > entrant.total).length,
+    }));
+}
+
+export function scenarioPreset(data, preset, meSlug = '') {
+  if (preset === 'reset') return {};
+  const out = {};
+  for (const game of data.games) {
+    if (preset === 'likely') out[game.id] = game.favorite;
+    if (preset === 'chaos') out[game.id] = game.chaos;
+    if (preset === 'dream' && game.dream?.[meSlug]) out[game.id] = game.dream[meSlug];
+  }
+  return out;
+}
+
+function paintGamedayOrder(doc, win) {
+  const grid = doc.querySelector('[data-gameday-cards]');
+  if (!grid) return;
+  const slug = doc.documentElement.dataset.me || '';
+  const cards = Array.from(grid.querySelectorAll('[data-gameday-card]'));
+  const before = new Map(cards.map((card) => [card, card.getBoundingClientRect()]));
+  cards.sort((a, b) => {
+    const priority = (card) => Number(
+      card.querySelector(`.rooting-readout[data-slug="${slug}"]`)?.dataset.priority
+        || card.dataset.drama || 0,
+    );
+    return priority(b) - priority(a);
+  });
+  for (const card of cards) grid.append(card);
+  if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for (const card of cards) {
+    const was = before.get(card);
+    const now = card.getBoundingClientRect();
+    if (!was.height || !now.height) continue;
+    const shift = was.top - now.top;
+    if (Math.abs(shift) < 1) continue;
+    card.animate?.(
+      [{ transform: `translateY(${shift.toFixed(1)}px)` }, { transform: 'none' }],
+      { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }
+}
+
+function initScenario(doc, win) {
+  const script = doc.querySelector('#gameday-data');
+  const root = doc.querySelector('[data-scenario]');
+  if (!script || !root) return;
+  let data;
+  try {
+    data = JSON.parse(script.textContent);
+  } catch {
+    return;
+  }
+  let selections = parseScenarioHash(doc.location?.hash || '', data.games);
+  let previousMeRank = null;
+
+  const paint = () => {
+    const standings = scenarioStandings(data, selections);
+    const board = root.querySelector('[data-scenario-board]');
+    const rows = new Map(Array.from(board?.children || [], (row) => [row.dataset.slug, row]));
+    for (const entrant of standings) {
+      const row = rows.get(entrant.slug);
+      if (!row) continue;
+      row.querySelector('.scenario-rank').textContent = entrant.rank;
+      row.querySelector('.scenario-total').textContent = entrant.total.toFixed(2);
+      board.append(row);
+    }
+    for (const fieldset of root.querySelectorAll('[data-scenario-game]')) {
+      const chosen = selections[fieldset.dataset.scenarioGame];
+      for (const button of fieldset.querySelectorAll('[data-scenario-choice]')) {
+        button.setAttribute('aria-pressed', String(button.dataset.scenarioChoice === chosen));
+      }
+    }
+    const me = doc.documentElement.dataset.me || '';
+    const meRank = standings.find((entrant) => entrant.slug === me)?.rank ?? null;
+    if (previousMeRank !== null && previousMeRank > 1 && meRank === 1
+        && !win.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      doc.documentElement.classList.remove('is-goal-line');
+      // Force a new animation even if two calls reach first in quick succession.
+      void doc.documentElement.offsetWidth;
+      doc.documentElement.classList.add('is-goal-line');
+      win.setTimeout(() => doc.documentElement.classList.remove('is-goal-line'), 850);
+    }
+    previousMeRank = meRank;
+    const hash = serializeScenario(selections, data.games);
+    win.history?.replaceState?.(null, '', `${doc.location?.pathname || ''}${hash}`);
+  };
+
+  root.addEventListener('click', (event) => {
+    const choice = event.target.closest?.('[data-scenario-choice]');
+    if (choice) {
+      const game = choice.closest('[data-scenario-game]').dataset.scenarioGame;
+      selections[game] = selections[game] === choice.dataset.scenarioChoice
+        ? undefined : choice.dataset.scenarioChoice;
+      if (!selections[game]) delete selections[game];
+      paint();
+      return;
+    }
+    const preset = event.target.closest?.('[data-scenario-preset]')?.dataset.scenarioPreset;
+    if (preset) {
+      const me = doc.documentElement.dataset.me || '';
+      const status = root.querySelector('[data-scenario-status]');
+      if (preset === 'dream' && !me) {
+        if (status) status.textContent = 'Choose who you are above to build your dream slate.';
+        return;
+      }
+      selections = scenarioPreset(data, preset, me);
+      if (status) status.textContent = '';
+      paint();
+    }
+  });
+
+  root.querySelector('[data-scenario-share]')?.addEventListener('click', async () => {
+    const status = root.querySelector('[data-scenario-status]');
+    try {
+      const copy = win.navigator?.clipboard?.writeText;
+      if (typeof copy !== 'function') throw new Error('clipboard unavailable');
+      await copy.call(win.navigator.clipboard, win.location?.href || doc.location?.href);
+      if (status) status.textContent = 'Scenario link copied.';
+    } catch {
+      if (status) status.textContent = 'Copy the scenario URL from your address bar.';
+    }
+  });
+
+  doc.querySelector('[data-me-select]')?.addEventListener('change', () => {
+    previousMeRank = null;
+    paint();
+  });
+  paint();
+}
+
+function paintLiveGames(doc, games) {
+  for (const game of games) {
+    const card = doc.querySelector(
+      `[data-gameday-card][data-away="${game.away}"][data-home="${game.home}"]`,
+    );
+    if (!card || game.state === 'pre') continue;
+    const strip = card.querySelector('[data-live-game]');
+    if (!strip) continue;
+    strip.hidden = false;
+    card.querySelector('[data-live-status]').textContent =
+      game.state === 'post' ? 'Final' : game.clock;
+    card.querySelector('[data-live-score]').textContent =
+      `${game.away} ${game.awayScore} · ${game.home} ${game.homeScore}`;
+    const situation = [
+      game.possession ? `${game.possession} ball` : '',
+      game.down,
+      game.redZone ? 'RED ZONE' : '',
+    ].filter(Boolean).join(' · ');
+    card.querySelector('[data-live-situation]').textContent = situation;
+    const detail = card.querySelector('[data-live-detail]');
+    const lastPlay = card.querySelector('[data-live-last-play]');
+    if (detail && lastPlay && game.lastPlay) {
+      detail.hidden = false;
+      lastPlay.textContent = game.lastPlay;
+    }
+  }
+}
+
+async function fetchEspnGames(win, url = ESPN_SCOREBOARD) {
+  let response = await win.fetch(url, { cache: 'no-store' });
+  // ESPN has occasionally rejected non-browser-shaped traffic on the older
+  // host while serving the same public response from site.web.api. Keep that
+  // narrowly scoped fallback here rather than making every caller know it.
+  if (response.status === 403 && url.startsWith(ESPN_SCOREBOARD)) {
+    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_WEB), {
+      cache: 'no-store',
+    });
+  }
+  if (!response.ok) throw new Error(`ESPN ${response.status}`);
+  return parseEspnScoreboard(await response.json());
+}
+
+function renderLiveHarness(doc, root, games) {
+  const list = root.querySelector('[data-live-harness-games]');
+  if (!list) return;
+  list.textContent = '';
+  for (const game of games) {
+    const row = doc.createElement('article');
+    row.className = `live-lab-game is-${game.state}`;
+    const matchup = doc.createElement('strong');
+    matchup.textContent = `${game.away} ${game.awayScore} · ${game.home} ${game.homeScore}`;
+    const state = doc.createElement('span');
+    state.textContent = game.state === 'post' ? 'Final' : (game.state === 'in' ? game.clock : 'Scheduled');
+    const situation = doc.createElement('span');
+    situation.textContent = [
+      game.possession ? `${game.possession} ball` : '', game.down,
+      game.redZone ? 'RED ZONE' : '',
+    ].filter(Boolean).join(' · ');
+    row.append(matchup, state, situation);
+    if (game.lastPlay) {
+      const play = doc.createElement('small');
+      play.textContent = game.lastPlay;
+      row.append(play);
+    }
+    list.append(row);
+  }
+  if (!games.length) {
+    const empty = doc.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'ESPN returned no games for this preseason week.';
+    list.append(empty);
+  }
+}
+
+function initLiveHarness(doc, win) {
+  const root = doc.querySelector('[data-live-harness]');
+  if (!root || typeof win.fetch !== 'function') return;
+  let request = 0;
+  const load = async (week) => {
+    const mine = ++request;
+    const state = root.querySelector('[data-live-feed-state]');
+    if (state) state.textContent = 'Loading…';
+    try {
+      const season = root.dataset.espnSeason || new Date().getFullYear();
+      const url = `${ESPN_SCOREBOARD}?seasontype=1&week=${week}&dates=${season}`;
+      const games = await fetchEspnGames(win, url);
+      if (mine !== request) return;
+      renderLiveHarness(doc, root, games);
+      if (state) {
+        const live = games.filter((game) => game.state === 'in').length;
+        state.textContent = live ? `${live} live · refreshes automatically` : `${games.length} games loaded`;
+      }
+      const delay = livePollDelay(games);
+      if (delay && root.open) win.setTimeout(() => load(week), delay);
+    } catch {
+      if (mine !== request) return;
+      if (state) state.textContent = 'Feed unavailable · try again';
+    }
+  };
+  root.addEventListener('toggle', () => {
+    if (!root.open || root.dataset.loaded) return;
+    root.dataset.loaded = 'true';
+    load(root.querySelector('[data-espn-week][aria-pressed="true"]')?.dataset.espnWeek || '4');
+  });
+  root.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-espn-week]');
+    if (!button) return;
+    for (const other of root.querySelectorAll('[data-espn-week]')) {
+      other.setAttribute('aria-pressed', String(other === button));
+    }
+    load(button.dataset.espnWeek);
+  });
+}
+
+function initLiveGames(doc, win) {
+  if (!doc.querySelector('[data-gameday-card]') || typeof win.fetch !== 'function') return;
+  const poll = async () => {
+    try {
+      const games = await fetchEspnGames(win);
+      paintLiveGames(doc, games);
+      const delay = livePollDelay(games);
+      if (delay) win.setTimeout(poll, delay);
+    } catch {
+      // Static nflverse state remains visible; an unofficial overlay is never
+      // important enough to turn a transient request failure into page noise.
+    }
+  };
+  poll();
+}
+
+// ---------------------------------------------------------------------------
 // DOM wiring
 // ---------------------------------------------------------------------------
 function initTheme(doc, storage, win) {
@@ -1620,12 +1984,19 @@ export function init(doc = document, win = window) {
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
   initMe(doc, storage, scopedKey(ME_KEY, scope));
+  paintGamedayOrder(doc, win);
+  doc.querySelector('[data-me-select]')?.addEventListener(
+    'change', () => paintGamedayOrder(doc, win),
+  );
   // The clock comes in through `win` so a test can stand anywhere in the season
   // without touching global time — the same discipline the Python side follows
   // by passing the fetch instant around rather than calling now().
   const nowMs = (win.Date ?? Date).now();
   initTimeZone(doc, storage, nowMs);
   initSchedule(doc, nowMs);
+  initScenario(doc, win);
+  initLiveGames(doc, win);
+  initLiveHarness(doc, win);
   initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));
   initSort(doc, win);
   initOdometer(doc, win);

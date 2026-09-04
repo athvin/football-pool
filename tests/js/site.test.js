@@ -18,6 +18,9 @@ import {
   PICK_COLORS,
   RED_ZONE,
   REVEAL_SELECTOR,
+  ESPN_SCOREBOARD,
+  LIVE_POLL_MS,
+  PREGAME_POLL_MS,
   STALE_AFTER_HOURS,
   THEME_KEY,
   TZ_KEY,
@@ -38,15 +41,22 @@ import {
   isValidTimeZone,
   markerNumber,
   nextTheme,
+  normalizeEspnTeam,
+  parseEspnScoreboard,
+  parseScenarioHash,
   relativeAge,
   rowTops,
   safeStorage,
+  scenarioPreset,
+  scenarioStandings,
   scrollProgress,
+  serializeScenario,
   sortTable,
   spreadLabels,
   sweepRadius,
   tooltipPosition,
   weekForInstant,
+  livePollDelay,
   yardToY,
 } from '../../assets/site.js';
 
@@ -253,6 +263,220 @@ describe('safeStorage', () => {
     });
     expect(s.get('a')).toBeNull();
     expect(() => s.set('a', '1')).not.toThrow();
+  });
+});
+
+describe('Gameday scenario helpers', () => {
+  const data = {
+    entrants: [
+      { slug: 'a', name: 'Alex', banked: 10 },
+      { slug: 'b', name: 'Blair', banked: 12 },
+      { slug: 'c', name: 'Casey', banked: 12 },
+    ],
+    games: [
+      {
+        id: '2026_01_KC_SEA', away: 'KC', home: 'SEA', tie: true,
+        favorite: 'KC', chaos: 'SEA', dream: { a: 'SEA', b: 'KC' },
+        points: {
+          a: { KC: 0, SEA: 5, TIE: 2.5 },
+          b: { KC: 4, SEA: 0, TIE: 2 },
+          c: { KC: 0, SEA: 0, TIE: 0 },
+        },
+      },
+      {
+        id: '2026_02_BUF_MIA', away: 'BUF', home: 'MIA', tie: false,
+        favorite: 'MIA', chaos: 'BUF', dream: { a: 'BUF', b: 'MIA' },
+        points: { a: { BUF: 1, MIA: 0 }, b: { BUF: 0, MIA: 3 }, c: { BUF: 0, MIA: 0 } },
+      },
+    ],
+  };
+
+  test('fragment round-trips valid calls and ignores stale or illegal ones', () => {
+    const selected = { '2026_01_KC_SEA': 'TIE', '2026_02_BUF_MIA': 'BUF' };
+    const hash = serializeScenario(selected, data.games);
+    expect(hash).toBe('#scenario=2026_01_KC_SEA:TIE,2026_02_BUF_MIA:BUF');
+    expect(parseScenarioHash(hash, data.games)).toEqual(selected);
+    expect(parseScenarioHash('#scenario=old%3AKC%2C2026_02_BUF_MIA%3ATIE', data.games)).toEqual({});
+    expect(parseScenarioHash('#something-else', data.games)).toEqual({});
+    expect(parseScenarioHash('#scenario=%E0%A4%A', data.games)).toEqual({});
+  });
+
+  test('called points recalculate totals with competition ranks', () => {
+    const standings = scenarioStandings(data, { '2026_01_KC_SEA': 'SEA' });
+    expect(standings.map((row) => [row.slug, row.total, row.rank])).toEqual([
+      ['a', 15, 1], ['b', 12, 2], ['c', 12, 2],
+    ]);
+  });
+
+  test('presets call chalk, upsets, a selected dream, or nothing', () => {
+    expect(scenarioPreset(data, 'likely')).toEqual({
+      '2026_01_KC_SEA': 'KC', '2026_02_BUF_MIA': 'MIA',
+    });
+    expect(scenarioPreset(data, 'chaos')).toEqual({
+      '2026_01_KC_SEA': 'SEA', '2026_02_BUF_MIA': 'BUF',
+    });
+    expect(scenarioPreset(data, 'dream', 'a')).toEqual({
+      '2026_01_KC_SEA': 'SEA', '2026_02_BUF_MIA': 'BUF',
+    });
+    expect(scenarioPreset(data, 'dream')).toEqual({});
+    expect(scenarioPreset(data, 'reset')).toEqual({});
+  });
+});
+
+describe('ESPN live scoreboard adapter', () => {
+  const payload = {
+    events: [{
+      id: 401,
+      status: { period: 3, displayClock: '4:12', type: { state: 'in' } },
+      competitions: [{
+        competitors: [
+          { id: '1', homeAway: 'away', score: '17', team: { abbreviation: 'WSH' } },
+          { id: '2', homeAway: 'home', score: '20', team: { abbreviation: 'JAC' } },
+        ],
+        situation: {
+          possession: '1', downDistanceText: '3rd & 7 at JAX 42', isRedZone: true,
+          lastPlay: { text: 'Pass complete for 12 yards.' },
+        },
+      }],
+    }],
+  };
+
+  test('normalizes team codes and extracts the live situation', () => {
+    expect(ESPN_SCOREBOARD).toContain('espn.com');
+    expect(normalizeEspnTeam('LA')).toBe('LAR');
+    expect(normalizeEspnTeam('BUF')).toBe('BUF');
+    expect(parseEspnScoreboard({ events: [{ competitions: [] }] })).toEqual([]);
+    const [game] = parseEspnScoreboard(payload);
+    expect(game).toMatchObject({
+      away: 'WAS', home: 'JAX', awayScore: '17', homeScore: '20',
+      state: 'in', clock: 'Q3 4:12', possession: 'WAS', redZone: true,
+      down: '3rd & 7 at JAX 42', lastPlay: 'Pass complete for 12 yards.',
+    });
+  });
+
+  test('polls by game state instead of hammering a quiet feed', () => {
+    expect(livePollDelay([{ state: 'in' }])).toBe(LIVE_POLL_MS);
+    expect(livePollDelay([{ state: 'pre' }])).toBe(PREGAME_POLL_MS);
+    expect(livePollDelay([{ state: 'post' }])).toBe(0);
+  });
+});
+
+describe('Gameday DOM wiring', () => {
+  const postPayload = {
+    events: [{
+      id: 900,
+      status: { period: 4, displayClock: '0:00', type: { state: 'post' } },
+      competitions: [{
+        competitors: [
+          { id: '1', homeAway: 'away', score: '24', team: { abbreviation: 'KC' } },
+          { id: '2', homeAway: 'home', score: '21', team: { abbreviation: 'SEA' } },
+        ],
+      }],
+    }],
+  };
+  const response = (payload = postPayload, status = 200) => ({
+    ok: status < 400, status, json: async () => payload,
+  });
+  const settle = async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+  };
+
+  test('an ESPN final updates a static matchup without a rebuild', async () => {
+    document.body.innerHTML = `
+      <article data-gameday-card="g" data-away="KC" data-home="SEA" data-drama="10">
+        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
+        <div data-live-detail hidden><p data-live-last-play></p></div>
+      </article>`;
+    const win = fakeWindow();
+    win.fetch = vi.fn(async () => response());
+    init(document, win);
+    await settle();
+
+    expect(win.fetch).toHaveBeenCalledOnce();
+    expect(document.querySelector('[data-live-game]').hidden).toBe(false);
+    expect(document.querySelector('[data-live-status]').textContent).toBe('Final');
+    expect(document.querySelector('[data-live-score]').textContent).toContain('KC 24');
+  });
+
+  test('a 403 retries against ESPN\'s web host', async () => {
+    document.body.innerHTML = `
+      <article data-gameday-card="g" data-away="KC" data-home="SEA">
+        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
+      </article>`;
+    const win = fakeWindow();
+    win.fetch = vi.fn()
+      .mockResolvedValueOnce(response({}, 403))
+      .mockResolvedValueOnce(response());
+    init(document, win);
+    await settle();
+
+    expect(win.fetch).toHaveBeenCalledTimes(2);
+    expect(win.fetch.mock.calls[1][0]).toContain('site.web.api.espn.com');
+  });
+
+  test('the deployed preseason bench loads a chosen week on demand', async () => {
+    document.body.innerHTML = `
+      <details data-live-harness data-espn-season="2026">
+        <summary><span data-live-feed-state></span></summary>
+        <button data-espn-week="3">Week 2</button>
+        <button data-espn-week="4" aria-pressed="true">Week 3</button>
+        <div data-live-harness-games></div>
+      </details>`;
+    const win = fakeWindow();
+    win.fetch = vi.fn(async () => response());
+    init(document, win);
+    const bench = document.querySelector('[data-live-harness]');
+    bench.open = true;
+    bench.dispatchEvent(new Event('toggle'));
+    await settle();
+
+    expect(win.fetch.mock.calls[0][0]).toContain('seasontype=1&week=4&dates=2026');
+    expect(document.querySelector('.live-lab-game').textContent).toContain('KC 24');
+    expect(document.querySelector('[data-live-feed-state]').textContent).toBe('1 games loaded');
+
+    document.querySelector('[data-espn-week="3"]').click();
+    await settle();
+    expect(win.fetch.mock.calls[1][0]).toContain('week=3');
+  });
+
+  test('scenario controls repaint totals and identity-aware dream calls', () => {
+    const data = {
+      entrants: [{ slug: 'a', name: 'Alex', banked: 10 }, { slug: 'b', name: 'Blair', banked: 12 }],
+      games: [{
+        id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
+        dream: { a: 'SEA', b: 'KC' },
+        points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
+      }],
+    };
+    document.body.innerHTML = `
+      <select data-me-select><option value=""></option><option value="a">Alex</option></select>
+      <section data-scenario>
+        <button data-scenario-preset="dream">Dream</button>
+        <button data-scenario-preset="reset">Reset</button>
+        <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button></fieldset>
+        <ol data-scenario-board>
+          <li data-slug="a"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+          <li data-slug="b"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+        </ol>
+        <button data-scenario-share></button><p data-scenario-status></p>
+      </section>
+      <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
+    const win = fakeWindow();
+    init(document, win);
+
+    document.querySelector('[data-scenario-preset="dream"]').click();
+    expect(document.querySelector('[data-scenario-status]').textContent).toContain('Choose who');
+    const select = document.querySelector('[data-me-select]');
+    select.value = 'a';
+    select.dispatchEvent(new Event('change'));
+    document.querySelector('[data-scenario-preset="dream"]').click();
+    expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('15.00');
+    expect(document.querySelector('li[data-slug="a"] .scenario-rank').textContent).toBe('1');
+    expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed')).toBe('true');
+    document.querySelector('[data-scenario-preset="reset"]').click();
+    expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('10.00');
   });
 });
 

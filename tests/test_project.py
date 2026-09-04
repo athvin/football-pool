@@ -11,7 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from football_pool.project import practically_eliminated, project
+from football_pool.project import conditional_game_impacts, practically_eliminated, project
 
 SIMS = 600
 
@@ -193,6 +193,46 @@ def test_projection_is_deterministic(field, preseason):
     b = project(field, preseason, simulations=SIMS).entrants
     assert np.allclose(a["p_first"], b["p_first"])
     assert np.allclose(a["mean_points"], b["mean_points"])
+
+
+def test_requested_games_carry_conditional_odds(field, preseason):
+    game_id = str(preseason.loc[preseason["game_type"] == "REG", "game_id"].iloc[0])
+    projection = project(field, preseason, simulations=SIMS, impact_game_ids=[game_id])
+
+    assert set(projection.game_impacts["game_id"]) == {game_id}
+    assert set(projection.game_impacts["name"]) == {"Strong", "Middle", "Weak"}
+    assert projection.game_impacts.filter(like="p_").notna().all().all()
+
+
+def test_conditionals_recombine_to_the_unconditional_result(make_season):
+    season = make_season(
+        [
+            {"name": "A", "teams": ["KC", "BAL", "DAL", "CIN"]},
+            {"name": "B", "teams": ["SEA", "NE", "LAR", "SF"]},
+        ]
+    )
+    points = np.zeros((4, season.n_teams))
+    # Away wins correlate with B leading; home wins correlate with A leading.
+    points[:2, season.idx["SEA"]] = 10
+    points[2:, season.idx["KC"]] = 10
+    outcomes = np.array([[False], [False], [True], [True]])
+
+    impacts = conditional_game_impacts(season, points, outcomes, ["g1"], ["g1"])
+    a = impacts.set_index("name").loc["A"]
+
+    assert a.away_p_first == 0
+    assert a.home_p_first == 1
+    assert 0.5 * a.away_p_first + 0.5 * a.home_p_first == pytest.approx(0.5)
+    assert 0.5 * a.away_expected_payout + 0.5 * a.home_expected_payout == pytest.approx(
+        season.payouts[0] / 2 + season.payouts[1] / 2
+    )
+
+
+def test_an_unrequested_conditional_summary_is_empty(field):
+    points = np.zeros((2, field.n_teams))
+    out = conditional_game_impacts(field, points, np.zeros((2, 1), dtype=bool), ["g"], [])
+    assert out.empty
+    assert "home_expected_payout" in out.columns
 
 
 # -- conditioning shows up in the projections -------------------------------

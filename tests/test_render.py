@@ -1954,6 +1954,85 @@ def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):
         assert 'href="/schedule/"' in text, page
 
 
+def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
+    page = site_mid_forecast.path / "gameday" / "index.html"
+    assert page.exists()
+    html = page.read_text()
+    assert "Rooting board" in html
+    assert "What-if scoreboard" in html
+    assert 'id="gameday-data"' in html
+    assert "Drama = pool swing" in html
+    for output, text in _real_pages(site_mid_forecast.written):
+        assert 'href="/gameday/"' in text, output
+
+
+def test_gameday_becomes_a_season_rewind_after_the_super_bowl(site_final):
+    html = (site_final.path / "gameday" / "index.html").read_text()
+    assert "Season rewind" in html
+    assert "What-if scoreboard" not in html
+    assert 1 <= html.count('class="gameday-card is-final"') <= 10
+
+
+def test_week_eighteen_is_not_mistaken_for_the_end_before_playoff_rows_arrive(
+    pool, games_2025, tmp_path
+):
+    regular = games_2025[games_2025["game_type"] == "REG"].copy()
+    data = GameData(regular, 2025, datetime(2026, 1, 6, tzinfo=timezone.utc), None, "cache")
+
+    render_site(pool, data, tmp_path)
+    html = (tmp_path / "gameday" / "index.html").read_text()
+    assert "Season rewind" not in html
+    assert "Week 18" in html
+
+
+def test_gameday_carries_optional_venue_weather_and_attribution(
+    pool, games_2025, tmp_path
+):
+    from football_pool.weather import KickoffWeather
+
+    games = games_2025.copy()
+    games[["played", "home_won", "away_won", "is_tie"]] = False
+    first = games[(games["game_type"] == "REG") & (games["week"] == 1)].index[0]
+    game_id = str(games.loc[first, "game_id"])
+    games.loc[first, "stadium"] = "Lumen Field"
+    games.loc[first, "roof"] = "outdoors"
+    games.loc[first, "surface"] = "fieldturf"
+    games.loc[first, "spread_line"] = 3.5
+    games.loc[first, "total_line"] = 46.5
+    games.loc[first, "away_rest"] = 7
+    games.loc[first, "home_rest"] = 9
+    games.loc[first, "away_qb_name"] = "Road QB"
+    games.loc[first, "home_qb_name"] = "Home QB"
+    data = GameData(games, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache")
+    weather = KickoffWeather(61, 59, 72, 11, 23, 61, "Light rain")
+
+    render_site(pool, data, tmp_path, simulations=100, weather={game_id: weather})
+    html = (tmp_path / "gameday" / "index.html").read_text()
+    assert "Lumen Field" in html and "Fieldturf" in html
+    assert "O/U 46.5" in html and "rest days" in html
+    assert "QBs Road QB / Home QB" in html
+    assert "Light rain · 61°F" in html
+    assert "Weather by Open-Meteo" in html
+
+
+def test_gameday_falls_back_to_immediate_pool_points_without_a_model(
+    make_season, games_2025, tmp_path
+):
+    season = make_season(
+        [{"name": "Solo", "teams": ["KC", "SEA", "DAL", "NE"]}],
+        year=2025,
+        forecast=False,
+    )
+    games = games_2025.copy()
+    games[["played", "home_won", "away_won", "is_tie"]] = False
+    data = GameData(games, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache")
+
+    render_site(season, data, tmp_path)
+    html = (tmp_path / "gameday" / "index.html").read_text()
+    assert "Based on the immediate points" in html
+    assert "What-if scoreboard" in html
+
+
 def test_the_season_tab_replaces_the_two_it_merged(site_final):
     """Weeks and Trends told one story between them; Season tells it in one tab."""
     html = (site_final.path / "index.html").read_text()

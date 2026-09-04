@@ -1,8 +1,9 @@
 # NFL Pool 🏈
 
-A static scoreboard for our leveling-factor pools. A GitHub Action refreshes it
-twice a day, recomputes everyone's totals from real NFL results, and publishes
-the site to GitHub Pages.
+A static scoreboard for our leveling-factor pools. GitHub Actions refresh it
+around NFL game windows, recompute everyone's totals from real results, and
+publish the site to GitHub Pages. The Gameday tab adds a browser-only live
+overlay, so an open page can update itself between those static builds.
 
 One season can carry more than one pool — different people, different stakes,
 the same football. Today there are two:
@@ -80,7 +81,7 @@ those by name, because a pool slugged `teams` would render its board straight
 over the teams page.
 
 Each pool gets a complete site of its own: its own leaderboard, entrant pages,
-schedule, forecast and `data/standings.json`. The one thing they share on disk
+schedule, Gameday war room, forecast and `data/standings.json`. The one thing they share on disk
 is `/assets/` — a single copy of the stylesheet, the script, the logos and the
 fonts, linked by the same URL from every pool. That sharing stops at assets:
 no rendered page carries a link to, or the name of, any pool but its own, and
@@ -216,6 +217,7 @@ src/football_pool/
   potential.py        next week, ceilings, floors, elimination
   history.py          week-by-week points and ranks
   project.py          Monte Carlo → per-entrant odds and distributions
+  weather.py          optional Open-Meteo kickoff-hour forecasts
   glossary.py         what the site's words mean, built from the season's rules
   svg.py              inline charts, generated at build time
   render.py           Jinja2 → public/
@@ -235,6 +237,22 @@ in the same games file; the roster is a second file from the same nflverse
 releases (`rosters/roster_<year>.csv`, refreshed daily in season). Both are
 context, not results: any failure to fetch them renders the site without them,
 and nothing about them can block a publish.
+
+The Gameday page has two additional, explicitly optional sources:
+
+- The same nflverse schedule carries venue, roof, surface, rest, quarterback,
+  and betting-line context. Open-air games within the forecast horizon get one
+  batched, keyless [Open-Meteo](https://open-meteo.com/) kickoff-hour forecast.
+  Weather is displayed with attribution and never enters the model or score.
+- An open browser polls ESPN's public NFL scoreboard for live score, clock,
+  possession, down-and-distance, red-zone state, and last play. Polling speeds
+  up only while a game is live and stops once the slate is final. A built-in
+  2026 preseason test bench makes the integration observable on the deployed
+  static site before pool scoring begins. This unofficial feed is display-only:
+  nflverse finals remain the ledger the next build scores from.
+
+Either optional request may fail without affecting the static schedule,
+standings, projections, or deployment.
 
 If the fetch fails, the build falls back to the committed copy in `data/` — an
 outage degrades the site to yesterday's numbers rather than breaking it. The

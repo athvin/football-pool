@@ -431,6 +431,7 @@ def test_a_pool_may_set_its_own_pick_count(tmp_path, season_writer):
         # case of `entrant` be deleted by the prune. This is the only one of
         # these failures that destroys files rather than just looking wrong.
         ({"teams": _pool()}, "already writes"),
+        ({"gameday": _pool()}, "already writes"),
         ({"entrant": _pool()}, "already writes"),
         ({"Friends": _pool()}, "not a usable slug"),
         ({"-friends": _pool()}, "not a usable slug"),

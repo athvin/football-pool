@@ -172,6 +172,7 @@ def _sibling_pools(season) -> tuple:
 
 def cmd_build(args) -> int:
     from .render import render_pools
+    from .weather import fetch_weather
 
     season, gd = _load(args)
 
@@ -214,9 +215,12 @@ def cmd_build(args) -> int:
     # Fetched after the staleness gate on purpose: a build that is refusing to
     # publish has no reason to spend a network round-trip decorating it.
     roster = _fetch_roster(season.year, args.offline)
+    weather = fetch_weather(gd.games, gd.fetched_at, offline=args.offline)
 
     seasons = (season,) if getattr(args, "pool", None) else (season, *_sibling_pools(season))
-    written = render_pools(seasons, gd, out, base=args.base, roster=roster)
+    written = render_pools(
+        seasons, gd, out, base=args.base, roster=roster, weather=weather
+    )
 
     pages = sum(1 for p in written if p.suffix == ".html")
     print(f"built {pages} pages for {season.year} -> {out}")
