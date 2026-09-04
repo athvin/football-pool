@@ -648,6 +648,7 @@ def heatmap(
     header_height: int = 46,
     axis_width: int = 22,
     hrefs: Mapping[str, str] | None = None,
+    same_picks: Sequence[Sequence[bool]] | None = None,
 ) -> str:
     """Pairwise probabilities, with the number printed in every cell.
 
@@ -687,6 +688,11 @@ def heatmap(
     because the drawn label has been through :func:`fit_labels` and may be an
     abbreviation of it. Both axes are the same set of people, so a name is a
     link whichever edge of the grid you find it on.
+
+    ``same_picks`` marks pairs that can never separate because they own the
+    same teams. The model correctly represents their head-to-head result as
+    0.5 in each direction, but the chart must call that a tie rather than
+    presenting it as two opposing 50% chances.
     """
     n = len(labels)
     if n == 0:
@@ -787,18 +793,34 @@ def heatmap(
                 )
                 continue
             v = float(value)
+            same = bool(
+                same_picks is not None
+                and i < len(same_picks)
+                and j < len(same_picks[i])
+                and same_picks[i][j]
+            )
+            same_attr = ' data-same-picks="true"' if same else ""
+            opacity = 0.44 if same else 0.08 + 0.72 * v
+            cell_text = "Tie" if same else f"{v * 100:.0f}%"
+            title = (
+                f"{escape(names[i])} and {escape(names[j])} always tie because "
+                "they have the same picks"
+                if same
+                else f"{escape(names[i])} {escape(verb)} {escape(names[j])} "
+                f"{v * 100:.0f}% of the time"
+            )
             out.append(
                 f'<rect class="heat-box" x="{x + 1}" y="{y + 1}" '
                 f'width="{cell - 2}" height="{cell - 2}" rx="4" '
-                f'fill="{MODEL}" opacity="{0.08 + 0.72 * v:.3f}" '
+                f'fill="{MODEL}" opacity="{opacity:.3f}" '
                 f'data-r="{i}" data-c="{j}" data-p="{v * 100:.0f}" '
                 f'data-row="{escape(names[i], quote=True)}" '
-                f'data-col="{escape(names[j], quote=True)}"{wave}>'
-                f"<title>{escape(names[i])} {escape(verb)} {escape(names[j])} "
-                f"{v * 100:.0f}% of the time</title></rect>"
+                f'data-col="{escape(names[j], quote=True)}"{same_attr}{wave}>'
+                f"<title>{title}</title></rect>"
                 f'<text x="{x + cell / 2:.1f}" y="{y + cell / 2 + 4:.1f}" '
                 f'text-anchor="middle" class="heat-cell'
-                f'{" is-strong" if v >= 0.5 else ""}"{wave}>{v * 100:.0f}%</text>'
+                f'{" is-strong" if same or v >= 0.5 else ""}"{wave}>'
+                f"{cell_text}</text>"
             )
 
     out.append("</svg>")

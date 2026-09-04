@@ -586,8 +586,10 @@ a, button, select, summary, label { touch-action: manipulation; }
 }
 .row:hover::after, .row:focus-within::after { animation: sheen 0.8s ease-out; }
 
-/* The leader sits under a floodlight. */
-.row.is-leader {
+/* The leader sits under a floodlight until the viewer identifies themselves.
+   At that point the selected entry is the one they are trying to find, so the
+   permanent first-place floodlight steps back instead of competing with it. */
+html:not([data-me]) .row.is-leader {
   --accent: var(--live);
   border-color: color-mix(in srgb, var(--live) 35%, var(--rule));
   background:
@@ -595,7 +597,7 @@ a, button, select, summary, label { touch-action: manipulation; }
       color-mix(in srgb, var(--live) 11%, transparent), transparent 60%),
     var(--surface);
 }
-.row.is-leader::before { transform: scaleY(1); }
+html:not([data-me]) .row.is-leader::before { transform: scaleY(1); }
 .row.is-eliminated { opacity: 0.62; }
 
 .row-rank {
@@ -607,7 +609,7 @@ a, button, select, summary, label { touch-action: manipulation; }
   color: var(--chalk-dim);
   font-variant-numeric: tabular-nums;
 }
-.row.is-leader .row-rank { color: var(--live); }
+html:not([data-me]) .row.is-leader .row-rank { color: var(--live); }
 
 .row-who { grid-area: who; min-width: 0; }
 
@@ -699,6 +701,17 @@ a, button, select, summary, label { touch-action: manipulation; }
   white-space: nowrap;
 }
 .team-chip.scored { color: var(--chalk); border-color: color-mix(in srgb, var(--live) 30%, var(--rule)); }
+
+/* The larger chip is the team directory's row label. Give its border a stable
+   width rather than making the last glyph define the right edge: Plex Mono's
+   ink can overhang its advance box by a fraction of a pixel, which is enough
+   to put the final letter of a three-letter code through a tightly-fit edge. */
+.team-chip.is-large {
+  box-sizing: border-box;
+  min-width: 4.25rem;
+  justify-content: flex-start;
+  padding-inline: 0.45rem 0.55rem;
+}
 
 /* Wearing the club's colours. Identity only — every chip still carries its
    three-letter code, because a dozen NFL primaries are indistinguishable from
@@ -2049,6 +2062,15 @@ html[data-slate='pool'] .bye-team.is-spare { display: none; }
 .slate-empty { display: none; }
 html[data-slate='pool'] .slate-empty { display: block; }
 
+/* The current week has very few idle games once a large pool has collectively
+   picked most of the league. Make the toggle itself confirm that the filter is
+   on, even when only one row disappears below the fold. */
+html[data-slate='pool'] [data-slate-toggle] {
+  color: var(--live);
+  border-color: color-mix(in srgb, var(--live) 40%, var(--rule));
+  background: color-mix(in srgb, var(--live) 8%, transparent);
+}
+
 .game-when {
   display: flex;
   flex-wrap: wrap;
@@ -2235,8 +2257,13 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 .row.is-me {
   --accent: var(--model);
   border-color: color-mix(in srgb, var(--model) 40%, var(--rule));
+  background:
+    radial-gradient(120% 180% at 0% 50%,
+      color-mix(in srgb, var(--model) 11%, transparent), transparent 60%),
+    var(--surface);
 }
 .row.is-me::before { transform: scaleY(1); }
+.row.is-me .row-rank { color: var(--model); }
 
 .badge.you { color: var(--model); }
 [data-me-only] { display: none; }

@@ -506,6 +506,7 @@ describe('this is me', () => {
 
     expect(document.querySelectorAll('.is-me')).toHaveLength(0);
     expect(win._store.get(ME_KEY)).toBe('');
+    expect(document.documentElement.hasAttribute('data-me')).toBe(false);
   });
 
   test('an identity that has left the pool is discarded, not left dangling', () => {
@@ -1586,6 +1587,27 @@ describe('the head-to-head grid', () => {
     const out = headToHeadReadout({ row: 'A', col: 'B', percent: '62', reverse: '38' });
     expect(out.claim).toBeTruthy();
     expect(out.odds).toBeNull();
+  });
+
+  test('identical picks are a tie, not two opposing 50% chances', () => {
+    const out = headToHeadReadout({
+      row: 'Brian', col: 'Zac + Sammy #1', percent: '50', reverse: '50',
+      rowWin: '12', colWin: '12', samePicks: true,
+    });
+    expect(out.claim).toBe(
+      'Brian and Zac + Sammy #1 tie in every simulated season because they have the same picks.',
+    );
+    expect(out.odds).toBeNull();
+  });
+
+  test('the grid passes its identical-picks marker into the readout', () => {
+    const cell = document.querySelector('[data-r="0"][data-c="1"]');
+    cell.dataset.samePicks = 'true';
+    cell.dispatchEvent(new window.Event('pointerenter'));
+
+    expect(document.querySelector('[data-heat-readout] .heat-claim').textContent)
+      .toBe('Brian Moore and Eric Riggs tie in every simulated season because they have the same picks.');
+    expect(document.querySelector('[data-heat-readout] .heat-odds')).toBeNull();
   });
 
   test('pointing at a cell writes the pair out in full names, with the odds', () => {

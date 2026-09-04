@@ -24,7 +24,7 @@
    rather than of the ones somebody remembered. #}
 {% macro team_chip(t, mods='', logo=true, large=false, vt=false, suffix='') -%}
   {%- set px = 18 if large else 14 -%}
-  <a class="team-chip{% if mods %} {{ mods }}{% endif %}" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}
+  <a class="team-chip{% if large %} is-large{% endif %}{% if mods %} {{ mods }}{% endif %}" href="{{ ('/team/' ~ t ~ '/')|url }}" style="{{ t|chip_style }}
   {%- if vt %}; view-transition-name: chip-{{ t }}{% endif %}">
   {%- if logo %}<img class="chip-logo{% if large %} chip-logo-lg{% endif %}" loading="lazy" decoding="async" src="{{ ('/assets/logos/' ~ t ~ '.png')|url }}" alt="" width="{{ px }}" height="{{ px }}">{% endif %}
   {{- t }}{{ suffix }}</a>

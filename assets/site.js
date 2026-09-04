@@ -735,7 +735,12 @@ function initMe(doc, storage, meKey = ME_KEY) {
   const stored = storage.get(meKey) || '';
 
   const apply = (slug) => {
-    doc.documentElement.dataset.me = slug;
+    // Absence means nobody is selected. Keeping data-me="" around makes CSS
+    // unable to distinguish that state from a real identity, which in turn
+    // prevents the ordinary leader highlight from returning when the picker
+    // is cleared.
+    if (slug) doc.documentElement.dataset.me = slug;
+    else delete doc.documentElement.dataset.me;
     for (const el of doc.querySelectorAll('[data-slug]')) {
       el.classList.toggle('is-me', Boolean(slug) && el.dataset.slug === slug);
     }
@@ -1029,8 +1034,19 @@ function initSchedule(doc, nowMs) {
  * themselves. Both figures come from real cells; the ties are what is left.
  */
 export function headToHeadReadout({
-  row, col, percent, reverse, rowWin, colWin, view = 'order',
+  row, col, percent, reverse, rowWin, colWin, view = 'order', samePicks = false,
 }) {
+  // Two entries holding the same four teams cannot separate. The model stores
+  // a tie as half a win in each direction so the pairwise matrix still adds to
+  // 100%; without this explicit marker that correct internal representation
+  // turns into the very misleading sentence "50% above, 50% below".
+  if (samePicks) {
+    return {
+      claim: `${row} and ${col} tie in every simulated season because they have the same picks.`,
+      odds: null,
+    };
+  }
+
   const other = reverse === undefined || reverse === null
     ? 100 - Number(percent)
     : Number(reverse);
@@ -1141,6 +1157,7 @@ function initHeatmap(doc) {
         rowWin: winOdds('row', r),
         colWin: winOdds('col', c),
         view,
+        samePicks: cell.dataset.samePicks === 'true',
       });
 
       readout.textContent = '';

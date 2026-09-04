@@ -1,0 +1,6 @@
+interface:
+  display_name: "GitHub Ship Loop"
+  short_description: "Shepherd changes through PR, CI, deploy, and verification"
+  default_prompt: "Use $github-ship-loop to shepherd the current change through its pull request, CI, merge, deployment, and production verification."
+policy:
+  allow_implicit_invocation: false
