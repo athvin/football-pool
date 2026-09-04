@@ -596,6 +596,10 @@ describe('Gameday DOM wiring', () => {
         <span data-preseason-state></span>
         <button data-preseason-week="all">All</button>
         <button data-preseason-week="3" aria-pressed="true">Week 2</button>
+        <div data-preseason-team-chips hidden>
+          <span data-preseason-team="KC"><a class="team-chip is-large scored" href="/football-pool/team/KC/" style="--team-bg:#e31837"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/KC.png" alt="">KC</a></span>
+          <span data-preseason-team="SEA"><a class="team-chip is-large scored" href="/football-pool/team/SEA/" style="--team-bg:#002244"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/SEA.png" alt="">SEA</a></span>
+        </div>
         <p data-preseason-summary></p><div data-preseason-games></div>
       </section>`;
     const win = fakeWindow();
@@ -622,7 +626,10 @@ describe('Gameday DOM wiring', () => {
     expect(document.querySelector('[data-preseason-state]').textContent).toContain('1 games loaded');
     expect(document.querySelector('.preseason-game').textContent).toContain('KC');
     expect(document.querySelector('.preseason-game').textContent).toContain('Test Field · ESPN');
-    expect(document.querySelector('.preseason-side.is-winner').href).toContain('/football-pool/team/SEA/');
+    expect(document.querySelector('.preseason-side.is-winner .team-chip').href)
+      .toContain('/football-pool/team/SEA/');
+    expect(document.querySelector('.preseason-side .chip-logo').src)
+      .toContain('/football-pool/assets/logos/KC.png');
     expect(document.querySelector('[data-preseason-summary]').textContent).toContain('1 game · 1 final');
   });
 

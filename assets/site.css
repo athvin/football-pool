@@ -1687,8 +1687,7 @@ svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   text-decoration: none;
   font: 700 0.72rem var(--mono);
 }
-.preseason-side:hover,
-.preseason-side:focus-visible,
+.preseason-side .team-chip { flex: none; }
 .preseason-side.is-winner { color: var(--chalk); }
 .preseason-side.is-winner strong { color: var(--live); }
 .preseason-side strong { font-family: var(--display); font-size: 1.35rem; }

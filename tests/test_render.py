@@ -1965,6 +1965,9 @@ def test_the_schedule_carries_a_browser_live_preseason_section(site_final):
     assert 'data-team-base="/team/"' in html
     assert "Preseason never scores pool points" in html
     assert 'data-preseason-week="4" aria-pressed="true"' in html
+    assert 'data-preseason-team-chips hidden' in html
+    assert 'class="chip-logo chip-logo-lg"' in html
+    assert 'src="/assets/logos/' in html
 
 
 def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):

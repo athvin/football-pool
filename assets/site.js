@@ -1099,14 +1099,18 @@ function renderPreseasonSchedule(doc, root, games, week) {
       [game.away, game.awayScore, game.awayWinner],
       [game.home, game.homeScore, game.homeWinner],
     ]) {
-      const side = doc.createElement('a');
+      const side = doc.createElement('div');
       side.className = `preseason-side${winner ? ' is-winner' : ''}`;
-      side.href = `${teamBase}${team}/`;
-      const name = doc.createElement('span');
-      name.textContent = team;
+      const original = root.querySelector(`[data-preseason-team="${team}"] .team-chip`);
+      const chip = original?.cloneNode(true) || doc.createElement('a');
+      if (!original) {
+        chip.className = 'team-chip is-large scored';
+        chip.href = `${teamBase}${team}/`;
+        chip.textContent = team;
+      }
       const points = doc.createElement('strong');
       points.textContent = game.state === 'pre' ? '—' : score;
-      side.append(name, points);
+      side.append(chip, points);
       matchup.append(side);
     }
 

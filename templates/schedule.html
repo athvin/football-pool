@@ -70,6 +70,15 @@
       <button type="button" data-preseason-week="4" aria-pressed="true">Week 3</button>
     </div>
     <p class="preseason-summary" data-preseason-summary aria-live="polite"></p>
+    {# ESPN rows arrive after the build, but their team links should be the
+       exact same coloured, outlined, logo-bearing chips as every static page.
+       These hidden originals carry the URL prefix and contrast-safe colours;
+       the browser clones them into each score card. #}
+    <div data-preseason-team-chips hidden>
+      {% for team in season.teams %}
+      <span data-preseason-team="{{ team }}">{{ team_chip(team, 'scored', large=true) }}</span>
+      {% endfor %}
+    </div>
     <div class="preseason-games" data-preseason-games aria-live="polite">
       <p class="empty">Choose PRE above to load the live preseason schedule.</p>
     </div>
