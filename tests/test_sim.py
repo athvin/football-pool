@@ -57,7 +57,11 @@ def test_config_defaults_when_no_forecast():
     assert cfg.home_field_elo == 48.0
 
 
-def test_config_reads_the_forecast_file(season):
+def test_config_reads_the_forecast_file(make_season):
+    # sims=None asks for a verbatim copy of the real forecast.yaml — this test
+    # is *about* reading the file, so it must see the uncapped 25,000 rather
+    # than the small count write_season substitutes for every other test.
+    season = make_season(sims=None)
     cfg = SimConfig.from_forecast(season.forecast)
     assert cfg.simulations == 25_000
     assert cfg.seed == 7

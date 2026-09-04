@@ -9,13 +9,12 @@ weeks the money gets decided.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from football_pool import cli
-from football_pool.nflverse import GameData, parse_games
+from football_pool.nflverse import GameData
 from football_pool.render import _pool_state, _team_rows, build_context, make_environment
 from football_pool.scoring import entrant_scores, score_teams
 from football_pool.season import ConfigError, load_season
@@ -24,12 +23,8 @@ from football_pool import history as history_mod
 
 from helpers import mkgames
 
-FIXTURES = Path(__file__).parent / "fixtures"
-
-
-@pytest.fixture
-def games_2025():
-    return parse_games(FIXTURES / "games_2025.csv", 2025)
+# games_2025 comes from conftest.py — this file used to carry its own copy of
+# the fixture, which shadowed the shared one and re-parsed the CSV per test.
 
 
 def _gd(games):
