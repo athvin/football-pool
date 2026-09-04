@@ -7,7 +7,7 @@ than bypassed.
 
 from __future__ import annotations
 
-import shutil
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -38,6 +38,7 @@ def write_season(
     *,
     rules_overrides: dict | None = None,
     forecast: bool = True,
+    sims: int | None = 50,
     pools: dict[str, dict] | None = None,
 ) -> Path:
     """Create ``root/seasons/<year>/`` from the repo's real rules plus picks.
@@ -46,6 +47,12 @@ def write_season(
     market inputs the real site uses. Pass ``forecast=False`` to build a season
     with projections switched off.
 
+    The copy's ``simulations:`` line is rewritten to ``sims`` (default 50),
+    because the real file says 25,000 and a render that doesn't pass an
+    explicit count would otherwise silently run the full Monte Carlo — which
+    once cost the suite fourteen seconds without a single test asserting on
+    the numbers. Pass ``sims=None`` for a verbatim copy.
+
     ``entrants`` becomes the root pool, ``family``. Pass ``pools`` — a
     ``{slug: {...}}`` mapping, each value a pool file's contents — to add more.
     """
@@ -53,7 +60,10 @@ def write_season(
     (sdir / "pools").mkdir(parents=True, exist_ok=True)
 
     if forecast:
-        shutil.copy(REAL_2026 / "forecast.yaml", sdir / "forecast.yaml")
+        text = (REAL_2026 / "forecast.yaml").read_text()
+        if sims is not None:
+            text = re.sub(r"(?m)^simulations: \d+$", f"simulations: {sims}", text, count=1)
+        (sdir / "forecast.yaml").write_text(text)
 
     rules = yaml.safe_load((REAL_2026 / "rules.yaml").read_text())
     family = yaml.safe_load((REAL_2026 / "pools" / "family.yaml").read_text())
@@ -132,7 +142,11 @@ def two_pools(tmp_path):
     return load_pools(2025, root=tmp_path)
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def games_2025():
-    """Every 2025 game, already final — a complete season to replay."""
+    """Every 2025 game, already final — a complete season to replay.
+
+    Session-scoped: the suite reads this frame hundreds of times and nothing
+    needs a private copy. Consumers must ``.copy()`` before mutating.
+    """
     return parse_games(FIXTURES / "games_2025.csv", 2025)

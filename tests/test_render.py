@@ -70,7 +70,7 @@ def preseason_data(games_2025):
     """
     g = games_2025[games_2025["game_type"] == "REG"].copy()
     g[["played", "home_won", "away_won", "is_tie"]] = False
-    return GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+    return GameData(g, 2025, NOW, None, "cache")
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ def mid_season(games_2025):
     g = games_2025.copy()
     g.loc[g["week"] > 11, "played"] = False
     g.loc[g["game_type"] != "REG", "played"] = False
-    return GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+    return GameData(g, 2025, NOW, None, "cache")
 
 
 # NB: this `pool` is a Season, and predates there being a PoolInfo of that
@@ -494,7 +494,7 @@ def test_playoff_phase_is_labelled(pool, games_2025, tmp_path):
     """Regular season done, bracket still running."""
     g = games_2025.copy()
     g.loc[g["game_type"].isin({"DIV", "CON", "SB"}), "played"] = False
-    data = GameData(g, 2025, datetime.now(timezone.utc), None, "cache")
+    data = GameData(g, 2025, NOW, None, "cache")
 
     render_site(pool, data, tmp_path)
     assert "Playoffs" in (tmp_path / "index.html").read_text()
@@ -505,7 +505,7 @@ def test_final_phase_is_labelled(pool, game_data, tmp_path):
     assert "Final" in (tmp_path / "index.html").read_text()
 
 
-def test_money_filter_hides_zero_and_missing(pool):
+def test_money_filter_hides_zero_and_missing():
     """An entrant out of the money shows nothing, not "$0"."""
     money = make_environment().filters["money"]
     assert money(0) == ""
@@ -513,7 +513,7 @@ def test_money_filter_hides_zero_and_missing(pool):
     assert money(37.5) == "$38"
 
 
-def test_points_filter_pads_and_handles_missing(pool):
+def test_points_filter_pads_and_handles_missing():
     points = make_environment().filters["points"]
     assert points(3.5) == "3.50"
     assert points(None) == "—"
@@ -1131,7 +1131,7 @@ def test_the_forecast_ships_both_head_to_head_grids(pool, mid_season, tmp_path):
     assert 'data-heat-note="money" hidden' in html
 
 
-def test_the_two_grids_carry_the_odds_each_one_is_about(pool, mid_season, tmp_path):
+def test_the_two_grids_carry_the_odds_each_one_is_about(pool, mid_season):
     """Outright is winning under one grid and being paid at all under the other.
 
     A pairwise number needs the outright one beside it or it misleads, and
@@ -1338,7 +1338,7 @@ def test_every_team_gets_a_page(pool, game_data, tmp_path):
         assert team in page.read_text()
 
 
-def test_a_team_page_lists_that_team_and_nobody_else(pool, game_data, tmp_path):
+def test_a_team_page_lists_that_team_and_nobody_else(pool, game_data):
     """Every game they play, in order, and none that they do not."""
     ctx = build_context(pool, game_data)
     page = _team_page(ctx, "KC")
@@ -1375,7 +1375,7 @@ def test_a_team_page_names_the_bye_where_it_falls(pool, game_data, tmp_path):
     assert "game-bye" in html
 
 
-def test_a_team_page_says_what_it_was_worth_to_each_owner(pool, game_data, tmp_path):
+def test_a_team_page_says_what_it_was_worth_to_each_owner(pool, game_data):
     """The points are one number; the share of a total is not.
 
     That is the whole reason the block exists — the same 12 points is a quarter
