@@ -191,11 +191,12 @@ def make_environment(base: str = "", pool_base: str | None = None) -> Environmen
     pool_prefix = (pool_base if pool_base is not None else base).rstrip("/")
 
     # One entry per distinct asset, filled on first reference. Scoped to this
-    # environment rather than to the module on purpose: the test suite renders a
-    # dozen sites in one process and one of them deliberately points ASSET_DIR
-    # somewhere else, so a module-level cache would hand back a digest computed
-    # by an earlier test. It also guarantees every page in a build cites the
-    # same hash even if a file changes on disk mid-render.
+    # environment rather than to the module on purpose: it guarantees every
+    # page in a build cites the same hash even if a file changes on disk
+    # mid-render. (The environment *cache* in :func:`_environment_for` is
+    # module-level, but it is keyed on ASSET_DIR and the assets' content
+    # digests, so a test that points ASSET_DIR somewhere else — or changes a
+    # file in place — gets a fresh environment, never a stale digest.)
     digests: dict[str, str] = {}
 
     def url(path: str) -> str:
@@ -251,8 +252,48 @@ def make_environment(base: str = "", pool_base: str | None = None) -> Environmen
     env.globals.update(
         svg=svg,
         base=pool_prefix,
-        now=datetime.now(timezone.utc),
     )
+    return env
+
+
+def _asset_signature() -> tuple:
+    """Content digests of everything under ``ASSET_DIR``, as a hashable key.
+
+    This is the part of a compiled template that Jinja constant-folds: a
+    literal like ``{{ "/assets/site.css"|url }}`` bakes the digest into the
+    compiled code itself. Two builds with equal signatures would fold
+    identical bytes, so sharing a compiled environment between them is safe —
+    and two builds with different signatures must never share one.
+    """
+    if not ASSET_DIR.is_dir():
+        return ()
+    return tuple(
+        sorted(
+            (str(p.relative_to(ASSET_DIR)), hashlib.sha256(p.read_bytes()).hexdigest()[:ASSET_HASH_CHARS])
+            for p in ASSET_DIR.rglob("*")
+            if p.is_file()
+        )
+    )
+
+
+_ENV_CACHE: dict[tuple, Environment] = {}
+
+
+def _environment_for(base: str, pool_base: str) -> Environment:
+    """A cached :func:`make_environment`, keyed on everything compilation folds.
+
+    Template compilation costs ~100ms per environment and a multi-pool build
+    (or the test suite, which renders a hundred sites in one process) repeats
+    it with the same inputs over and over. The key carries both prefixes and
+    the asset digests because Jinja folds all three into the compiled
+    bytecode — see :func:`_asset_signature` — plus ``ASSET_DIR`` itself, so a
+    test that repoints the module global cannot be handed another directory's
+    environment. Hashing the assets costs ~1ms against the ~100ms it saves.
+    """
+    key = (base.rstrip("/"), pool_base.rstrip("/"), str(ASSET_DIR), _asset_signature())
+    env = _ENV_CACHE.get(key)
+    if env is None:
+        env = _ENV_CACHE[key] = make_environment(base, pool_base=pool_base)
     return env
 
 
@@ -1112,7 +1153,7 @@ def render_site(
             site root — see :func:`render_pools`.
     """
     ctx = build_context(season, data, simulations=simulations)
-    env = make_environment(site_base if site_base is not None else base, pool_base=base)
+    env = _environment_for(site_base if site_base is not None else base, base)
 
     # The templates reach the same function through the `url` filter. The charts
     # are built here in Python and cannot, so they are handed the filter itself
