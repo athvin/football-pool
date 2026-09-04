@@ -1687,8 +1687,7 @@ svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent;
   text-decoration: none;
   font: 700 0.72rem var(--mono);
 }
-.preseason-side:hover,
-.preseason-side:focus-visible,
+.preseason-side .team-chip { flex: none; }
 .preseason-side.is-winner { color: var(--chalk); }
 .preseason-side.is-winner strong { color: var(--live); }
 .preseason-side strong { font-family: var(--display); font-size: 1.35rem; }
@@ -2163,9 +2162,10 @@ html[data-slate='pool'] .slate-empty { display: block; }
    picked most of the league. Make the toggle itself confirm that the filter is
    on, even when only one row disappears below the fold. */
 html[data-slate='pool'] [data-slate-toggle] {
-  color: var(--field);
-  border-color: var(--live);
-  background: var(--live);
+  color: var(--live);
+  border-color: color-mix(in srgb, var(--live) 78%, var(--rule));
+  background: color-mix(in srgb, var(--live) 13%, var(--surface));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--live) 12%, transparent);
 }
 
 .game-when {
@@ -3162,9 +3162,16 @@ html[data-me] .rooting-anon { display: none; }
   font: 600 0.62rem var(--mono);
   cursor: pointer;
 }
-.scenario-presets button:hover, .scenario-game button:hover, .share-scenario:hover,
-.scenario-game button[aria-pressed='true'] { color: var(--chalk); border-color: var(--live); }
-.scenario-game button[aria-pressed='true'] { background: color-mix(in srgb, var(--live) 12%, var(--surface)); }
+.scenario-presets button:hover, .scenario-game button:hover, .share-scenario:hover {
+  color: var(--chalk);
+  border-color: var(--live);
+}
+.scenario-presets button[aria-pressed='true'],
+.scenario-game button[aria-pressed='true'] {
+  color: var(--live);
+  border-color: var(--live);
+  background: color-mix(in srgb, var(--live) 12%, var(--surface));
+}
 .scenario-note { margin: 0.45rem 0 0.9rem; max-width: 70ch; }
 .scenario-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr); gap: 1rem; align-items: start; }
 .scenario-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
