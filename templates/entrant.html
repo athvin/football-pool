@@ -35,6 +35,17 @@
   </div>
 </div>
 
+{% if entrant.projection %}
+  <a class="entrant-gameday-link"
+     href="{{ ('/gameday/?me=' ~ entrant.slug ~ '&preset=dream')|url }}">
+    <span>
+      <strong>Open {{ entrant.name }}’s best Gameday</strong>
+      <small>{{ entrant.name }} selected · best slate preloaded</small>
+    </span>
+    <span aria-hidden="true">→</span>
+  </a>
+{% endif %}
+
 <h2 class="section-title">Where the points come from</h2>
 {{ entrant.contrib|safe }}
 

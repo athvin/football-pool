@@ -908,6 +908,31 @@ tbody tr:nth-child(even):hover { background: var(--surface-2); }
   font-variant-numeric: tabular-nums;
 }
 
+.entrant-gameday-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding: 0.8rem 1rem;
+  color: var(--model);
+  background: color-mix(in srgb, var(--model) 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--model) 45%, var(--rule));
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: border-color 0.18s, background-color 0.18s, transform 0.18s;
+}
+.entrant-gameday-link strong { display: block; font-family: var(--display); font-size: 1.1rem; }
+.entrant-gameday-link small { display: block; margin-top: 0.15rem; color: var(--chalk-dim); font: 0.62rem var(--mono); }
+.entrant-gameday-link > span:last-child { font-size: 1.35rem; }
+.entrant-gameday-link:hover,
+.entrant-gameday-link:focus-visible {
+  color: var(--model);
+  border-color: var(--model);
+  background: color-mix(in srgb, var(--model) 14%, var(--surface));
+  transform: translateY(-1px);
+}
+
 /* --- a team's own page --------------------------------------------------
    The same hero an entrant gets, with the club's badge set into the name.
    A team is an object on this site — it has a page, a colour and a record —

@@ -37,6 +37,29 @@ export function scopedKey(key, scope) {
   return scope ? `${key}:${scope}` : key;
 }
 
+/** Identity and initial scenario requested by a shareable Gameday URL. */
+export function gamedayLaunchParams(search = '') {
+  let params;
+  try {
+    params = new URLSearchParams(String(search));
+  } catch {
+    return { me: '', preset: '' };
+  }
+  const preset = params.get('preset') || '';
+  return {
+    me: params.get('me') || '',
+    preset: ['dream', 'help'].includes(preset) ? preset : '',
+  };
+}
+
+/** Keep identity in shared scenario URLs, but consume the one-shot preset. */
+export function scenarioLocation(pathname = '', search = '', hash = '') {
+  const params = new URLSearchParams(String(search));
+  params.delete('preset');
+  const query = params.toString();
+  return `${pathname}${query ? `?${query}` : ''}${hash}`;
+}
+
 /**
  * Colours for the comparison chart, assigned in the order people are picked.
  *
@@ -952,7 +975,7 @@ function paintScenarioDrilldown(doc, root, data, game, chosen) {
   }
 }
 
-function initScenario(doc, win) {
+function initScenario(doc, win, launchPreset = '') {
   const script = doc.querySelector('#gameday-data');
   const root = doc.querySelector('[data-scenario]');
   if (!script || !root) return;
@@ -962,8 +985,9 @@ function initScenario(doc, win) {
   } catch {
     return;
   }
-  let selections = parseScenarioHash(doc.location?.hash || '', data.games);
-  let activePreset = Object.keys(selections).length ? '' : 'reset';
+  let selections = parseScenarioHash(win.location?.hash || doc.location?.hash || '', data.games);
+  const sharedScenario = Object.keys(selections).length > 0;
+  let activePreset = sharedScenario ? '' : 'reset';
   let previousMeRank = null;
 
   const paint = () => {
@@ -1008,7 +1032,15 @@ function initScenario(doc, win) {
     }
     previousMeRank = meRank;
     const hash = serializeScenario(selections, data.games);
-    win.history?.replaceState?.(null, '', `${doc.location?.pathname || ''}${hash}`);
+    win.history?.replaceState?.(
+      null,
+      '',
+      scenarioLocation(
+        win.location?.pathname || doc.location?.pathname || '',
+        win.location?.search || doc.location?.search || '',
+        hash,
+      ),
+    );
     return standings;
   };
 
@@ -1112,6 +1144,21 @@ function initScenario(doc, win) {
     }
     paint();
   });
+  if (!sharedScenario && launchPreset) {
+    const me = doc.documentElement.dataset.me || '';
+    if (me) {
+      activePreset = launchPreset;
+      selections = scenarioPreset(data, launchPreset, me);
+      const standings = paint();
+      const status = root.querySelector('[data-scenario-status]');
+      if (status) {
+        status.textContent = launchPreset === 'dream'
+          ? describeDream(standings, me)
+          : describeHelp(standings, me);
+      }
+      return;
+    }
+  }
   paint();
 }
 
@@ -1685,9 +1732,10 @@ function paintYouStrip(doc, slug) {
   strip.append(link);
 }
 
-function initMe(doc, storage, meKey = ME_KEY) {
+function initMe(doc, storage, meKey = ME_KEY, requested = '') {
   const select = doc.querySelector('[data-me-select]');
   const stored = storage.get(meKey) || '';
+  const preferred = requested || stored;
 
   const apply = (slug) => {
     // Absence means nobody is selected. Keeping data-me="" around makes CSS
@@ -1706,8 +1754,8 @@ function initMe(doc, storage, meKey = ME_KEY) {
     // A stored name that is no longer in the pool must not leave the picker
     // showing a blank: next season's picks file will not have last year's
     // entrants in it.
-    select.value = stored;
-    const slug = select.value === stored ? stored : '';
+    select.value = preferred;
+    const slug = select.value === preferred ? preferred : '';
     apply(slug);
     if (slug !== stored) storage.set(meKey, slug);
 
@@ -1717,7 +1765,7 @@ function initMe(doc, storage, meKey = ME_KEY) {
     });
     return;
   }
-  apply(stored);
+  apply(preferred);
 }
 
 /**
@@ -2589,6 +2637,9 @@ export function init(doc = document, win = window) {
   // Which pool this page belongs to — '' at the site root. Only the two keys
   // that name entrants are scoped by it; see scopedKey.
   const scope = doc.documentElement.dataset.pool || '';
+  const launch = doc.documentElement.dataset.page === 'gameday'
+    ? gamedayLaunchParams(win.location?.search || '')
+    : { me: '', preset: '' };
   initTheme(doc, storage, win);
   initStickyChrome(doc, win);
   initDetail(doc, storage);
@@ -2596,7 +2647,7 @@ export function init(doc = document, win = window) {
   initGameDetail(doc);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
-  initMe(doc, storage, scopedKey(ME_KEY, scope));
+  initMe(doc, storage, scopedKey(ME_KEY, scope), launch.me);
   paintGamedayOrder(doc, win);
   doc.querySelector('[data-me-select]')?.addEventListener(
     'change', () => paintGamedayOrder(doc, win, true),
@@ -2609,7 +2660,7 @@ export function init(doc = document, win = window) {
   initTimeZone(doc, storage, nowMs);
   initSchedule(doc, nowMs);
   initPreseasonSchedule(doc, win);
-  initScenario(doc, win);
+  initScenario(doc, win, launch.preset);
   initLiveGames(doc, win);
   initLiveHarness(doc, win);
   initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));

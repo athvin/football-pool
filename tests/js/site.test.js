@@ -36,6 +36,7 @@ import {
   firstSortDirection,
   flipShifts,
   formatTimestamp,
+  gamedayLaunchParams,
   headToHeadReadout,
   init,
   isStale,
@@ -52,6 +53,7 @@ import {
   relativeAge,
   rowTops,
   safeStorage,
+  scenarioLocation,
   scenarioPreset,
   scenarioStandings,
   scrollProgress,
@@ -73,6 +75,7 @@ const ISO = '2026-02-09T14:30:00+00:00';
 // leave the next one there — which is exactly how it broke the first time.
 beforeEach(() => {
   document.documentElement.removeAttribute('data-pool');
+  document.documentElement.removeAttribute('data-page');
   document.documentElement.style.removeProperty('--masthead-height');
   document.documentElement.style.removeProperty('--viewer-height');
 });
@@ -306,6 +309,20 @@ describe('Gameday scenario helpers', () => {
     expect(parseScenarioHash('#scenario=old%3AKC%2C2026_02_BUF_MIA%3ATIE', data.games)).toEqual({});
     expect(parseScenarioHash('#something-else', data.games)).toEqual({});
     expect(parseScenarioHash('#scenario=%E0%A4%A', data.games)).toEqual({});
+  });
+
+  test('entrant links carry identity into one initial preset and keep it shareable', () => {
+    expect(gamedayLaunchParams('?me=julie&preset=dream')).toEqual({
+      me: 'julie', preset: 'dream',
+    });
+    expect(gamedayLaunchParams('?me=julie&preset=unknown')).toEqual({
+      me: 'julie', preset: '',
+    });
+    expect(scenarioLocation(
+      '/football-pool/gameday/',
+      '?me=julie&preset=dream&utm_source=entrant',
+      '#scenario=g%3AJAX',
+    )).toBe('/football-pool/gameday/?me=julie&utm_source=entrant#scenario=g%3AJAX');
   });
 
   test('called points recalculate totals with competition ranks', () => {
@@ -725,6 +742,58 @@ describe('Gameday DOM wiring', () => {
     expect(button.getAttribute('aria-pressed')).toBe('false');
     expect(document.querySelector('[data-rooting-help-label]').textContent).toBe('Outside help only');
     expect(document.querySelectorAll('.is-help-game, .is-needed')).toHaveLength(0);
+  });
+
+  test('an entrant Gameday link selects them and opens on their best slate', () => {
+    const data = {
+      entrants: [
+        { slug: 'julie', name: 'Julie', teams: ['JAX'], banked: 10 },
+        { slug: 'rival', name: 'Rival', teams: ['TEN'], banked: 12 },
+      ],
+      games: [{
+        id: 'g', away: 'JAX', home: 'TEN', favorite: 'TEN', chaos: 'JAX',
+        points: { julie: { JAX: 5, TEN: 0 }, rival: { JAX: 0, TEN: 4 } },
+      }],
+    };
+    document.documentElement.dataset.page = 'gameday';
+    document.body.innerHTML = `
+      <select data-me-select><option value=""></option><option value="julie">Julie</option><option value="rival">Rival</option></select>
+      <section data-scenario>
+        <button data-scenario-preset="dream">Dream</button>
+        <button data-scenario-preset="reset">Reset</button>
+        <fieldset data-scenario-game="g">
+          <button data-scenario-choice="JAX">JAX</button>
+          <button data-scenario-choice="TEN">TEN</button>
+        </fieldset>
+        <ol data-scenario-board>
+          <li data-slug="julie"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+          <li data-slug="rival"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+        </ol>
+        <p data-scenario-status></p>
+      </section>
+      <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
+    const store = new Map();
+    const win = fakeWindow({ store });
+    win.location = {
+      pathname: '/football-pool/gameday/',
+      search: '?me=julie&preset=dream',
+      hash: '',
+    };
+    win.history = { replaceState: vi.fn() };
+    init(document, win);
+
+    expect(document.documentElement.dataset.me).toBe('julie');
+    expect(document.querySelector('[data-me-select]').value).toBe('julie');
+    expect(document.querySelector('[data-slug="julie"]').classList.contains('is-me')).toBe(true);
+    expect(store.get(ME_KEY)).toBe('julie');
+    expect(document.querySelector('[data-scenario-preset="dream"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(document.querySelector('[data-scenario-choice="JAX"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(document.querySelector('[data-scenario-status]').textContent)
+      .toContain("Julie's best slate lands at #1");
+    expect(win.history.replaceState.mock.calls.at(-1)[2])
+      .toBe('/football-pool/gameday/?me=julie#scenario=g:JAX');
   });
 
   test('the Schedule PRE tab lazily renders scores, venue, network, and team links', async () => {
