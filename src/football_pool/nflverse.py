@@ -20,6 +20,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import httpx
+import numpy as np
 import pandas as pd
 
 from .season import TEAM_ALIASES
@@ -369,22 +370,30 @@ def validate_teams(games: pd.DataFrame, teams: tuple[str, ...]) -> None:
 
 
 def team_records(games: pd.DataFrame, teams: tuple[str, ...]) -> pd.DataFrame:
-    """Win/loss/tie record per team from completed regular-season games."""
-    rec = pd.DataFrame(
-        0, index=list(teams), columns=["w", "l", "t"], dtype=int
-    )
+    """Win/loss/tie record per team from completed regular-season games.
+
+    Vectorized with ``np.add.at`` rather than a per-game ``.loc`` loop: this
+    runs on every standings and leveling computation, so a whole site build
+    calls it dozens of times and label-based scalar writes were a third of the
+    build. Anything not a tie and not a home win is an away win — the same
+    three-way split the old loop made, one bucket per branch.
+    """
     reg = games[games["played"] & (games["game_type"] == "REG")]
-    for row in reg.itertuples():
-        h, a = row.home_team, row.away_team
-        if row.is_tie:
-            rec.loc[h, "t"] += 1
-            rec.loc[a, "t"] += 1
-        elif row.home_won:
-            rec.loc[h, "w"] += 1
-            rec.loc[a, "l"] += 1
-        else:
-            rec.loc[a, "w"] += 1
-            rec.loc[h, "l"] += 1
+
+    counts = np.zeros((len(teams), 3), dtype=np.int64)  # w, l, t
+    if not reg.empty:
+        idx = {t: i for i, t in enumerate(teams)}
+        h = reg["home_team"].map(idx).to_numpy(np.int64)
+        a = reg["away_team"].map(idx).to_numpy(np.int64)
+        tie = reg["is_tie"].to_numpy(bool)
+        hw = reg["home_won"].to_numpy(bool)
+        aw = ~(tie | hw)
+
+        np.add.at(counts[:, 0], np.concatenate([h[hw], a[aw]]), 1)
+        np.add.at(counts[:, 1], np.concatenate([a[hw], h[aw]]), 1)
+        np.add.at(counts[:, 2], np.concatenate([h[tie], a[tie]]), 1)
+
+    rec = pd.DataFrame(counts, index=list(teams), columns=["w", "l", "t"])
     rec["gp"] = rec[["w", "l", "t"]].sum(axis=1)
     rec["win_pct"] = (rec["w"] + 0.5 * rec["t"]) / rec["gp"].where(rec["gp"] > 0)
     return rec.fillna({"win_pct": 0.0})
