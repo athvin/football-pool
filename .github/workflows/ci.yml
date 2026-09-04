@@ -43,7 +43,7 @@ jobs:
 
       # cache-python keeps the managed CPython that .python-version pins from
       # being re-downloaded every run.
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
           cache-python: true
@@ -120,7 +120,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
           cache-python: true

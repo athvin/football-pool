@@ -157,7 +157,7 @@ jobs:
           # simply skipped — see that step for why you may want to add it.
           token: ${{ secrets.DATA_PUSH_TOKEN || github.token }}
 
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
           cache-python: true
