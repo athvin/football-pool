@@ -1,0 +1,2503 @@
+season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
+2026,ARI,DB,27,ACT,Andrew Wingard,Wyoming,WingAn01,7
+2026,ARI,DB,3,ACT,Budda Baker,Washington,BakeBu00,9
+2026,ARI,DB,42,ACT,Dadrion Taylor-Demerson,Texas Tech,TaylDa02,2
+2026,ARI,DB,29,ACT,Denzel Burke,Ohio State,BurkDe01,1
+2026,ARI,DB,21,ACT,Garrett Williams,Syracuse,WillGa00,3
+2026,ARI,DB,32,RES,Joey Blount,Virginia,BlouJo00,4
+2026,ARI,DB,35,DEV,Kalen King,Penn State,KingKa00,2
+2026,ARI,DB,13,ACT,Kei'Trel Clark,Louisville,ClarKe02,3
+2026,ARI,DB,36,ACT,Kitan Crawford,Nevada; Texas,CrawKi00,1
+2026,ARI,DB,16,ACT,Max Melton,Rutgers,MeltMa00,2
+2026,ARI,DB,24,DEV,Starling Thomas V,UAB,ThomSt01,3
+2026,ARI,DB,2,ACT,Will Johnson,Michigan,JohnWi02,1
+2026,ARI,DB,31,ACT,Wydett Williams Jr.,Mississippi; Louisiana-Monroe; Delta State University,,0
+2026,ARI,DL,95,ACT,Andrew Billings,Baylor,BillAn00,10
+2026,ARI,DL,93,DEV,Cam Horsley,Boston College,,1
+2026,ARI,DL,96,DEV,Damonic Williams,Oklahoma; TCU,,0
+2026,ARI,DL,55,ACT,Dante Stills,West Virginia,StilDa01,3
+2026,ARI,DL,56,ACT,Darius Robinson,Missouri,RobiDa01,2
+2026,ARI,DL,,DEV,Jared Harrison-Hunte,SMU; Miami,,1
+2026,ARI,DL,94,RES,Kaleb Proctor,Southeastern Louisiana,ProcKa01,0
+2026,ARI,DL,91,ACT,L.J. Collier,TCU,CollLJ00,7
+2026,ARI,DL,51,ACT,Roy Lopez,Arizona,LopeRo00,5
+2026,ARI,DL,97,ACT,Walter Nolen,Mississippi; Texas A&M,NoleWa00,1
+2026,ARI,DL,90,RSR,Zachary Carter,Florida,CartZa00,4
+2026,ARI,K,38,ACT,Chad Ryland,Maryland; Eastern Michigan,RylaCh00,3
+2026,ARI,LB,5,ACT,Baron Browning,Ohio State,BrowBa01,5
+2026,ARI,LB,49,DEV,Cam Robertson,SMU; North Texas,,0
+2026,ARI,LB,0,ACT,Cody Simon,Ohio State,SimoCo01,1
+2026,ARI,LB,54,ACT,Eku Leota,Auburn,LeotEk00,3
+2026,ARI,LB,61,DEV,Eugene Asante,Auburn; North Carolina,,1
+2026,ARI,LB,50,ACT,Jack Gibbens,Minnesota; Abilene Christian,GibbJa00,4
+2026,ARI,LB,52,ACT,Jordan Burch,Oregon; South Carolina,BurcJo00,1
+2026,ARI,LB,10,ACT,Josh Sweat,Florida State,SweaJo00,8
+2026,ARI,LB,43,ACT,Karson Sharar,Iowa,SharKa00,0
+2026,ARI,LB,1,ACT,Mack Wilson,Alabama,WilsMa03,7
+2026,ARI,LB,25,ACT,Zaven Collins,Tulsa,CollZa00,5
+2026,ARI,LS,59,ACT,Casey Kreiter,Iowa,,10
+2026,ARI,OL,57,RES,Chase Bisontis,Texas A&M,,0
+2026,ARI,OL,67,DEV,Demontrey Jacobs,South Florida Community College; Grambling State,,3
+2026,ARI,OL,65,ACT,Elijah Wilkinson,UMass Amherst,,9
+2026,ARI,OL,58,ACT,Hayden Conner,Texas,,1
+2026,ARI,OL,72,ACT,Hjalte Froholdt,Arkansas,,7
+2026,ARI,OL,73,ACT,Isaac Seumalo,Oregon State,,10
+2026,ARI,OL,74,ACT,Isaiah Adams,Illinois; Garden City CC,,2
+2026,ARI,OL,66,ACT,Jayden Williams,Mississippi,,0
+2026,ARI,OL,71,ACT,Jon Gaines II,UCLA,,3
+2026,ARI,OL,78,ACT,Josh Fryar,Ohio State,,1
+2026,ARI,OL,76,DEV,Matt Pryor,TCU,,8
+2026,ARI,OL,70,ACT,Paris Johnson Jr.,Ohio State,,3
+2026,ARI,OL,69,DEV,Valentin Senn,Connecticut; Colorado,,1
+2026,ARI,OL,,DEV,Vershon Lee,South Carolina,,1
+2026,ARI,P,12,ACT,Blake Gillikin,Penn State,GillBl00,6
+2026,ARI,QB,19,ACT,Carson Beck,Miami; Georgia,BeckCa01,0
+2026,ARI,QB,15,ACT,Gardner Minshew,Washington State,MinsGa00,7
+2026,ARI,QB,7,ACT,Jacoby Brissett,N.C. State; Florida,BrisJa00,10
+2026,ARI,RB,20,ACT,Bam Knight,N.C. State,KnigZo00,4
+2026,ARI,RB,43,DEV,Evan Hull,Northwestern,HullEv00,3
+2026,ARI,RB,6,RSR,James Conner,Pittsburgh,ConnJa00,9
+2026,ARI,RB,4,ACT,Jeremiyah Love,Notre Dame,LoveJe00,0
+2026,ARI,RB,33,RES,Trey Benson,Florida State; Oregon,BensTr01,2
+2026,ARI,RB,22,ACT,Tyler Allgeier,BYU,AllgTy00,4
+2026,ARI,TE,84,ACT,Elijah Higgins,Stanford,HiggEl00,3
+2026,ARI,TE,89,ACT,Hunter Long,Boston College,LongHu00,5
+2026,ARI,TE,46,RES,Jameson Geers,Minnesota,,0
+2026,ARI,TE,48,DEV,Shawn Bowman,Rutgers; Maine,,2
+2026,ARI,TE,47,DEV,Teagan Quitoriano,Oregon State,QuitTe00,4
+2026,ARI,TE,87,PUP,Tip Reiman,Illinois,ReimTi00,2
+2026,ARI,TE,85,ACT,Trey McBride,Colorado State,McBrTr01,4
+2026,ARI,WR,81,ACT,Devin Duvernay,Texas,DuveDe00,6
+2026,ARI,WR,30,DEV,Harrison Wallace III,Mississippi; Penn State,WallHa00,0
+2026,ARI,WR,9,DEV,Ihmir Smith-Marsette,Iowa,SmitIh00,5
+2026,ARI,WR,86,ACT,Jalen Brooks,South Carolina; Tarleton State; Wingate,BrooJa03,3
+2026,ARI,WR,17,ACT,Kendrick Bourne,Eastern Washington,BourKe00,9
+2026,ARI,WR,18,ACT,Marvin Harrison Jr.,Ohio State,HarrMa09,2
+2026,ARI,WR,14,ACT,Michael Wilson,Stanford,WilsMi02,3
+2026,ARI,WR,82,ACT,Reggie Virgil,Texas Tech; Miami (Ohio),VirgRe00,0
+2026,ARI,WR,80,ACT,Simi Fehoko,Stanford,FehoSi00,5
+2026,ATL,DB,24,ACT,A.J. Terrell,Clemson,TerrAJ00,6
+2026,ATL,DB,12,ACT,Avieon Terrell,Clemson,TerrAv00,0
+2026,ATL,DB,33,ACT,Billy Bowman Jr.,Oklahoma,BowmBi01,1
+2026,ATL,DB,26,ACT,C.J. Henderson,Florida,HendCJ00,6
+2026,ATL,DB,30,DEV,Darnay Holmes,UCLA,HolmDa01,6
+2026,ATL,DB,41,RES,Darren Hall,San Diego State,HallDa03,5
+2026,ATL,DB,23,ACT,DeMarcco Hellams,Alabama,HellDe00,3
+2026,ATL,DB,34,DEV,Jammie Robinson,Florida State,RobiJa03,3
+2026,ATL,DB,3,ACT,Jessie Bates,Wake Forest,BateJe00,8
+2026,ATL,DB,36,ACT,Malcolm DeWalt IV,Akron; Butte College; Snow,,0
+2026,ATL,DB,28,ACT,Mike Ford,Southeast Missouri State,FordMi01,8
+2026,ATL,DB,21,ACT,Mike Hughes,UCF; Garden City CC; North Carolina,HughMi00,8
+2026,ATL,DB,29,ACT,Sydney Brown,Illinois,BrowSy00,3
+2026,ATL,DB,31,ACT,Xavier Watts,Notre Dame,WattXa00,1
+2026,ATL,DL,98,RSN,Anterio Thompson,Washington; Western Michigan; Iowa; Iowa Western CC,ThomAn03,0
+2026,ATL,DL,54,ACT,Brandon Dorlus,Oregon,DorlBr00,2
+2026,ATL,DL,99,ACT,Cameron Thomas,San Diego State,ThomCa03,4
+2026,ATL,DL,79,DEV,Carlos Allen Jr.,Houston; Kennesaw State,,0
+2026,ATL,DL,90,ACT,Da'Shawn Hand,Alabama,HandDa00,8
+2026,ATL,DL,95,ACT,Gervon Dexter Sr.,Florida,DextGe00,3
+2026,ATL,DL,27,SUS,James Pearce Jr.,Tennessee,PearJa00,1
+2026,ATL,DL,59,RES,Keshawn Banks,San Diego State,,3
+2026,ATL,DL,,DEV,Khalid Kareem,Notre Dame,KareKh00,6
+2026,ATL,DL,94,ACT,LaCale London,Western Illinois,LondLa00,6
+2026,ATL,DL,92,ACT,Maason Smith,LSU,SmitMa07,2
+2026,ATL,DL,52,ACT,Samson Ebukam,Eastern Washington,EbukSa00,9
+2026,ATL,DL,53,ACT,Za'Darius Smith,Kentucky; East Mississippi JC,SmitZa00,11
+2026,ATL,DL,96,DEV,Zach Harrison,Ohio State,HarrZa00,3
+2026,ATL,K,6,ACT,Nick Folk,Arizona,FolkNi20,19
+2026,ATL,LB,45,ACT,Christian Harris,Alabama,HarrCh06,4
+2026,ATL,LB,50,PUP,DeAngelo Malone,Western Kentucky,MaloDe00,4
+2026,ATL,LB,0,ACT,Divine Deablo,Virginia Tech,DeabDi00,5
+2026,ATL,LB,56,ACT,Harold Perkins Jr.,LSU,PerkHa01,0
+2026,ATL,LB,40,RES,JD Bertrand,Notre Dame,BertJD00,2
+2026,ATL,LB,11,RES,Jalon Walker,Georgia,WalkJa02,1
+2026,ATL,LB,51,ACT,Jared Ivey,Mississippi; Georgia Tech,IveyJa00,1
+2026,ATL,LB,46,ACT,Josh Woods,Maryland,WoodJo02,8
+2026,ATL,LB,53,ACT,Kendal Daniels,Oklahoma; Oklahoma State,DaniKe00,0
+2026,ATL,LB,43,RES,Malik Verdon,Iowa State,,1
+2026,ATL,LB,22,ACT,Yasir Abdullah,Louisville,AbduYa00,3
+2026,ATL,LS,49,ACT,Liam McCullough,Ohio State,,4
+2026,ATL,OL,73,ACT,Cameron Williams,Texas,,1
+2026,ATL,OL,63,ACT,Chris Lindstrom,Boston College,,7
+2026,ATL,OL,62,ACT,Corey Levin,Tennessee-Chattanooga,,9
+2026,ATL,OL,75,ACT,Ethan Onianwa,Ohio State; Rice,,0
+2026,ATL,OL,70,ACT,Jake Matthews,Texas A&M,,12
+2026,ATL,OL,66,DEV,James Brockermeyer,Miami; TCU; Alabama,,0
+2026,ATL,OL,71,ACT,Jawaan Taylor,Florida,,7
+2026,ATL,OL,,DEV,Josh Thompson,LSU; Northwestern,,0
+2026,ATL,OL,61,DEV,Kam Dewberry,Alabama; Texas A&M,,0
+2026,ATL,OL,68,ACT,Kyle Hinton,Washburn,,6
+2026,ATL,OL,65,ACT,Matthew Bergeron,Syracuse,,3
+2026,ATL,OL,72,ACT,Michael Jerrell,Findlay,,2
+2026,ATL,OL,76,DEV,Riley Mahlman,Wisconsin,,0
+2026,ATL,OL,64,ACT,Ryan Neuzil,Appalachian State,,5
+2026,ATL,OL,77,PUP,Storm Norton,Toledo,,9
+2026,ATL,P,16,ACT,Jake Bailey,Stanford,BailJa00,7
+2026,ATL,QB,13,ACT,Cooper Rush,Central Michigan; Tarrant County JC,RushCo00,9
+2026,ATL,QB,18,ACT,Jack Strand,Minnesota State,,0
+2026,ATL,QB,9,ACT,Michael Penix Jr.,Washington; Indiana,PeniMi00,2
+2026,ATL,QB,1,ACT,Tua Tagovailoa,Alabama,TagoTu00,6
+2026,ATL,RB,7,ACT,Bijan Robinson,Texas,RobiBi01,3
+2026,ATL,RB,15,ACT,Brian Robinson,Alabama,RobiBr01,4
+2026,ATL,RB,32,DEV,Cash Jones,Georgia,JoneCa06,0
+2026,ATL,RB,,RES,Trey Sermon,Ohio State; Oklahoma,SermTr00,5
+2026,ATL,RB,25,DEV,Tyler Goodson,Iowa,GoodTy00,4
+2026,ATL,TE,81,ACT,Austin Hooper,Stanford,HoopAu00,10
+2026,ATL,TE,89,ACT,Charlie Woerner,Georgia,WoerCh00,6
+2026,ATL,TE,84,DEV,Jack Velling,Michigan State; Oregon State,,0
+2026,ATL,TE,8,ACT,Kyle Pitts,Florida,PittKy00,5
+2026,ATL,TE,87,DEV,Nick Muse,South Carolina,MuseNi00,4
+2026,ATL,WR,82,DEV,Antwane Wells Jr.,Mississippi; South Carolina; James Madison,WellAn00,1
+2026,ATL,WR,88,RSR,Beaux Collins,Notre Dame; Clemson,CollBe00,1
+2026,ATL,WR,19,ACT,Chris Blair,Alcorn State,BlaiCh00,5
+2026,ATL,WR,5,ACT,Drake London,USC,LondDr00,4
+2026,ATL,WR,80,DEV,Dylan Drummond,Eastern Michigan,DrumDy00,3
+2026,ATL,WR,4,ACT,Jahan Dotson,Penn State,DotsJa00,4
+2026,ATL,WR,14,ACT,Olamide Zaccheaus,Virginia,ZaccOl01,7
+2026,ATL,WR,86,DEV,Vinny Anthony II,Wisconsin,AnthVi01,0
+2026,ATL,WR,17,ACT,Zachariah Branch,Georgia; USC,BranZa00,0
+2026,BAL,DB,25,DEV,Amani Oruwariye,Penn State,OruwAm00,7
+2026,BAL,DB,31,RES,Bilhal Kone,Western Michigan; Iowa Central CC-Eagle Grove,KoneBi00,1
+2026,BAL,DB,29,ACT,Chandler Rivers,Duke,RiveCh00,0
+2026,BAL,DB,3,ACT,Chidobe Awuzie,Colorado,AwuzCh00,9
+2026,BAL,DB,41,RES,Jahquez Robinson,Auburn; Colorado,,0
+2026,BAL,DB,21,ACT,Jaylinn Hawkins,California,HawkJa00,6
+2026,BAL,DB,26,DEV,K'Von Wallace,Clemson,WallKV00,6
+2026,BAL,DB,39,ACT,Keondre Jackson,Illinois State,JackKe03,1
+2026,BAL,DB,38,ACT,Keyon Martin,Louisiana-Lafayette; Youngstown State,MartKe03,1
+2026,BAL,DB,14,ACT,Kyle Hamilton,Notre Dame,HamiKy00,4
+2026,BAL,DB,24,ACT,Malaki Starks,Georgia,StarMa00,1
+2026,BAL,DB,44,ACT,Marlon Humphrey,Alabama,HumpMa00,9
+2026,BAL,DB,2,ACT,Nate Wiggins,Clemson,WiggNa00,2
+2026,BAL,DB,27,ACT,T.J. Tampa,Iowa State,TampTJ00,2
+2026,BAL,DL,90,ACT,Aeneas Peebles,Virginia Tech; Duke,PeebAe00,1
+2026,BAL,DL,96,ACT,Broderick Washington,Texas Tech,WashBr01,6
+2026,BAL,DL,93,ACT,Calais Campbell,Miami,CampCa99,18
+2026,BAL,DL,65,DEV,David Olajiga,Central Missouri; Butler County JC,,2
+2026,BAL,DL,94,ACT,John Jenkins,Georgia; Gulf Coast CC; Mississippi,JenkJo00,13
+2026,BAL,DL,92,ACT,Nnamdi Madubuike,Texas A&M,MaduJu00,6
+2026,BAL,DL,99,DEV,Rayshaun Benny,Michigan,BennRa00,0
+2026,BAL,DL,98,ACT,Travis Jones,Connecticut,JoneTr00,4
+2026,BAL,K,,DEV,Jake Moody,Michigan,MoodJa00,3
+2026,BAL,K,33,ACT,Tyler Loop,Arizona,LoopTy00,1
+2026,BAL,LB,50,DEV,Adisa Isaac,Penn State,IsaaAd00,2
+2026,BAL,LB,48,DEV,Carl Jones,UCLA,JoneCa05,2
+2026,BAL,LB,42,DEV,Dominic DeLuca,Penn State,,0
+2026,BAL,LB,45,ACT,Ethan Burke,Texas,,0
+2026,BAL,LB,49,ACT,Jay Higgins,Iowa,HiggJa01,1
+2026,BAL,LB,56,DEV,Kaimon Rucker,North Carolina,,1
+2026,BAL,LB,15,ACT,Mike Green,Marshall; Virginia,GreeMi02,1
+2026,BAL,LB,0,ACT,Roquan Smith,Georgia,SmitRo07,8
+2026,BAL,LB,95,ACT,Tavius Robinson,Mississippi,RobiTa00,3
+2026,BAL,LB,40,ACT,Teddye Buchanan,California,BuchTe00,1
+2026,BAL,LB,32,ACT,Trenton Simpson,Clemson,SimpTr00,3
+2026,BAL,LB,91,ACT,Trey Hendrickson,Florida Atlantic,HendTr00,9
+2026,BAL,LB,9,ACT,Zion Young,Missouri; Michigan State,YounZi00,0
+2026,BAL,LS,46,ACT,Nick Moore,Georgia,,6
+2026,BAL,OL,,DEV,A.J. Arcuri,Michigan State,,4
+2026,BAL,OL,72,ACT,Andrew Vorhees,USC,,3
+2026,BAL,OL,76,ACT,Carson Vinson,Alabama A&M,,1
+2026,BAL,OL,63,RES,Danny Pinter,Ball State,,6
+2026,BAL,OL,51,ACT,Emery Jones Jr.,LSU,,1
+2026,BAL,OL,77,ACT,Ethan Pocic,LSU,,9
+2026,BAL,OL,78,DEV,Gerad Lichtenhan,Oregon State,,1
+2026,BAL,OL,74,ACT,John Simpson,Clemson,,6
+2026,BAL,OL,54,ACT,Jovaughn Gwyn,South Carolina,,3
+2026,BAL,OL,53,DEV,Nick Dawkins,Penn State,,0
+2026,BAL,OL,71,ACT,Olaivavega Ioane,Penn State,,0
+2026,BAL,OL,70,ACT,Roger Rosengarten,Washington,,2
+2026,BAL,OL,79,ACT,Ronnie Stanley,Notre Dame,,10
+2026,BAL,P,30,ACT,Ryan Eckley,Michigan State,EcklRy00,0
+2026,BAL,QB,12,ACT,Joe Fagnano,Connecticut; Maine,,0
+2026,BAL,QB,8,ACT,Lamar Jackson,Louisville,JackLa00,8
+2026,BAL,QB,11,RES,Skylar Thompson,Kansas State,ThomSk00,4
+2026,BAL,QB,5,ACT,Tyler Huntley,Utah,HuntTy01,6
+2026,BAL,RB,23,RES,Adam Randall,Clemson,RandAd00,0
+2026,BAL,RB,22,ACT,Derrick Henry,Alabama,HenrDe00,10
+2026,BAL,RB,35,DEV,Jonathan Ward,Central Michigan,WardJo00,6
+2026,BAL,RB,43,ACT,Justice Hill,Oklahoma State,HillJu00,7
+2026,BAL,RB,26,ACT,Rasheen Ali,Marshall,AlixRa00,2
+2026,BAL,TE,80,ACT,Durham Smythe,Notre Dame,SmytDu00,8
+2026,BAL,TE,85,ACT,Josh Cuevas,Alabama; Washington; Pomona State,CuevJo00,0
+2026,BAL,TE,89,ACT,Mark Andrews,Oklahoma,AndrMa00,8
+2026,BAL,TE,88,ACT,Matthew Hibner,SMU; Michigan,HibnMa00,0
+2026,BAL,TE,,DEV,Nick Vannett,Ohio State,VannNi00,10
+2026,BAL,TE,84,DEV,Ty Pezza,Brown,,0
+2026,BAL,WR,17,DEV,Chris Moore,Cincinnati,MoorCh00,10
+2026,BAL,WR,81,ACT,Devontez Walker,North Carolina; Kent State; North Carolina Central,WalkDe01,2
+2026,BAL,WR,13,ACT,Elijah Sarratt,Indiana; James Madison; St. Francis PA,SarrEl00,0
+2026,BAL,WR,6,ACT,Ja'Kobi Lane,USC,LaneJa01,0
+2026,BAL,WR,10,ACT,LaJohntay Wester,Colorado; Florida Atlantic,WestLa01,1
+2026,BAL,WR,7,ACT,Rashod Bateman,Minnesota,BateRa00,5
+2026,BAL,WR,16,DEV,Xavier Guillory,Arizona State; Idaho State,,0
+2026,BAL,WR,4,ACT,Zay Flowers,Boston College,FlowZa00,3
+2026,BUF,DB,30,DEV,Anthony Kendall,Baldwin Wallace College,KendAn00,3
+2026,BUF,DB,22,ACT,C.J. Gardner-Johnson,Florida,GardCh00,7
+2026,BUF,DB,47,ACT,Christian Benford,Villanova,BenfCh00,4
+2026,BUF,DB,24,ACT,Cole Bishop,Utah,BishCo00,2
+2026,BUF,DB,3,ACT,Damar Hamlin,Pittsburgh,HamlDa00,5
+2026,BUF,DB,21,ACT,Davison Igbinosun,Ohio State; Mississippi,IgbiDa01,0
+2026,BUF,DB,23,ACT,Dee Alford,Tusculum College,AlfoDe00,4
+2026,BUF,DB,43,RSN,Dorian Strong,Virginia Tech,StroDo01,1
+2026,BUF,DB,25,DEV,Geno Stone,Iowa,StonGe00,6
+2026,BUF,DB,29,ACT,Jalon Kilgore,South Carolina,KilgJa00,0
+2026,BUF,DB,37,ACT,Jordan Hancock,Ohio State,HancJo00,1
+2026,BUF,DB,41,DEV,Kani Walker,Arkansas; Oklahoma; Louisville,,0
+2026,BUF,DB,31,ACT,Maxwell Hairston,Kentucky,HairMa00,1
+2026,BUF,DB,28,ACT,Sam Franklin Jr.,Temple,FranSa00,6
+2026,BUF,DB,33,DEV,Te'Cory Couch,Miami,,2
+2026,BUF,DL,90,ACT,DeWayne Carter,Duke,CartDe03,2
+2026,BUF,DL,96,ACT,Deone Walker,Kentucky,WalkDe04,1
+2026,BUF,DL,91,ACT,Ed Oliver,Houston,OlivEd00,7
+2026,BUF,DL,97,ACT,Greg Gaines,Washington,GainGr00,7
+2026,BUF,DL,94,ACT,Landon Jackson,Arkansas; LSU,JackLa03,1
+2026,BUF,DL,72,SUS,Phidarian Mathis,Alabama,MathPh00,4
+2026,BUF,DL,98,ACT,T.J. Sanders,South Carolina,SandTJ00,1
+2026,BUF,DL,92,RES,Zane Durant,Penn State,DuraZa00,0
+2026,BUF,K,16,ACT,Tyler Bass,Georgia Southern,BassTy00,6
+2026,BUF,LB,59,DEV,Andre Jones Jr.,Louisiana-Lafayette,JoneAn02,3
+2026,BUF,LB,9,ACT,Bradley Chubb,N.C. State,ChubBr00,8
+2026,BUF,LB,50,RES,Demetrius Flannigan-Fowles,Arizona,FlanDe00,7
+2026,BUF,LB,42,ACT,Dorian Williams,Tulane,WillDo04,3
+2026,BUF,LB,15,ACT,Greg Rousseau,Miami,RousGr00,5
+2026,BUF,LB,56,ACT,Javon Solomon,Troy,SoloJa00,2
+2026,BUF,LB,44,ACT,Joe Andreessen,Buffalo,AndrJo02,2
+2026,BUF,LB,52,ACT,Kaleb Elarms-Orr,TCU; California,ElarKa00,0
+2026,BUF,LB,49,DEV,Keonta Jenkins,Virginia Tech,JenkKe01,1
+2026,BUF,LB,51,ACT,Michael Danna,Michigan,DannMi00,6
+2026,BUF,LB,55,ACT,Michael Hoecht,Brown,HoecMi00,6
+2026,BUF,LB,45,DEV,Shaq Thompson,Washington,ThomSh01,11
+2026,BUF,LB,99,ACT,TJ Parker,Clemson,ParkTJ00,0
+2026,BUF,LB,8,ACT,Terrel Bernard,Baylor,BernTe00,4
+2026,BUF,LS,69,ACT,Reid Ferguson,LSU,,10
+2026,BUF,OL,70,ACT,Alec Anderson,UCLA,,4
+2026,BUF,OL,60,ACT,Ar'maj Reed-Adams,Texas A&M; Kansas,,0
+2026,BUF,OL,63,ACT,Austin Corbett,Nevada,,8
+2026,BUF,OL,77,DEV,Chase Lundt,Connecticut,,1
+2026,BUF,OL,66,ACT,Connor McGovern,Penn State,,7
+2026,BUF,OL,73,ACT,Dion Dawkins,Temple,,9
+2026,BUF,OL,,DEV,Jedrick Wills,Alabama,,6
+2026,BUF,OL,74,ACT,Jude Bowry,Boston College,,0
+2026,BUF,OL,53,ACT,Lloyd Cushenberry III,LSU,,6
+2026,BUF,OL,65,DEV,Nick Broeker,Mississippi,,3
+2026,BUF,OL,64,ACT,O'Cyrus Torrence,Florida; Louisiana-Lafayette,,3
+2026,BUF,OL,79,ACT,Spencer Brown,Northern Iowa,,5
+2026,BUF,OL,67,DEV,Travis Clayton,,,2
+2026,BUF,OL,68,ACT,Tylan Grable,UCF; Jacksonville State,,2
+2026,BUF,P,39,ACT,Tommy Doman Jr.,Florida; Michigan,DomaTo00,0
+2026,BUF,QB,17,ACT,Josh Allen,Wyoming; Reedley,AlleJo02,8
+2026,BUF,QB,11,ACT,Kyle Allen,Houston; Texas A&M,AlleKy00,8
+2026,BUF,QB,6,DEV,Shane Buechele,SMU,BuecSh00,5
+2026,BUF,RB,20,DEV,Frank Gore Jr.,Southern Mississippi,GoreFr01,2
+2026,BUF,RB,4,ACT,James Cook,Georgia,CookJa01,4
+2026,BUF,RB,7,ACT,Ray Davis,Kentucky; Vanderbilt; Temple,DaviRa04,2
+2026,BUF,RB,26,ACT,Ty Johnson,Maryland,JohnTy02,7
+2026,BUF,TE,86,ACT,Dalton Kincaid,Utah; Univ of California-San Diego,KincDa00,3
+2026,BUF,TE,88,ACT,Dawson Knox,Mississippi,KnoxDa00,7
+2026,BUF,TE,85,ACT,Jackson Hawes,Georgia Tech; Yale,HaweJa00,1
+2026,BUF,TE,83,ACT,Keleki Latu,Washington; Nevada,LatuKe00,1
+2026,BUF,WR,3,ACT,DJ Moore,Maryland,MoorD.00,8
+2026,BUF,WR,,DEV,Greg Dortch,Wake Forest,DortGr01,7
+2026,BUF,WR,84,DEV,Ja'Mori Maclin,Kentucky; North Texas; Missouri,MaclJa00,0
+2026,BUF,WR,5,ACT,Josh Palmer,Tennessee,PalmJo00,5
+2026,BUF,WR,0,ACT,Keon Coleman,Florida State; Michigan State,ColeKe02,2
+2026,BUF,WR,10,ACT,Khalil Shakir,Boise State,ShakKh00,4
+2026,BUF,WR,13,ACT,Skyler Bell,Connecticut; Wisconsin,BellSk00,0
+2026,BUF,WR,89,DEV,Stephen Gosnell,Virginia Tech; North Carolina,,1
+2026,BUF,WR,81,DEV,Trent Sherfield,Vanderbilt,SherTr00,8
+2026,BUF,WR,14,PUP,Tyrell Shavers,San Diego State; Mississippi State; Alabama,ShavTy00,3
+2026,CAR,DB,29,ACT,Akayleb Evans,Missouri,EvanAk00,4
+2026,CAR,DB,26,ACT,Chau Smith-Wade,Washington State,SmitCh05,2
+2026,CAR,DB,31,DEV,Corey Thornton,Louisville,ThorCo00,1
+2026,CAR,DB,43,DEV,Devonta Smith,Notre Dame; Alabama,,0
+2026,CAR,DB,27,DEV,Isaiah Simmons,Clemson,SimmIs00,6
+2026,CAR,DB,8,ACT,Jaycee Horn,South Carolina,HornJa00,5
+2026,CAR,DB,22,ACT,Lathan Ransom,Ohio State,RansLa00,1
+2026,CAR,DB,2,ACT,Mike Jackson,Miami,JackMi01,7
+2026,CAR,DB,21,ACT,Nick Scott,Penn State,ScotNi01,7
+2026,CAR,DB,7,ACT,Tre'von Moehrig,TCU,MoehTr00,5
+2026,CAR,DB,24,ACT,Will Lee III,Texas A&M; Kansas State,LeexWi00,0
+2026,CAR,DB,20,ACT,Zakee Wheatley,Penn State,WheaZa00,0
+2026,CAR,DB,,DEV,Zion Childress,Kentucky; Texas State-San Marcos,ChilZi00,1
+2026,CAR,DL,94,ACT,Aaron Hall,Duke,,0
+2026,CAR,DL,,DEV,Anthony Goodlow,Oklahoma State,GoodAn00,2
+2026,CAR,DL,97,ACT,Bobby Brown III,Texas A&M,BrowBo04,5
+2026,CAR,DL,99,ACT,Cam Jackson,Florida; Memphis,JackCa01,1
+2026,CAR,DL,95,ACT,Derrick Brown,Auburn,BrowDe05,6
+2026,CAR,DL,92,ACT,Lee Hunter,Texas Tech; UCF; Auburn,HuntLe00,0
+2026,CAR,DL,69,DEV,Parker Petersen,Wisconsin; Tulane,,0
+2026,CAR,DL,93,ACT,TeRah Edwards,Illinois; Northwestern,,1
+2026,CAR,DL,98,PUP,Tershawn Wharton,Missouri-Rolla,WharTe00,6
+2026,CAR,K,10,ACT,Ryan Fitzgerald,Florida State,FitzRy01,1
+2026,CAR,LB,54,RSR,Bam Martin-Scott,South Carolina; Dodge City CC,MartBa00,1
+2026,CAR,LB,58,ACT,Bobby Okereke,Stanford,OkerBo00,7
+2026,CAR,LB,49,DEV,Cam Gill,Wagner,GillCa00,6
+2026,CAR,LB,53,ACT,Claudin Cherelus,Alcorn State; UMass Amherst,CherCl00,3
+2026,CAR,LB,55,ACT,Devin Lloyd,Utah,LloyDe00,4
+2026,CAR,LB,46,ACT,Jackson Kuwatch,Miami (Ohio); Ohio State,KuwaJa00,0
+2026,CAR,LB,5,ACT,Jaelan Phillips,Miami,PhilJa02,5
+2026,CAR,LB,58,DEV,Mapalo Mwansa,,,1
+2026,CAR,LB,11,RES,Nic Scourton,Texas A&M; Purdue,ScouNi00,1
+2026,CAR,LB,91,ACT,Patrick Jones II,Pittsburgh,JonePa00,5
+2026,CAR,LB,3,ACT,Princely Umanmielen,Mississippi; Florida,UmanPr00,1
+2026,CAR,LB,48,ACT,Thomas Incoom,Central Michigan; Valdosta State,IncoTh00,3
+2026,CAR,LB,52,ACT,Trevis Gipson,Tulsa,GipsTr00,6
+2026,CAR,LB,,DEV,Tyrel Dodson,Texas A&M,DodsTy01,7
+2026,CAR,LS,44,ACT,J.J. Jansen,Notre Dame,,18
+2026,CAR,OL,76,ACT,Albert Reese,Mississippi State,,0
+2026,CAR,OL,70,RES,Brady Christensen,BYU,,5
+2026,CAR,OL,62,DEV,Chandler Zavala,N.C. State; Fairmont State,,3
+2026,CAR,OL,67,ACT,Corey Bullock,Maryland; North Carolina Central,,2
+2026,CAR,OL,68,ACT,Damien Lewis,LSU; Northwest Mississippi CC,,6
+2026,CAR,OL,79,PUP,Ikem Ekwonu,N.C. State,,4
+2026,CAR,OL,74,DEV,Isaia Glass,Vanderbilt,,0
+2026,CAR,OL,71,DEV,Jake Curhan,California,,5
+2026,CAR,OL,77,ACT,Luke Fortner,Kentucky,,4
+2026,CAR,OL,57,ACT,Monroe Freeling,Georgia,,0
+2026,CAR,OL,63,ACT,Rasheed Walker,Penn State,,4
+2026,CAR,OL,50,ACT,Robert Hunt,Louisiana-Lafayette,,6
+2026,CAR,OL,66,RES,Ryan Hayes,Michigan,,3
+2026,CAR,OL,75,ACT,Sam Hecht,Kansas State,,0
+2026,CAR,OL,73,ACT,Stone Forsythe,Florida,,5
+2026,CAR,OL,72,RSN,Taylor Moton,Western Michigan,,9
+2026,CAR,OL,,DEV,Torricelli Simpkins III,South Carolina; North Carolina Central,,1
+2026,CAR,P,6,ACT,Sam Martin,Appalachian State,MartSa01,13
+2026,CAR,QB,9,ACT,Bryce Young,Alabama,YounBr01,3
+2026,CAR,QB,16,ACT,Haynes King,Georgia Tech; Texas A&M,,0
+2026,CAR,QB,12,ACT,Kenny Pickett,Pittsburgh,PickKe00,4
+2026,CAR,RB,28,ACT,AJ Dillon,Boston College,DillAJ00,6
+2026,CAR,RB,34,DEV,Anthony Tyus III,Ohio,,1
+2026,CAR,RB,30,ACT,Chuba Hubbard,Oklahoma State,HubbCh01,5
+2026,CAR,RB,25,ACT,Jonathon Brooks,Texas,BrooJo02,2
+2026,CAR,RB,23,RSR,Trevor Etienne,Georgia; Florida,EtieTr01,1
+2026,CAR,TE,88,ACT,Darren Waller,Georgia Tech,WallDa01,11
+2026,CAR,TE,81,ACT,Feleipe Franks,Arkansas,FranFe00,5
+2026,CAR,TE,0,ACT,Ja'Tavion Sanders,Texas,SandJa01,2
+2026,CAR,TE,84,ACT,Mitchell Evans,Notre Dame,EvanMi01,1
+2026,CAR,TE,82,ACT,Tommy Tremble,Notre Dame,TremTo00,5
+2026,CAR,WR,87,ACT,Brycen Tremayne,Stanford,TremBr00,3
+2026,CAR,WR,88,DEV,Casey Washington,Illinois,WashCa01,2
+2026,CAR,WR,19,RES,Chris Brazzell II,Tennessee; Tulane,BrazCh01,0
+2026,CAR,WR,83,DEV,David Moore,East Central,MoorDa03,9
+2026,CAR,WR,86,DEV,Ja'Seem Reed,San Diego,ReedJa05,1
+2026,CAR,WR,18,ACT,Jalen Coker,Holy Cross,CokeJa01,2
+2026,CAR,WR,15,ACT,Jimmy Horn Jr.,Colorado; University of South Florida,HornJi00,1
+2026,CAR,WR,13,ACT,John Metchie III,Alabama,MetcJo00,4
+2026,CAR,WR,4,ACT,Tetairoa McMillan,Arizona,McMiTe00,1
+2026,CAR,WR,17,ACT,Xavier Legette,South Carolina,LegeXa00,2
+2026,CHI,DB,25,SUS,Beanie Bishop Jr.,West Virginia; Minnesota; Western Kentucky,BishBe00,2
+2026,CHI,DB,21,ACT,Cam Lewis,Buffalo,LewiCa00,7
+2026,CHI,DB,20,ACT,Clark Phillips III,Utah,PhilCl00,3
+2026,CHI,DB,2,RES,Coby Bryant,Cincinnati,BryaCo01,4
+2026,CHI,DB,37,RES,Dallis Flowers,Pittsburg State (KS),FlowDa00,4
+2026,CHI,DB,37,DEV,Deantre Prince,Mississippi,PrinDe01,2
+2026,CHI,DB,31,ACT,Dillon Thieneman,Oregon; Purdue,ThieDi00,0
+2026,CHI,DB,27,RES,Dontae Manning,Oregon,,1
+2026,CHI,DB,22,ACT,Elijah Hicks,California,HickEl00,4
+2026,CHI,DB,1,ACT,Jaylon Johnson,Utah,JohnJa13,6
+2026,CHI,DB,39,ACT,Josh Blackwell,Duke,BlacJo00,4
+2026,CHI,DB,6,PUP,Kyler Gordon,Washington,GordKy00,4
+2026,CHI,DB,24,ACT,Malik Muhammad,Texas,MuhaMa00,0
+2026,CHI,DB,36,DEV,Marlen Sewell,Vanderbilt,,0
+2026,CHI,DB,38,ACT,Skyler Thomas,Oregon State,,0
+2026,CHI,DB,29,ACT,Tyrique Stevenson,Miami; Georgia,StevTy01,3
+2026,CHI,DB,32,ACT,Xavier Woods,Louisiana Tech,WoodXa00,9
+2026,CHI,DL,94,ACT,Austin Booker,Kansas; Minnesota,BookAu00,2
+2026,CHI,DL,92,ACT,Daniel Hardy,Montana State,HardDa01,4
+2026,CHI,DL,55,ACT,Dayo Odeyingbo,Vanderbilt,OdeyDa00,5
+2026,CHI,DL,50,ACT,Grady Jarrett,Clemson,JarrGr00,11
+2026,CHI,DL,97,ACT,James Lynch,Baylor,LyncJa00,6
+2026,CHI,DL,59,ACT,Jamree Kromah,James Madison; Rutgers,,2
+2026,CHI,DL,91,ACT,Jayden Loving,Wake Forest,,0
+2026,CHI,DL,52,RES,Jonathan Garvin,Miami,GarvJo00,6
+2026,CHI,DL,96,ACT,Jordan van den Berg,Georgia Tech; Penn State; Iowa Western CC,vandJo00,0
+2026,CHI,DL,93,ACT,Kentavius Street,N.C. State,StreKe00,8
+2026,CHI,DL,52,DEV,Marcus Davenport,Texas-San Antonio,DaveMa00,8
+2026,CHI,DL,98,ACT,Montez Sweat,Mississippi State; Copiah-Lincoln Junior College; Michigan State,SweaMo00,7
+2026,CHI,DL,90,ACT,Neville Gallimore,Oklahoma,GallNe00,6
+2026,CHI,DL,95,PUP,Shemar Turner,Texas A&M,TurnSh00,1
+2026,CHI,K,8,ACT,Cairo Santos,Tulane,SantCa01,12
+2026,CHI,LB,,DEV,Buddy Johnson,Texas A&M,JohnBu01,5
+2026,CHI,LB,48,ACT,D'Marco Jackson,Appalachian State,JackDM00,4
+2026,CHI,LB,12,ACT,Devin Bush,Michigan,BushDe01,7
+2026,CHI,LB,57,ACT,Jack Sanborn,Wisconsin,SanbJa00,4
+2026,CHI,LB,49,ACT,Keyshaun Elliott,Arizona State; New Mexico State,ElliKe03,0
+2026,CHI,LB,45,RES,Nephi Sewell,Utah,SeweNe00,4
+2026,CHI,LB,44,PUP,Noah Sewell,Oregon,SeweNo00,3
+2026,CHI,LB,47,RES,Ruben Hyppolite II,Maryland,HyppRu00,1
+2026,CHI,LB,53,ACT,T.J. Edwards,Wisconsin,EdwaTJ02,7
+2026,CHI,LB,43,RES,Tony Fields II,West Virginia,FielTo00,5
+2026,CHI,LB,35,DEV,Wayne Matthews II,Michigan State; Old Dominion,,0
+2026,CHI,LS,45,ACT,Beau Gardner,Georgia; UCLA,,0
+2026,CHI,OL,70,ACT,Braxton Jones,Southern Utah State,,4
+2026,CHI,OL,76,DEV,Caden Barnett,Wyoming,,0
+2026,CHI,OL,,DEV,Christian Jones,Texas,,2
+2026,CHI,OL,58,ACT,Darnell Wright,Tennessee,,3
+2026,CHI,OL,67,ACT,Garrett Bradbury,N.C. State,,7
+2026,CHI,OL,62,ACT,Joe Thuney,N.C. State,,10
+2026,CHI,OL,73,ACT,Jonah Jackson,Ohio State; Rutgers,,6
+2026,CHI,OL,74,ACT,Jordan McFadden,Clemson,,3
+2026,CHI,OL,60,DEV,Kyle Hergel,Boston College; Texas State-San Marcos,,2
+2026,CHI,OL,54,ACT,Logan Jones,Iowa,,0
+2026,CHI,OL,65,ACT,Luke Newman,Michigan State; Holy Cross,,1
+2026,CHI,OL,75,ACT,Ozzy Trapilo,Boston College,,1
+2026,CHI,OL,79,ACT,Theo Benedet,University of British Columbia,,2
+2026,CHI,P,19,ACT,Tory Taylor,Iowa,TaylTo01,2
+2026,CHI,QB,18,ACT,Caleb Williams,USC; Oklahoma,WillCa03,2
+2026,CHI,QB,11,ACT,Case Keenum,Houston,KeenCa00,14
+2026,CHI,QB,17,ACT,Tyson Bagent,Shepherd,BageTy00,3
+2026,CHI,RB,38,RES,Brittain Brown,UCLA,BrowBr06,4
+2026,CHI,RB,4,ACT,D'Andre Swift,Georgia,SwifDA00,6
+2026,CHI,RB,25,ACT,Kyle Monangai,Rutgers,MonaKy00,1
+2026,CHI,RB,23,ACT,Roschon Johnson,Texas,JohnRo07,3
+2026,CHI,RB,36,DEV,Salvon Ahmed,Washington,AhmeSa01,6
+2026,CHI,RB,,DEV,Zavier Scott,Maine,ScotZa00,3
+2026,CHI,TE,85,ACT,Cole Kmet,Notre Dame,KmetCo00,6
+2026,CHI,TE,84,ACT,Colston Loveland,Michigan,LoveCo00,1
+2026,CHI,TE,43,RES,Hayden Large,Iowa,,0
+2026,CHI,TE,86,RES,Nikola Kalinic,York (Canada),KaliNi00,4
+2026,CHI,TE,80,DEV,Qadir Ismail,Samford; Villanova,,2
+2026,CHI,TE,87,ACT,Sam Roush,Stanford,RousSa00,0
+2026,CHI,TE,88,DEV,Stephen Carlson,Princeton,CarlSt00,7
+2026,CHI,WR,83,DEV,JP Richardson,TCU; Oklahoma State,RichJP00,1
+2026,CHI,WR,9,ACT,Jahdae Walker,Texas A&M; Grand Valley,WalkJa03,1
+2026,CHI,WR,27,DEV,Kaden Davis,NW Missouri State University,DaviKa02,4
+2026,CHI,WR,14,ACT,Kalif Raymond,Holy Cross,RaymKa00,10
+2026,CHI,WR,10,ACT,Luther Burden III,Missouri,BurdLu00,1
+2026,CHI,WR,26,RES,Ray-Ray McCloud,Clemson,McClRa00,8
+2026,CHI,WR,15,ACT,Rome Odunze,Washington,OdunRo00,2
+2026,CHI,WR,35,DEV,Scott Miller,Bowling Green,MillSc01,7
+2026,CHI,WR,81,ACT,Zavion Thomas,LSU; Mississippi State,ThomZa05,0
+2026,CIN,DB,21,DEV,Bralyn Lux,Texas Tech,LuxxBr00,1
+2026,CIN,DB,6,ACT,Bryan Cook,Cincinnati; Howard,CookBr02,4
+2026,CIN,DB,38,ACT,D.J. Ivey,Miami,IveyDJ00,3
+2026,CIN,DB,0,ACT,DJ Turner II,Michigan,TurnDJ01,3
+2026,CIN,DB,23,ACT,Daxton Hill,Michigan,HillDa04,4
+2026,CIN,DB,26,RSR,Ja'Sir Taylor,Wake Forest,TaylJa04,4
+2026,CIN,DB,35,ACT,Jalen Davis,Utah State,DaviJa06,8
+2026,CIN,DB,27,ACT,Jordan Battle,Alabama,BattJo00,3
+2026,CIN,DB,28,ACT,Josh Newton,TCU; Louisiana-Monroe,NewtJo00,2
+2026,CIN,DB,29,ACT,Kyle Dugger,Lenoir Rhyne,DuggKy00,6
+2026,CIN,DB,37,ACT,PJ Jules,Southern Illinois,JulePJ00,2
+2026,CIN,DB,39,DEV,Russ Yeast,Kansas State,YeasRu00,4
+2026,CIN,DB,20,ACT,Tacario Davis,Washington; Arizona,DaviTa01,0
+2026,CIN,DB,,DEV,Trikweze Bridges,Florida; Oregon,BridTr00,1
+2026,CIN,DL,92,ACT,B.J. Hill,N.C. State,HillB.00,8
+2026,CIN,DL,53,ACT,Boye Mafe,Minnesota,MafeBo00,4
+2026,CIN,DL,55,ACT,Cashius Howell,Texas A&M; Bowling Green,HoweCa00,0
+2026,CIN,DL,52,ACT,Cedric Johnson,Mississippi,JohnCe01,2
+2026,CIN,DL,97,ACT,Dexter Lawrence,Clemson,LawrDe03,7
+2026,CIN,DL,95,DEV,Howard Cross III,Notre Dame,CrosHo01,1
+2026,CIN,DL,51,DEV,Isaiah Foskey,Notre Dame,FoskIs00,3
+2026,CIN,DL,93,ACT,Jonathan Allen,Alabama,AlleJo01,9
+2026,CIN,DL,90,ACT,Kris Jenkins,Michigan,JenkKr01,2
+2026,CIN,DL,96,ACT,Landon Robinson,Navy,RobiLa04,0
+2026,CIN,DL,99,ACT,Myles Murphy,Clemson,MurpMy00,3
+2026,CIN,DL,94,ACT,Shemar Stewart,Texas A&M,StewSh00,1
+2026,CIN,DL,98,ACT,Tedarrell Slaton,Florida,SlatTe00,5
+2026,CIN,K,2,ACT,Evan McPherson,Florida,McPhEv00,5
+2026,CIN,LB,49,ACT,Barrett Carter,Clemson,CartBa00,1
+2026,CIN,LB,44,ACT,Demetrius Knight Jr.,South Carolina; Charlotte,KnigDe00,1
+2026,CIN,LB,,DEV,Garmon Randolph,Baylor,,1
+2026,CIN,LB,43,DEV,Joe Giles-Harris,Duke,GileJo01,7
+2026,CIN,LB,42,ACT,Oren Burks,Vanderbilt,BurkOr00,8
+2026,CIN,LB,50,DEV,Shaka Heyward,Duke,HeywSh00,3
+2026,CIN,LB,47,ACT,Swayze Bozeman,Southern Mississippi; Copiah-Lincoln Junior College,BozeSw00,2
+2026,CIN,LS,46,ACT,William Wagner,Michigan,,1
+2026,CIN,OL,71,ACT,Amarius Mims,Georgia,,2
+2026,CIN,OL,,DEV,Blake Freeland,BYU,,3
+2026,CIN,OL,62,RSR,Brian Parker II,Duke,,0
+2026,CIN,OL,65,ACT,Connor Lew,Auburn,,0
+2026,CIN,OL,66,ACT,Dalton Risner,Kansas State,,7
+2026,CIN,OL,63,ACT,Dylan Fairchild,Georgia,,1
+2026,CIN,OL,69,ACT,Jacob Bayer,Arkansas State; Lamar,,1
+2026,CIN,OL,74,ACT,Jalen Rivers,Miami,,1
+2026,CIN,OL,73,ACT,Javon Foster,Missouri,,2
+2026,CIN,OL,,ACT,Myles Hinton,Michigan; Stanford,,1
+2026,CIN,OL,75,ACT,Orlando Brown,Oklahoma,,8
+2026,CIN,OL,64,ACT,Ted Karras,Illinois,,10
+2026,CIN,P,8,ACT,Ryan Rehkow,BYU,RehkRy00,2
+2026,CIN,QB,9,ACT,Joe Burrow,LSU; Ohio State,BurrJo01,6
+2026,CIN,QB,16,ACT,Joe Flacco,Delaware; Pittsburgh,FlacJo00,18
+2026,CIN,QB,11,DEV,Josh Johnson,San Diego,JohnJo05,18
+2026,CIN,QB,4,DEV,Sean Clifford,Penn State,ClifSe00,3
+2026,CIN,RB,30,ACT,Chase Brown,Illinois; Western Michigan,BrowCh10,3
+2026,CIN,RB,36,DEV,Kendall Milton,Georgia,MiltKe01,2
+2026,CIN,RB,31,DEV,Kentrel Bullock,South Alabama; Mississippi,,0
+2026,CIN,RB,34,ACT,Samaje Perine,Oklahoma,PeriSa00,9
+2026,CIN,RB,25,ACT,Tahj Brooks,Texas Tech,BrooTa00,1
+2026,CIN,TE,89,ACT,Drew Sample,Washington,SampDr00,7
+2026,CIN,TE,83,ACT,Erick All,Iowa; Michigan,AllxEr00,2
+2026,CIN,TE,84,ACT,Jack Endries,Texas; California,EndrJa00,0
+2026,CIN,TE,88,ACT,Mike Gesicki,Penn State,GesiMi00,8
+2026,CIN,TE,87,DEV,Tanner Hudson,Southern Arkansas; Memphis,HudsTa00,8
+2026,CIN,WR,80,ACT,Andrei Iosivas,Princeton,IosiAn00,3
+2026,CIN,WR,86,ACT,Colbie Young,Georgia; Miami; Lackawanna JC,YounCo01,0
+2026,CIN,WR,81,ACT,Dohnte Meyers,Delta State University; Presbyterian College,MeyeDo00,0
+2026,CIN,WR,1,ACT,Ja'Marr Chase,LSU,ChasJa00,5
+2026,CIN,WR,14,DEV,Jordan Moore,Duke,,1
+2026,CIN,WR,12,ACT,Ke'Shawn Williams,Indiana; Wake Forest,WillKe08,1
+2026,CIN,WR,17,DEV,Noah Thomas,Georgia; Texas A&M,ThomNo01,0
+2026,CIN,WR,5,ACT,Tee Higgins,Clemson,HiggTe00,6
+2026,CLE,DB,20,DEV,D'Angelo Ross,New Mexico,RossDA03,7
+2026,CLE,DB,37,RES,Damarri Mathis,Pittsburgh,MathDa00,4
+2026,CLE,DB,24,ACT,Daniel Thomas,Auburn,ThomDa07,6
+2026,CLE,DB,21,ACT,Denzel Ward,Ohio State,WardDe02,8
+2026,CLE,DB,31,ACT,Donovan McMillon,Pittsburgh; Florida,McMiDo00,1
+2026,CLE,DB,28,ACT,Emmanuel McNeil-Warren,Toledo,McNeEm00,0
+2026,CLE,DB,9,ACT,Grant Delpit,LSU,DelpGr00,6
+2026,CLE,DB,,ACT,Mekhi Blackmon,USC; Colorado,BlacMe00,3
+2026,CLE,DB,27,DEV,Myles Bryant,Washington,BryaMy01,6
+2026,CLE,DB,26,ACT,Myles Harden,South Dakota,HardMy00,2
+2026,CLE,DB,,ACT,Noah Igbinoghene,Auburn,IgbiNo00,6
+2026,CLE,DB,33,ACT,Ronnie Hickman Jr.,Ohio State,HickRo00,3
+2026,CLE,DB,,ACT,Toriano Pride Jr.,Missouri; Clemson,PridTo00,0
+2026,CLE,DB,7,ACT,Tyson Campbell,Georgia,CampTy01,5
+2026,CLE,DB,34,DEV,Zion Washington,Boise State,,0
+2026,CLE,DL,98,ACT,Adin Huntington,Tulane; Louisiana-Monroe; Kent State,HuntAd00,1
+2026,CLE,DL,91,RES,Alex Wright,UAB,WrigAl01,4
+2026,CLE,DL,,DEV,Chris Williams,Wagner,WillCh08,6
+2026,CLE,DL,,ACT,Derek Barnett,Tennessee,BarnDe01,9
+2026,CLE,DL,62,RES,Elijah Chatman,SMU,ChatEl00,2
+2026,CLE,DL,57,ACT,Isaiah McGuire,Missouri,McGuIs00,3
+2026,CLE,DL,8,ACT,Jared Verse,Florida State; Albany,VersJa00,2
+2026,CLE,DL,93,RES,Kalia Davis,UCF,DaviKa01,4
+2026,CLE,DL,90,DEV,Khordae Sydnor,Vanderbilt; Purdue,,0
+2026,CLE,DL,97,DEV,Logan Fano,Utah; BYU,FanoLo00,0
+2026,CLE,DL,96,ACT,Maliek Collins,Nebraska,CollMa00,10
+2026,CLE,DL,94,ACT,Mason Graham,Michigan,GrahMa00,1
+2026,CLE,DL,51,ACT,Mike Hall Jr.,Ohio State,HallMi00,2
+2026,CLE,DL,92,DEV,Sam Kamara,Stony Brook,KamaSa00,5
+2026,CLE,DL,,ACT,Sam Williams,Mississippi,WillSa00,4
+2026,CLE,DL,66,RES,Travis Bell,Kennesaw State,BellTr01,3
+2026,CLE,DL,64,DEV,Tyreak Sapp,Florida,,0
+2026,CLE,K,25,ACT,Andre Szmyt,Syracuse,SzmyAn00,2
+2026,CLE,LB,49,ACT,Carson Schwesinger,UCLA,SchwCa00,1
+2026,CLE,LB,42,ACT,Easton Mascarenas-Arnold,USC; Oregon State,MascEa00,1
+2026,CLE,LB,54,RES,Edefuan Ulofoshio,Washington,UlofEd00,2
+2026,CLE,LB,6,PUP,Jeremiah Owusu-Koramoah,Notre Dame,OwusJe00,5
+2026,CLE,LB,17,ACT,Justin Jefferson,Alabama,JeffJu01,0
+2026,CLE,LB,40,DEV,Nathaniel Watson,Mississippi State,WatsNa00,2
+2026,CLE,LB,5,ACT,Quincy Williams,Murray State,WillQu01,7
+2026,CLE,LB,59,ACT,Winston Reid,Weber State,ReidWi01,2
+2026,CLE,LS,50,ACT,Rex Sunahara,West Virginia,,6
+2026,CLE,OL,58,ACT,Austin Barber,Florida,,0
+2026,CLE,OL,79,ACT,Dawand Jones,Ohio State,,3
+2026,CLE,OL,74,ACT,Elgton Jenkins,Mississippi State,,7
+2026,CLE,OL,72,DEV,KT Leveston,Kansas State,,2
+2026,CLE,OL,53,RES,Kendrick Green,Illinois,,5
+2026,CLE,OL,56,ACT,Luke Wypler,Ohio State,,3
+2026,CLE,OL,52,ACT,Parker Brailsford,Alabama; Washington,,0
+2026,CLE,OL,55,ACT,Spencer Fano,Utah,,0
+2026,CLE,OL,78,ACT,Teven Jenkins,Oklahoma State,,5
+2026,CLE,OL,71,ACT,Tytus Howard,Alabama State,,7
+2026,CLE,OL,70,ACT,Zak Zinter,Michigan,,2
+2026,CLE,OL,77,ACT,Zion Johnson,Boston College; Davidson,,4
+2026,CLE,P,13,ACT,Corey Bojorquez,New Mexico; Cerritos College,BojoCo00,8
+2026,CLE,P,36,DEV,Wes Pahl,Oklahoma State,,0
+2026,CLE,QB,4,ACT,Deshaun Watson,Clemson,WatsDe00,9
+2026,CLE,QB,6,RSR,Dillon Gabriel,Oregon; Oklahoma; UCF,GabrDi00,1
+2026,CLE,QB,2,ACT,Shedeur Sanders,Colorado; Jackson State University,SandSh00,1
+2026,CLE,QB,15,ACT,Taylen Green,Arkansas; Boise State,GreeTa00,0
+2026,CLE,RB,22,ACT,Dylan Sampson,Tennessee,SampDy00,1
+2026,CLE,RB,,DEV,Jaleel McLaughlin,Youngstown State,McLaJa00,3
+2026,CLE,RB,34,ACT,Michael Burton,Rutgers,BurtMi00,11
+2026,CLE,RB,10,ACT,Quinshon Judkins,Ohio State; Mississippi,JudkQu00,1
+2026,CLE,RB,35,ACT,Raheim Sanders,South Carolina; Arkansas,SandRa00,1
+2026,CLE,TE,86,ACT,Blake Whiteheart,Wake Forest,WhitBl01,3
+2026,CLE,TE,48,ACT,Carsen Ryan,BYU; Utah; UCLA,RyanCa00,0
+2026,CLE,TE,44,ACT,Harold Fannin Jr.,Bowling Green,FannHa00,1
+2026,CLE,TE,18,RSN,Joe Royer,Cincinnati; Ohio State,RoyeJo01,0
+2026,CLE,TE,,DEV,Messiah Swinson,Arizona State; Missouri,,2
+2026,CLE,WR,,DEV,Bryce Oliver,Youngstown State; Kentucky,OlivBr02,2
+2026,CLE,WR,12,ACT,Denzel Boston,Washington,BostDe00,0
+2026,CLE,WR,0,ACT,Isaiah Bond,Texas; Alabama,BondIs00,1
+2026,CLE,WR,80,RES,Jamari Thrash,Louisville; Georgia State,ThraJa01,2
+2026,CLE,WR,3,ACT,Jerry Jeudy,Alabama,JeudJe00,6
+2026,CLE,WR,1,ACT,KC Concepcion,Texas A&M; N.C. State,ConcKC00,0
+2026,CLE,WR,87,DEV,Kole Wilson,Baylor; Texas State-San Marcos,,0
+2026,CLE,WR,83,ACT,Malachi Corley,Western Kentucky,CorlMa00,2
+2026,CLE,WR,16,ACT,Tylan Wallace,Oklahoma State,WallTy00,5
+2026,DAL,DB,38,ACT,Alijah Clark,Syracuse; Rutgers,ClarAl01,1
+2026,DAL,DB,39,ACT,Ameer Speed,Michigan State; Georgia,SpeeAm00,3
+2026,DAL,DB,21,ACT,Caelen Carson,Wake Forest,CarsCa01,2
+2026,DAL,DB,13,ACT,Caleb Downs,Ohio State,DownCa00,0
+2026,DAL,DB,2,ACT,Cobie Durant,South Carolina State,DuraDe01,4
+2026,DAL,DB,26,ACT,DaRon Bland,Fresno State,BlanDa00,4
+2026,DAL,DB,15,DEV,Derion Kendrick,Georgia; Clemson,KendDe00,4
+2026,DAL,DB,29,RSR,Devin Moore,Florida,MoorDe04,0
+2026,DAL,DB,34,ACT,Jalen Thompson,Washington State,ThomJa04,7
+2026,DAL,DB,24,ACT,Malik Hooker,Ohio State,HookMa00,9
+2026,DAL,DB,14,ACT,Markquese Bell,Florida A&M,BellMa01,4
+2026,DAL,DB,1,ACT,P.J. Locke,Texas,LockPJ00,7
+2026,DAL,DB,27,DEV,Reddy Steward,Troy,StewRe00,2
+2026,DAL,DB,28,ACT,Shavon Revel Jr.,East Carolina; Louisburg,ReveSh00,1
+2026,DAL,DL,96,DEV,Adedayo Odeleye,,,4
+2026,DAL,DL,,DEV,Elijah Garcia,Rice,GarcEl00,4
+2026,DAL,DL,98,ACT,Jonathan Bullard,Florida,BullJo00,10
+2026,DAL,DL,94,RES,Kelvin Gilliam,Virginia Tech; Oklahoma,,0
+2026,DAL,DL,97,ACT,Kenny Clark,UCLA,ClarKe01,10
+2026,DAL,DL,99,ACT,LT Overton,Alabama,OverLT00,0
+2026,DAL,DL,91,ACT,Otito Ogbonnia,UCLA,OgboOt00,4
+2026,DAL,DL,92,ACT,Quinnen Williams,Alabama,WillQu00,7
+2026,DAL,DL,95,DEV,Tommy Dunn,Kansas,,0
+2026,DAL,K,17,ACT,Brandon Aubrey,Notre Dame,AubrBr00,3
+2026,DAL,LB,42,DEV,Curtis Robinson,Stanford,RobiCu00,5
+2026,DAL,LB,0,ACT,DeMarvion Overshown,Texas,OverDe00,3
+2026,DAL,LB,53,ACT,Dee Winters,TCU,WintDe00,3
+2026,DAL,LB,6,ACT,Donovan Ezeiruaku,Boston College,EzeiDo00,1
+2026,DAL,LB,58,DEV,Isaiah Land,Florida A&M,LandIs00,3
+2026,DAL,LB,55,ACT,Jaishawn Barham,Michigan; Maryland,BarhJa01,0
+2026,DAL,LB,41,ACT,James Houston,Jackson State University,HousJa01,4
+2026,DAL,LB,45,DEV,Justin Barron,Syracuse,BarrJu00,1
+2026,DAL,LB,57,ACT,Malachi Lawrence,UCF,LawrMa01,0
+2026,DAL,LB,35,RSR,Marist Liufau,Notre Dame,LiufMa00,2
+2026,DAL,LB,7,ACT,Rashan Gary,Michigan,GaryRa00,7
+2026,DAL,LB,50,ACT,Shemar James,Florida,JameSh00,1
+2026,DAL,LB,90,ACT,Tyrus Wheat,Mississippi State,WheaTy02,3
+2026,DAL,LB,40,ACT,Von Miller,Texas A&M,MillVo00,15
+2026,DAL,LS,44,ACT,Trent Sieg,Colorado State,,8
+2026,DAL,OL,65,ACT,Ajani Cornelius,Oregon; Rhode Island,,1
+2026,DAL,OL,77,ACT,Broderick Jones,Georgia,,3
+2026,DAL,OL,56,ACT,Cooper Beebe,Kansas State,,2
+2026,DAL,OL,67,ACT,Drew Shelton,Penn State,,0
+2026,DAL,OL,79,DEV,Marcellus Johnson,Missouri; Eastern Michigan,,2
+2026,DAL,OL,72,RES,Matt Hennessy,Temple,,6
+2026,DAL,OL,51,DEV,Nick Leverett,Rice; North Carolina Central,,6
+2026,DAL,OL,66,ACT,TJ Bass,Oregon; Butte College,,3
+2026,DAL,OL,78,ACT,Terence Steele,Texas Tech,,6
+2026,DAL,OL,52,ACT,Tyler Booker,Alabama,,1
+2026,DAL,OL,60,ACT,Tyler Guyton,Oklahoma; TCU,,2
+2026,DAL,OL,73,ACT,Tyler Smith,Tulsa,,4
+2026,DAL,OL,,DEV,Wanya Morris,Oklahoma; Tennessee,,3
+2026,DAL,P,5,ACT,Bryan Anger,California,AngeBr00,14
+2026,DAL,QB,4,ACT,Dak Prescott,Mississippi State,PresDa01,10
+2026,DAL,QB,16,ACT,Sam Howell,North Carolina,HoweSa00,4
+2026,DAL,RB,31,ACT,Emari Demercado,TCU,DemeEm00,3
+2026,DAL,RB,40,ACT,Hunter Luepke,North Dakota State,LuepHu00,3
+2026,DAL,RB,30,DEV,Israel Abanikanda,Pittsburgh,AbanIs00,3
+2026,DAL,RB,33,ACT,Javonte Williams,North Carolina,WillJa10,5
+2026,DAL,RB,20,ACT,Malik Davis,Florida,DaviMa02,4
+2026,DAL,TE,89,ACT,Brevyn Spann-Ford,Minnesota,SpanBr00,2
+2026,DAL,TE,49,RES,DJ Rogers,TCU,,0
+2026,DAL,TE,87,ACT,Jake Ferguson,Wisconsin,FergJa00,4
+2026,DAL,TE,86,ACT,Luke Schoonmaker,Michigan,SchoLu00,3
+2026,DAL,TE,46,DEV,Michael Trigg,Baylor; Mississippi; USC,TrigMi00,0
+2026,DAL,TE,,DEV,Mitch Van Vooren,St Norbert College,,0
+2026,DAL,TE,85,RES,Princeton Fant,Tennessee,FantPr00,3
+2026,DAL,WR,83,DEV,Anthony Smith,East Carolina; N.C. State,SmitAn05,0
+2026,DAL,WR,6,ACT,Camden Brown,Georgia Southern; Auburn,,0
+2026,DAL,WR,88,ACT,CeeDee Lamb,Oklahoma,LambCe00,6
+2026,DAL,WR,3,ACT,George Pickens,Georgia,PickGe00,4
+2026,DAL,WR,81,ACT,Jonathan Mingo,Mississippi,MingJo00,3
+2026,DAL,WR,18,DEV,Jordan Hudson,SMU; TCU,,0
+2026,DAL,WR,9,ACT,KaVontae Turpin,TCU,TurpKa00,4
+2026,DAL,WR,19,ACT,Ryan Flournoy,Southeast Missouri State; Iowa Western CC,FlouRy00,2
+2026,DEN,DB,22,ACT,Brandon Jones,Texas,JoneBr06,6
+2026,DEN,DB,25,DEV,Brent Austin,California; University of South Florida; James Madison,,0
+2026,DEN,DB,26,ACT,Devon Key,Western Kentucky,KeyxDe00,5
+2026,DEN,DB,34,ACT,JL Skinner,Boise State,SkinJL00,3
+2026,DEN,DB,29,ACT,Ja'Quan McMillian,East Carolina,McMiJa00,4
+2026,DEN,DB,23,ACT,Jahdae Barron,Texas,BarrJa01,1
+2026,DEN,DB,31,ACT,Kris Abrams-Draine,Missouri,AbraKr00,2
+2026,DEN,DB,39,DEV,Miles Scott,Illinois,ScotMi00,0
+2026,DEN,DB,2,ACT,Pat Surtain II,Alabama,SurtPa01,5
+2026,DEN,DB,21,ACT,Riley Moss,Iowa,MossRi00,3
+2026,DEN,DB,37,DEV,Sean Fresch,Rice,,0
+2026,DEN,DB,9,ACT,Talanoa Hufanga,USC,HufaTa00,5
+2026,DEN,DB,6,ACT,Tycen Anderson,Toledo,AndeTy00,4
+2026,DEN,DL,93,ACT,D.J. Jones,Mississippi; East Mississippi JC,JoneD.01,9
+2026,DEN,DL,,DEV,David Agoha,,,3
+2026,DEN,DL,96,ACT,Eyioma Uwazurike,Iowa State,UwazEy00,4
+2026,DEN,DL,94,ACT,Jordan Jackson,Air Force,JackJo06,4
+2026,DEN,DL,97,ACT,Malcolm Roach,Texas,RoacMa01,6
+2026,DEN,DL,91,RES,Matt Henningsen,Wisconsin,HennMa01,4
+2026,DEN,DL,95,ACT,Sai'vion Jones,LSU,JoneSa01,1
+2026,DEN,DL,98,ACT,Tyler Onyedim,Texas A&M; Iowa State,OnyeTy00,0
+2026,DEN,DL,99,ACT,Zach Allen,Boston College,AlleZa01,7
+2026,DEN,K,3,ACT,Wil Lutz,Georgia State,LutzWi00,10
+2026,DEN,LB,49,ACT,Alex Singleton,Montana State,SingAl00,11
+2026,DEN,LB,92,ACT,Dondrea Tillman,"Indiana PA,  University of",TillDo00,2
+2026,DEN,LB,41,RES,Drew Sanders,Arkansas; Alabama,SandDr00,3
+2026,DEN,LB,59,DEV,Johnny Walker Jr.,Missouri,,1
+2026,DEN,LB,52,ACT,Jonah Elliss,Utah,ElliJo03,2
+2026,DEN,LB,0,EXE,Jonathon Cooper,Ohio State,CoopJo02,5
+2026,DEN,LB,55,ACT,Jordan Turner,Michigan State; Wisconsin,TurnJo00,1
+2026,DEN,LB,40,ACT,Justin Strnad,Wake Forest,StrnJu00,6
+2026,DEN,LB,47,ACT,Karene Reid,Utah,ReidKa00,1
+2026,DEN,LB,56,RES,Levelle Bailey,Fresno State; Sacramento State,BailLe00,2
+2026,DEN,LB,15,ACT,Nik Bonitto,Oklahoma,BoniNi00,4
+2026,DEN,LB,51,ACT,Que Robinson,Alabama,RobiQu00,1
+2026,DEN,LB,50,DEV,Red Murdock,Buffalo,MurdRe00,0
+2026,DEN,LS,43,DEV,Luke Basso,Oregon,,0
+2026,DEN,LS,48,DEV,Mitchell Fraboni,Arizona State,,4
+2026,DEN,OL,54,ACT,Alex Forsyth,Oregon,,3
+2026,DEN,OL,63,ACT,Alex Palczewski,Illinois,,3
+2026,DEN,OL,74,ACT,Ben Powers,Oklahoma; Butler County JC,,7
+2026,DEN,OL,76,DEV,Calvin Throckmorton,Oregon,,6
+2026,DEN,OL,73,RSR,Frank Crum,Wyoming,,2
+2026,DEN,OL,72,ACT,Garett Bolles,Utah; Snow,,9
+2026,DEN,OL,68,DEV,Gavin Ortega,Weber State,,0
+2026,DEN,OL,78,ACT,Kage Casey,Boise State,,0
+2026,DEN,OL,60,ACT,Luke Wattenberg,Washington,,4
+2026,DEN,OL,79,ACT,Matt Peart,Connecticut,,6
+2026,DEN,OL,67,RES,Michael Deiter,Wisconsin,,7
+2026,DEN,OL,69,ACT,Mike McGlinchey,Notre Dame,,8
+2026,DEN,OL,66,PUP,Nick Gargiulo,South Carolina; Yale,,2
+2026,DEN,OL,77,ACT,Quinn Meinerz,Wisconsin-Whitewater,,5
+2026,DEN,OL,71,DEV,Tyler Miller,Iowa State,,0
+2026,DEN,P,16,ACT,Jeremy Crawshaw,Florida,CrawJe00,1
+2026,DEN,QB,10,ACT,Bo Nix,Oregon; Auburn,NixxBo00,2
+2026,DEN,QB,8,ACT,Jarrett Stidham,Auburn; McLennan CC; Baylor,StidJa00,7
+2026,DEN,QB,4,ACT,Sam Ehlinger,Texas,EhliSa00,5
+2026,DEN,RB,46,DEV,Adam Prentice,South Carolina,PrenAd00,5
+2026,DEN,RB,25,DEV,Cody Schrader,Missouri; Truman State University,SchrCo00,2
+2026,DEN,RB,27,ACT,J.K. Dobbins,Ohio State,DobbJK00,6
+2026,DEN,RB,20,ACT,Jonah Coleman,Washington; Arizona,ColeJo00,0
+2026,DEN,RB,12,ACT,RJ Harvey,UCF; Virginia,HarvRJ00,1
+2026,DEN,RB,28,ACT,Tyler Badie,Missouri,BadiTy00,4
+2026,DEN,TE,82,ACT,Adam Trautman,Dayton,TrauAd00,6
+2026,DEN,TE,84,RSR,Caleb Lohner,Utah; Baylor,LohnCa00,1
+2026,DEN,TE,89,ACT,Dallen Bentley,Utah; Snow,BentDa00,0
+2026,DEN,TE,1,ACT,Evan Engram,Mississippi,EngrEv00,9
+2026,DEN,TE,85,DEV,Lucas Krull,Pittsburgh,KrulLu00,4
+2026,DEN,TE,45,ACT,Nate Adkins,South Carolina,AdkiNa00,3
+2026,DEN,WR,14,ACT,Courtland Sutton,SMU,SuttCo00,8
+2026,DEN,WR,32,DEV,Dane Key,Nebraska; Kentucky,KeyxDa00,0
+2026,DEN,WR,17,ACT,Jaylen Waddle,Alabama,WaddJa00,5
+2026,DEN,WR,81,DEV,Kolbe Katsis,Northern Arizona; Pittsburg State (KS),,0
+2026,DEN,WR,5,ACT,Lil'Jordan Humphrey,Texas,HumpLi01,7
+2026,DEN,WR,19,ACT,Marvin Mims Jr.,Oklahoma,MimsMa00,3
+2026,DEN,WR,83,DEV,Michael Bandy,San Diego,BandMi00,5
+2026,DEN,WR,13,ACT,Pat Bryant,Illinois,BryaPa00,1
+2026,DEN,WR,11,ACT,Troy Franklin,Oregon,FranTr00,2
+2026,DET,DB,42,DEV,Aamaris Brown,UNLV; University of South Florida; Kansas State,,0
+2026,DET,DB,29,ACT,Avonte Maddox,Pittsburgh,MaddAv00,8
+2026,DET,DB,32,PUP,Brian Branch,Alabama,BranBr00,3
+2026,DET,DB,27,ACT,Christian Izien,Rutgers,IzieCh00,3
+2026,DET,DB,36,ACT,Chuck Clark,Virginia Tech,ClarCh00,9
+2026,DET,DB,4,ACT,D.J. Reed,Kansas State; Cerritos College; Fresno State,ReedD.00,8
+2026,DET,DB,2,ACT,Ennis Rakestraw Jr.,Missouri,RakeEn00,2
+2026,DET,DB,28,ACT,Keith Abney II,Arizona State,AbneKe00,0
+2026,DET,DB,31,PUP,Kerby Joseph,Illinois,JoseKe03,4
+2026,DET,DB,30,ACT,Khalil Dorsey,Northern Arizona,DorsKh00,6
+2026,DET,DB,38,DEV,Nick Whiteside,Saginaw Valley State,WhitNi02,3
+2026,DET,DB,23,ACT,Rock Ya-Sin,Temple,Ya-SRo00,7
+2026,DET,DB,21,ACT,Roger McCreary,Auburn,McCrRo01,4
+2026,DET,DB,12,ACT,Thomas Harper,Notre Dame; Oklahoma State,HarpTh00,2
+2026,DET,DL,99,ACT,Ahmed Hassanein,Boise State,HassAh00,1
+2026,DET,DL,97,ACT,Aidan Hutchinson,Michigan,HutcAi00,4
+2026,DET,DL,54,ACT,Alim McNeill,N.C. State,McNeAl00,5
+2026,DET,DL,61,DEV,Anthony Lucas,USC; Texas A&M,,0
+2026,DET,DL,72,DEV,Ben Stille,Nebraska,StilBe00,4
+2026,DET,DL,90,DEV,Chris Smith,Notre Dame; Harvard,,3
+2026,DET,DL,9,ACT,Derrick Moore,Michigan,MoorDe03,0
+2026,DET,DL,66,ACT,Eric O'Neill,Rutgers; Long Island Coll.-Brooklyn,,0
+2026,DET,DL,95,ACT,Levi Onwuzurike,Washington,OnwuLe00,5
+2026,DET,DL,94,ACT,Mekhi Wingo,LSU; Missouri,WingMe00,2
+2026,DET,DL,92,RES,Payton Turner,Houston,TurnPa02,5
+2026,DET,DL,50,ACT,Skyler Gill-Howard,Texas Tech,GillSk00,0
+2026,DET,DL,91,ACT,Tyleik Williams,Ohio State,WillTy02,1
+2026,DET,DL,93,ACT,Tyler Lacy,Oklahoma State,LacyTy00,3
+2026,DET,DL,52,DEV,Tyre West,Tennessee,WestTy00,0
+2026,DET,K,39,ACT,Jake Bates,Arkansas; Central Arkansas,BateJa00,2
+2026,DET,LB,57,DEV,Amen Ogbongbemiga,Oklahoma State,OgboAm00,5
+2026,DET,LB,98,ACT,D.J. Wonnum,South Carolina,WonnDJ00,6
+2026,DET,LB,11,RES,Damone Clark,LSU,ClarDa02,4
+2026,DET,LB,55,ACT,Derrick Barnes,Purdue,BarnDe02,5
+2026,DET,LB,45,ACT,Devin White,LSU,WhitDe02,7
+2026,DET,LB,46,ACT,Jack Campbell,Iowa,CampJa04,3
+2026,DET,LB,41,ACT,Jimmy Rolder,Michigan,RoldJi00,0
+2026,DET,LB,35,DEV,Joe Bachie,Michigan State,BachJo01,6
+2026,DET,LB,44,ACT,Malcolm Rodriguez,Oklahoma State,RodrMa00,4
+2026,DET,LB,53,ACT,Trevor Nowaske,Saginaw Valley State,NowaTr00,3
+2026,DET,LS,49,ACT,Hogan Hatten,Idaho,,2
+2026,DET,OL,78,ACT,Ben Bartch,St. John's (MN),,6
+2026,DET,OL,76,ACT,Blake Miller,Clemson,,0
+2026,DET,OL,64,RSR,Cade Mays,Tennessee,,4
+2026,DET,OL,73,ACT,Christian Mahogany,Boston College,,2
+2026,DET,OL,77,DEV,Devin Cochran,Georgia Tech,,4
+2026,DET,OL,,DEV,Elijah Klein,Texas-El Paso,,2
+2026,DET,OL,59,RSN,Giovanni Manu,University of British Columbia,,2
+2026,DET,OL,70,ACT,Juice Scruggs,Penn State,,3
+2026,DET,OL,79,ACT,Larry Borom,Missouri,,5
+2026,DET,OL,63,DEV,Mason Miller,North Dakota State,,1
+2026,DET,OL,62,RES,Michael Niese,Temple,,4
+2026,DET,OL,71,ACT,Miles Frazier,LSU; Florida International,,1
+2026,DET,OL,58,ACT,Penei Sewell,Oregon,,5
+2026,DET,OL,69,ACT,Tate Ratledge,Georgia,,1
+2026,DET,P,3,ACT,Jack Fox,Rice,FoxxJa01,7
+2026,DET,QB,16,ACT,Jared Goff,California,GoffJa00,10
+2026,DET,QB,6,ACT,Joshua Dobbs,Tennessee,DobbJo00,9
+2026,DET,QB,2,DEV,Luke Altmyer,Illinois; Mississippi,AltmLu00,0
+2026,DET,RB,10,RES,Isiah Pacheco,Rutgers,PachIs00,4
+2026,DET,RB,25,ACT,Jacob Saylors,East Tennessee State,SaylJa00,3
+2026,DET,RB,0,ACT,Jahmyr Gibbs,Alabama; Georgia Tech,GibbJa01,3
+2026,DET,RB,33,ACT,Sione Vaki,Utah,VakiSi00,2
+2026,DET,TE,89,ACT,Brock Wright,Notre Dame,WrigBr01,5
+2026,DET,TE,87,ACT,Sam LaPorta,Iowa,LaPoSa01,3
+2026,DET,TE,82,DEV,Thomas Gordon,Northwestern,,1
+2026,DET,TE,83,ACT,Tyler Conklin,Central Michigan; Northwood,ConkTy00,8
+2026,DET,WR,14,ACT,Amon-Ra St. Brown,USC,StxxAm00,5
+2026,DET,WR,19,DEV,Dominic Lovett,Georgia; Missouri,LoveDo00,1
+2026,DET,WR,18,ACT,Isaac TeSlaa,Arkansas; Hillsdale,TeSlIs00,1
+2026,DET,WR,13,ACT,Jackson Meeks,Syracuse,MeekJa00,1
+2026,DET,WR,1,ACT,Jameson Williams,Alabama; Ohio State,WillJa11,4
+2026,DET,WR,88,RES,Kendrick Law,Kentucky; Alabama,LawxKe00,0
+2026,DET,WR,11,DEV,Lucky Jackson,Western Kentucky,JackLu00,3
+2026,DET,WR,17,ACT,Tay Martin,Oklahoma State,MartTa00,4
+2026,DET,WR,85,DEV,Tom Kennedy,Bryant,KennTo01,7
+2026,GB,DB,21,ACT,Benjamin St-Juste,Minnesota,StJuBe00,5
+2026,GB,DB,2,ACT,Brandon Cisse,South Carolina; N.C. State,CissBr00,0
+2026,GB,DB,24,ACT,Carrington Valentine,Kentucky,ValeCa00,3
+2026,GB,DB,20,DEV,Domani Jackson,Alabama,JackDo04,0
+2026,GB,DB,33,ACT,Evan Williams,Oregon; Fresno State,WillEv00,2
+2026,GB,DB,7,ACT,Javon Bullard,Georgia,BullJa00,2
+2026,GB,DB,37,RES,Johnathan Baldwin,UNLV,BaldJo01,1
+2026,GB,DB,36,ACT,Kamal Hadden,Tennessee; Independence Comm. College; Auburn,HaddKa00,2
+2026,GB,DB,25,ACT,Keisean Nixon,South Carolina,NixoKe00,7
+2026,GB,DB,27,ACT,Kitan Oladapo,Oregon State,OladKi00,2
+2026,GB,DB,46,RES,Marlon Jones,Vanderbilt; Eastern Washington,,0
+2026,GB,DB,39,DEV,Murvin Kenion,Nevada,,0
+2026,GB,DB,35,RES,Trey Dean III,Florida,DeanTr00,3
+2026,GB,DB,29,ACT,Xavier McKinney,Alabama,McKiXa00,6
+2026,GB,DL,93,ACT,Anthony Campbell,Miami; Louisiana-Monroe; Independence Comm. College,,1
+2026,GB,DL,53,DEV,Arron Mosby,Fresno State,MosbAr00,4
+2026,GB,DL,99,ACT,Barryn Sorrell,Texas,SorrBa00,1
+2026,GB,DL,57,ACT,Brenton Cox Jr.,Florida; Georgia,CoxxBr02,3
+2026,GB,DL,55,ACT,Chris McClellan,Missouri; Florida,McClCh01,0
+2026,GB,DL,95,ACT,Devonte Wyatt,Georgia,WyatDe00,4
+2026,GB,DL,63,DEV,Jaden Crumedy,Mississippi State,CrumJa00,2
+2026,GB,DL,98,ACT,Javon Hargrave,South Carolina State,HargJa00,10
+2026,GB,DL,96,ACT,Jonathan Ford,Miami,FordJo00,4
+2026,GB,DL,97,PUP,Jordon Riley,Oregon; Nebraska; Garden City CC; North Carolina,RileJo00,3
+2026,GB,DL,94,ACT,Karl Brooks,Bowling Green,BrooKa00,3
+2026,GB,DL,47,DEV,Nyjalik Kelly,UCF; Miami,KellNy00,0
+2026,GB,DL,91,ACT,Warren Brinson,Georgia,BrinWa00,1
+2026,GB,K,,DEV,Lenny Krieg,,KrieLe00,1
+2026,GB,K,28,ACT,Trey Smack,Florida,SmacTr00,0
+2026,GB,LB,45,RSR,Collin Oliver,Oklahoma State,OlivCo00,1
+2026,GB,LB,51,ACT,Dani Dennis-Sutton,Penn State,DennDa01,0
+2026,GB,LB,56,ACT,Edgerrin Cooper,Texas A&M,CoopEd00,2
+2026,GB,LB,58,ACT,Isaiah McDuffie,Boston College,McDuIs00,5
+2026,GB,LB,54,DEV,Kristian Welch,Iowa,WelcKr00,6
+2026,GB,LB,90,ACT,Lukas Van Ness,Iowa,VanNLu00,3
+2026,GB,LB,1,PUP,Micah Parsons,Penn State,ParsMi00,5
+2026,GB,LB,31,ACT,Nick Niemann,Iowa,NiemNi00,5
+2026,GB,LB,59,ACT,Ty'Ron Hopper,Missouri; Florida,HoppTy00,2
+2026,GB,LB,44,ACT,Zaire Franklin,Syracuse,FranZa00,8
+2026,GB,LS,42,ACT,Matthew Orzech,Azusa Pacific,OrzeMa00,7
+2026,GB,LS,,DEV,Scott Daly,Notre Dame,,5
+2026,GB,OL,65,ACT,Aaron Banks,Notre Dame,,5
+2026,GB,OL,71,ACT,Anthony Belton,N.C. State; Georgia Military,,1
+2026,GB,OL,78,DEV,Dalton Cooper,Oklahoma State; Texas State-San Marcos,,1
+2026,GB,OL,68,DEV,Dillon Wade,Auburn; Tulsa,,0
+2026,GB,OL,67,ACT,Donovan Jennings,University of South Florida,,2
+2026,GB,OL,62,ACT,Jacob Monk,Duke,,2
+2026,GB,OL,52,ACT,Jager Burton,Kentucky,,0
+2026,GB,OL,73,ACT,John Williams,Cincinnati,,1
+2026,GB,OL,77,ACT,Jordan Morgan,Arizona,,2
+2026,GB,OL,76,DEV,Josh Gesky,Illinois,,0
+2026,GB,OL,75,ACT,Sean Rhyan,UCLA,,4
+2026,GB,OL,79,ACT,Travis Glover,Georgia State,,2
+2026,GB,OL,50,ACT,Zach Bako-Bewele,Wake Forest,,4
+2026,GB,P,19,ACT,Daniel Whelan,UC Davis,WhelDa00,3
+2026,GB,QB,10,ACT,Jordan Love,Utah State,LoveJo03,6
+2026,GB,QB,,DEV,Kedon Slovis,BYU; Pittsburgh; USC,SlovKe00,2
+2026,GB,QB,6,ACT,Tyrod Taylor,Virginia Tech,TaylTy00,15
+2026,GB,RB,30,ACT,Chris Brooks,BYU; California,BrooCh00,3
+2026,GB,RB,8,EXE,Josh Jacobs,Alabama,JacoJo01,7
+2026,GB,RB,26,ACT,Kaleb Johnson,Iowa,JohnKa03,1
+2026,GB,RB,32,ACT,MarShawn Lloyd,USC; South Carolina,LloyMa00,2
+2026,GB,RB,22,DEV,Pierre Strong,South Dakota State,StroPi00,4
+2026,GB,TE,49,DEV,Drake Dabney,TCU; Baylor,DabnDr00,1
+2026,GB,TE,18,ACT,Jonnu Smith,Florida International,SmitJo01,9
+2026,GB,TE,81,ACT,Josh Whyle,Cincinnati,WhylJo01,3
+2026,GB,TE,88,PUP,Luke Musgrave,Oregon State,MusgLu00,3
+2026,GB,TE,86,ACT,Mark Redman,Louisville; San Diego State,,1
+2026,GB,TE,47,RES,McCallan Castles,Tennessee; UC Davis; California,CastMc00,2
+2026,GB,TE,84,RES,Thomas Yassmin,Utah,,2
+2026,GB,TE,85,ACT,Tucker Kraft,South Dakota State,KrafTu00,3
+2026,GB,WR,16,ACT,Bo Melton,Rutgers,MeltBo00,4
+2026,GB,WR,37,DEV,Chris Hilton Jr.,LSU,HiltCh00,0
+2026,GB,WR,9,ACT,Christian Watson,North Dakota State,WatsCh00,4
+2026,GB,WR,80,DEV,Isaiah Neyor,Nebraska; Texas; Wyoming,NeyoIs00,1
+2026,GB,WR,87,ACT,J. Michael Sturdivant,Florida; UCLA; California,MichJ00,0
+2026,GB,WR,11,ACT,Jayden Reed,Michigan State; Western Michigan,ReedJa03,3
+2026,GB,WR,0,ACT,Matthew Golden,Texas; Houston,GoldMa02,1
+2026,GB,WR,83,RSR,Savion Williams,TCU,WillSa01,1
+2026,GB,WR,23,ACT,Skyy Moore,Western Michigan,MoorSk01,4
+2026,HOU,DB,28,DEV,Alijah Huzzie,North Carolina; East Tennessee State,HuzzAl00,1
+2026,HOU,DB,34,DEV,Bryce Hall,Virginia,HallBr02,6
+2026,HOU,DB,2,ACT,Calen Bullock,USC,BullCa00,2
+2026,HOU,DB,37,ACT,Collin Wright,Stanford,,0
+2026,HOU,DB,24,ACT,Derek Stingley Jr.,LSU,StinDe00,4
+2026,HOU,DB,,DEV,George Odum,Central Arkansas,OdumGe00,8
+2026,HOU,DB,20,RSR,Ja'Marcus Ingram,Buffalo; Texas Tech,IngrJa00,4
+2026,HOU,DB,5,ACT,Jalen Pitre,Baylor,PitrJa00,4
+2026,HOU,DB,22,ACT,Jaylin Smith,USC,SmitJa11,1
+2026,HOU,DB,3,ACT,Kamari Lassiter,Georgia,LassKa00,2
+2026,HOU,DB,27,ACT,Kamari Ramsey,USC; UCLA,RamsKa01,0
+2026,HOU,DB,29,PUP,M.J. Stewart,North Carolina,StewM.00,8
+2026,HOU,DB,6,ACT,Reed Blankenship,Middle Tennessee State,BlanRe00,4
+2026,HOU,DB,11,ACT,Tremon Smith,Central Arkansas,SmitTr04,8
+2026,HOU,DL,95,RES,Ali Gaye,LSU; Garden City CC; Arizona Western,GayeAl01,3
+2026,HOU,DL,55,ACT,Danielle Hunter,LSU,HuntDa01,11
+2026,HOU,DL,96,DEV,Dominic Bailey,Tennessee,,0
+2026,HOU,DL,97,ACT,Dominique Robinson,Miami (Ohio),RobiDo00,4
+2026,HOU,DL,92,RES,Dylan Horton,TCU,HortDy00,3
+2026,HOU,DL,90,ACT,Jadeveon Clowney,South Carolina,ClowJa00,12
+2026,HOU,DL,,DEV,Junior Tafuna,Utah,,1
+2026,HOU,DL,93,ACT,Kayden McDonald,Ohio State,McDoKa00,0
+2026,HOU,DL,58,RES,Kyonte Hamilton,Rutgers,HamiKy01,1
+2026,HOU,DL,90,ACT,Logan Hall,Houston,HallLo00,4
+2026,HOU,DL,97,ACT,Mario Edwards,Florida State,EdwaMa01,11
+2026,HOU,DL,94,ACT,Sabastian Harsh,N.C. State; Wyoming,,0
+2026,HOU,DL,98,ACT,Sheldon Rankins,Louisville,RankSh00,10
+2026,HOU,DL,50,RES,Solomon Byrd,USC; Wyoming,ByrdSo00,2
+2026,HOU,DL,72,ACT,Tommy Togiai,Ohio State,TogiTo00,5
+2026,HOU,DL,51,ACT,Will Anderson Jr.,Alabama,AndeWi01,3
+2026,HOU,K,15,ACT,Ka'imi Fairbairn,UCLA,FairKa01,10
+2026,HOU,LB,59,ACT,Aiden Fisher,Indiana; James Madison,FishAi00,0
+2026,HOU,LB,0,ACT,Azeez Al-Shaair,Florida Atlantic,AlShAz00,7
+2026,HOU,LB,,DEV,Chris Braswell,Alabama,BrasCh01,2
+2026,HOU,LB,45,PUP,E.J. Speed,Tarleton State,SpeeEJ00,7
+2026,HOU,LB,39,ACT,Henry To'oTo'o,Alabama; Tennessee,TooTHe00,3
+2026,HOU,LB,33,ACT,Jacob Hummel,Iowa State,HummJa00,4
+2026,HOU,LB,35,ACT,Jake Hansen,Illinois,HansJa01,4
+2026,HOU,LB,56,DEV,Jamal Hill,Oregon,HillJa02,2
+2026,HOU,LB,52,RES,K.C. Ossai,Louisiana,,1
+2026,HOU,LB,30,ACT,Wade Woodaz,Clemson,WoodWa00,0
+2026,HOU,LS,40,ACT,Austin Brinkman,West Virginia,,1
+2026,HOU,OL,79,ACT,Aireontae Ersery,Minnesota,,1
+2026,HOU,OL,57,ACT,Blake Fisher,Notre Dame,,2
+2026,HOU,OL,71,RES,Braden Smith,Auburn,,8
+2026,HOU,OL,69,ACT,Ed Ingram,LSU,,4
+2026,HOU,OL,67,ACT,Evan Brown,SMU,,8
+2026,HOU,OL,64,ACT,Febechi Nwaiwu,Oklahoma; North Texas,,0
+2026,HOU,OL,60,ACT,Jake Andrews,Troy,,3
+2026,HOU,OL,70,DEV,James Neal III,Iowa State; Independence Comm. College,,0
+2026,HOU,OL,,DEV,Ka'ena Decambra,Arizona; Hawaii,,0
+2026,HOU,OL,66,ACT,Keylan Rutledge,Georgia Tech; Middle Tennessee State,,0
+2026,HOU,OL,,ACT,Nathan Thomas,Louisiana-Lafayette,,2
+2026,HOU,OL,76,RES,Sam Hagen,South Dakota State; North Dakota,,0
+2026,HOU,OL,77,ACT,Trent Brown,Florida; Georgia Military,,11
+2026,HOU,OL,75,ACT,Wyatt Teller,Virginia Tech,,8
+2026,HOU,P,38,ACT,Kai Kroeger,South Carolina,KroeKa00,1
+2026,HOU,QB,7,ACT,C.J. Stroud,Ohio State,StroCJ00,3
+2026,HOU,QB,10,ACT,Davis Mills,Stanford,MillDa02,5
+2026,HOU,QB,18,RES,Graham Mertz,Florida; Wisconsin,MertGr00,1
+2026,HOU,RB,44,ACT,British Brooks,North Carolina,BrooBr01,2
+2026,HOU,RB,32,ACT,David Montgomery,Iowa State,MontDa01,7
+2026,HOU,RB,25,DEV,Jawhar Jordan,Louisville; Syracuse,JordJa00,2
+2026,HOU,RB,26,DEV,Noah Whittington,Oregon; Western Kentucky,WhitNo00,0
+2026,HOU,RB,4,ACT,Woody Marks,USC; Mississippi State,MarkWo00,1
+2026,HOU,TE,9,ACT,Brevin Jordan,Miami,JordBr00,5
+2026,HOU,TE,8,ACT,Cade Stover,Ohio State,StovCa00,2
+2026,HOU,TE,86,ACT,Dalton Schultz,Stanford,SchuDa00,8
+2026,HOU,TE,87,ACT,Foster Moreau,LSU,MoreFo00,7
+2026,HOU,TE,83,ACT,Marlin Klein,Michigan,KleiMa00,0
+2026,HOU,TE,,DEV,Zaire Mitchell-Paden,Florida Atlantic,MitcZa00,4
+2026,HOU,WR,17,DEV,Daniel Sobkowicz,Illinois State,,0
+2026,HOU,WR,89,ACT,Jared Wayne,Pittsburgh,WaynJa01,3
+2026,HOU,WR,81,RES,Jayden Higgins,Iowa State; Eastern Kentucky,HiggJa00,1
+2026,HOU,WR,13,ACT,Jaylin Noel,Iowa State,NoelJa00,1
+2026,HOU,WR,85,DEV,Josh Kelly,Texas Tech; Washington State; Fresno State,,1
+2026,HOU,WR,,ACT,Kayshon Boutte,LSU,BoutKa00,3
+2026,HOU,WR,82,DEV,Lewis Bond,Boston College,BondLe00,0
+2026,HOU,WR,,DEV,Mitchell Tinsley,Penn State; Western Kentucky,TinsMi00,3
+2026,HOU,WR,12,ACT,Nico Collins,Michigan,CollNi00,5
+2026,HOU,WR,1,RSR,Tank Dell,Houston; Independence Comm. College; Alabama A&M,DellNa00,3
+2026,HOU,WR,19,ACT,Xavier Hutchinson,Iowa State,HutcXa00,3
+2026,IND,DB,25,ACT,A.J. Haulcy,LSU; Houston; New Mexico,HaulAJ00,0
+2026,IND,DB,26,SUS,Cam Taylor-Britt,Nebraska,TaylCa01,4
+2026,IND,DB,43,RES,Cameron Mitchell,Northwestern,MitcCa01,3
+2026,IND,DB,0,ACT,Camryn Bynum,California,BynuCa00,5
+2026,IND,DB,7,ACT,Charvarius Ward,Middle Tennessee State; Hinds CC,WardCh01,8
+2026,IND,DB,32,DEV,Daniel Scott,California,ScotDa03,3
+2026,IND,DB,30,ACT,Hunter Wohler,Wisconsin,WohlHu00,1
+2026,IND,DB,40,ACT,Jaylon Jones,Texas A&M,JoneJa13,3
+2026,IND,DB,35,ACT,Johnathan Edwards,Tulane,EdwaJo00,1
+2026,IND,DB,38,ACT,Jonathan Owens,Missouri Western,OwenJo01,8
+2026,IND,DB,27,ACT,Justin Walley,Minnesota,WallJu00,1
+2026,IND,DB,,ACT,Kapena Gushiken,Mississippi; Washington State; Saddleback Community College,,0
+2026,IND,DB,,DEV,Kenneth Harris,Oklahoma State,,0
+2026,IND,DB,39,DEV,Rob Carter Jr.,Robert Morris,,0
+2026,IND,DB,1,ACT,Sauce Gardner,Cincinnati,GardSa00,4
+2026,IND,DB,41,DEV,Trey Washington,Mississippi,WashTr00,1
+2026,IND,DL,95,ACT,Adetomiwa Adebawore,Northwestern,AdebAd00,3
+2026,IND,DL,98,ACT,Arden Key,LSU,KeyxAr00,8
+2026,IND,DL,55,ACT,Caden Curry,Ohio State,CurrCa00,0
+2026,IND,DL,64,DEV,Cameron Ball,Arkansas,,0
+2026,IND,DL,99,ACT,DeForest Buckner,Oregon,BuckDe00,10
+2026,IND,DL,52,ACT,George Gumbs Jr.,Florida; Northern Illinois,GumbGe00,0
+2026,IND,DL,90,ACT,Grover Stewart,Albany State (GA),StewGr00,9
+2026,IND,DL,91,ACT,Jaylahn Tuimoloau,Ohio State,TuimJT00,1
+2026,IND,DL,94,ACT,Jerry Tillery,Notre Dame,TillJe00,7
+2026,IND,DL,97,ACT,Laiatu Latu,UCLA; Washington,LatuLa00,2
+2026,IND,DL,72,ACT,Micheal Clemons,Texas A&M,ClemMi03,4
+2026,IND,DL,54,DEV,Mitchell Melton,Virginia; Ohio State,,0
+2026,IND,DL,93,ACT,Tim Smith,Alabama,SmitTi02,1
+2026,IND,K,3,ACT,Spencer Shrader,Notre Dame; University of South Florida,ShraSp00,2
+2026,IND,LB,51,ACT,Akeem Davis-Gaither,Appalachian State,DaviAk01,6
+2026,IND,LB,58,ACT,Austin Ajiake,UNLV,AjiaAu00,3
+2026,IND,LB,50,ACT,Bryce Boettcher,Oregon,BoetBr00,0
+2026,IND,LB,53,ACT,CJ Allen,Georgia,AlleCJ00,0
+2026,IND,LB,57,ACT,Jaylon Carlies,Missouri,CarlJa01,2
+2026,IND,LB,44,ACT,Tahj Chambers,Mississippi; Missouri State,,0
+2026,IND,LB,47,DEV,West Weeks,LSU; Virginia,,0
+2026,IND,LS,46,ACT,Luke Rhodes,William & Mary,RhodLu00,10
+2026,IND,OL,79,ACT,Bernhard Raimann,Central Michigan,,4
+2026,IND,OL,68,ACT,Dalton Tucker,Marshall,,2
+2026,IND,OL,62,ACT,Jalen Farmer,Kentucky,,0
+2026,IND,OL,75,ACT,Jalen Travis,Iowa State; Princeton,,1
+2026,IND,OL,66,DEV,Josh Sills,Oklahoma State; West Virginia,,4
+2026,IND,OL,67,DEV,Luke Tenuta,Virginia Tech,,4
+2026,IND,OL,71,ACT,Matt Goncalves,Pittsburgh,,2
+2026,IND,OL,76,DEV,Nolan Rucci,Penn State; Wisconsin,,0
+2026,IND,OL,56,ACT,Quenton Nelson,Notre Dame,,8
+2026,IND,OL,,DEV,Reid Holskey,Miami (Ohio),,1
+2026,IND,OL,78,DEV,Roy Mbaeteka,,,4
+2026,IND,OL,,ACT,Sedrick Van Pran-Granger,Georgia,,2
+2026,IND,OL,60,ACT,Tanor Bortolini,Wisconsin,,2
+2026,IND,P,8,ACT,Rigoberto Sanchez,Hawaii; Butte College,SancRi00,9
+2026,IND,QB,5,ACT,Anthony Richardson,Florida,RichAn03,3
+2026,IND,QB,17,ACT,Daniel Jones,Duke,JoneDa05,7
+2026,IND,QB,15,ACT,Riley Leonard,Notre Dame; Duke,LeonRi02,1
+2026,IND,RB,42,DEV,Anderson Castle,Duke; Appalachian State,,0
+2026,IND,RB,21,ACT,DJ Giddens,Kansas State,GiddDJ00,1
+2026,IND,RB,,DEV,Davon Booth,Mississippi State; Utah State,BootDa00,0
+2026,IND,RB,28,ACT,Jonathan Taylor,Wisconsin,TaylJo02,6
+2026,IND,RB,20,ACT,Seth McGowan,Kentucky; New Mexico State; Butler University; Oklahoma,McGoSe01,0
+2026,IND,TE,85,ACT,Andrew Ogletree,Youngstown State,OgleAn00,4
+2026,IND,TE,45,RES,Carson Towt,Notre Dame; Northern Arizona,,0
+2026,IND,TE,81,ACT,Mo Alie-Cox,Virginia Commonwealth Univ.,AlieMo00,9
+2026,IND,TE,49,DEV,Pharaoh Brown,Oregon,BrowPh01,9
+2026,IND,TE,84,ACT,Tyler Warren,Penn State,WarrTy00,1
+2026,IND,TE,86,RSR,Will Mallory,Miami,MallWi00,3
+2026,IND,WR,14,ACT,Alec Pierce,Cincinnati,PierAl00,4
+2026,IND,WR,6,DEV,Anthony Gould,Oregon State,GoulAn00,2
+2026,IND,WR,16,ACT,Ashton Dulin,Malone,DuliAs00,7
+2026,IND,WR,9,RES,Coleman Owen,Ohio; Northern Arizona,OwenCo00,1
+2026,IND,WR,2,RES,D.J. Montgomery,Austin Peay; Holmes County JC,MontDJ01,7
+2026,IND,WR,80,ACT,Deion Burks,Oklahoma; Purdue,BurkDe02,0
+2026,IND,WR,2,ACT,Josh Downs,North Carolina,DownJo00,3
+2026,IND,WR,10,ACT,Keenan Allen,California,AlleKe00,13
+2026,IND,WR,13,ACT,Laquon Treadwell,Mississippi,TreaLa00,10
+2026,IND,WR,12,DEV,Nick Westbrook-Ikhine,Indiana,WestNi00,6
+2026,JAX,DB,6,ACT,Antonio Johnson,Texas A&M,JohnAn07,3
+2026,JAX,DB,27,ACT,Caleb Ransaw,Tulane; Troy,RansCa00,1
+2026,JAX,DB,42,DEV,Cam'Ron Silmon-Craig,Colorado; Jackson State University,SilmCa00,1
+2026,JAX,DB,21,ACT,Christian Braswell,Rutgers; Temple,BrasCh00,3
+2026,JAX,DB,29,ACT,Eric Murray,Minnesota,MurrEr00,10
+2026,JAX,DB,37,DEV,Jabbar Muhammad,Oregon; Washington; Oklahoma State,,1
+2026,JAX,DB,22,ACT,Jalen Huskey,Maryland; Bowling Green,HuskJa00,0
+2026,JAX,DB,4,ACT,Jarrian Jones,Florida State; Mississippi State,JoneJa14,2
+2026,JAX,DB,2,ACT,Jourdan Lewis,Michigan,LewiJo01,9
+2026,JAX,DB,,DEV,Kaevon Merriweather,Iowa,MerrKa00,3
+2026,JAX,DB,1,ACT,Montaric Brown,Arkansas,BrowMo00,4
+2026,JAX,DB,25,ACT,Rayuan Lane III,Navy,LaneRa00,1
+2026,JAX,DB,12,ACT,Travis Hunter,Colorado; Jackson State University,HuntTr00,1
+2026,JAX,DL,98,ACT,Albert Regis,Texas A&M,RegiAl00,0
+2026,JAX,DL,91,ACT,Arik Armstead,Oregon,ArmsAr01,11
+2026,JAX,DL,95,ACT,BJ Green II,Colorado; Arizona State,GreeBJ00,1
+2026,JAX,DL,57,ACT,Bryan Thomas Jr.,South Carolina,,0
+2026,JAX,DL,52,ACT,DaVon Hamilton,Ohio State,HamiDa02,6
+2026,JAX,DL,92,ACT,Danny Striggow,Minnesota,StriDa01,1
+2026,JAX,DL,41,ACT,Josh Hines-Allen,Kentucky,AlleJo03,7
+2026,JAX,DL,97,RES,Keivie Rose,Arkansas; Louisiana Tech,,1
+2026,JAX,DL,93,ACT,Matt Dickerson,UCLA,DickMa00,8
+2026,JAX,DL,99,ACT,Ruke Orhorhoro,Clemson,OrhoRu00,2
+2026,JAX,DL,94,DEV,T.J. Bollers,California; Wisconsin,,0
+2026,JAX,DL,44,ACT,Travon Walker,Georgia,WalkTr03,4
+2026,JAX,DL,90,ACT,Wesley Williams,Duke,WillWe01,0
+2026,JAX,DL,58,RSR,Zach Durfee,Washington; Sioux Falls,DurfZa00,0
+2026,JAX,K,39,ACT,Cam Little,Arkansas,LittCa00,2
+2026,JAX,LB,50,ACT,Branson Combs,Wake Forest,CombBr00,1
+2026,JAX,LB,47,ACT,Dennis Gardeck,Sioux Falls; West Virginia State,GardDe01,8
+2026,JAX,LB,23,ACT,Foye Oluokun,Yale,OluoFo00,8
+2026,JAX,LB,54,DEV,Jack Kiser,Notre Dame,KiseJa00,1
+2026,JAX,LB,32,ACT,Jahlani Tavai,Hawaii,TavaJa00,7
+2026,JAX,LB,35,DEV,Jalen McLeod,Auburn; Appalachian State,McLeJa00,1
+2026,JAX,LB,45,RES,Jared Bartlett,Cincinnati; West Virginia,,1
+2026,JAX,LB,53,RES,Parker Hughes,Middle Tennessee State,HughPa00,0
+2026,JAX,LB,51,ACT,Ventrell Miller,Florida,MillVe00,3
+2026,JAX,LS,46,ACT,Ross Matiscik,Baylor,,6
+2026,JAX,OL,77,ACT,Anton Harrison,Oklahoma,,3
+2026,JAX,OL,70,ACT,Cole Van Lanen,Wisconsin,,5
+2026,JAX,OL,,ACT,Daniel Faalele,Minnesota,,4
+2026,JAX,OL,,DEV,Eli Cox,Kentucky,,1
+2026,JAX,OL,75,ACT,Emmanuel Pregnon,Oregon; USC; Wyoming,,0
+2026,JAX,OL,76,ACT,Ezra Cleveland,Boise State,,6
+2026,JAX,OL,74,RES,Garrett DiGiorgio,UCLA,,0
+2026,JAX,OL,61,DEV,Geron Christian,Louisville,,8
+2026,JAX,OL,60,ACT,Jonah Monheim,USC,,1
+2026,JAX,OL,78,DEV,Kilian Zierer,Auburn,,3
+2026,JAX,OL,65,RSR,Patrick Mekari,California,,7
+2026,JAX,OL,73,ACT,Robert Hainsey,Notre Dame,,5
+2026,JAX,OL,69,RES,Sam Mustipher,Notre Dame,,7
+2026,JAX,OL,72,ACT,Walker Little,Stanford,,5
+2026,JAX,OL,64,ACT,Wyatt Milum,West Virginia,,1
+2026,JAX,P,9,ACT,Logan Cooke,Mississippi State,CookLo00,8
+2026,JAX,QB,10,RES,Carter Bradley,South Alabama; Toledo,BradCa02,2
+2026,JAX,QB,17,DEV,Joey Aguilar,Tennessee; Appalachian State; Diablo Valley College,,0
+2026,JAX,QB,14,DEV,Nick Mullens,Southern Mississippi,MullNi00,9
+2026,JAX,QB,,ACT,Quinn Ewers,Texas; Ohio State,EwerQu00,1
+2026,JAX,QB,16,ACT,Trevor Lawrence,Clemson,LawrTr00,5
+2026,JAX,RB,43,ACT,Ameer Abdullah,Nebraska,AbduAm00,11
+2026,JAX,RB,33,ACT,Bhayshul Tuten,Virginia Tech; North Carolina A&T,TuteBh00,1
+2026,JAX,RB,24,ACT,Chris Rodriguez Jr.,Kentucky,RodrCh00,3
+2026,JAX,RB,30,DEV,J'Mari Taylor,Virginia; North Carolina Central,TaylJM00,0
+2026,JAX,RB,5,ACT,LeQuint Allen Jr.,Syracuse,AlleLe01,1
+2026,JAX,TE,85,ACT,Brenton Strange,Penn State,StraBr00,3
+2026,JAX,TE,,DEV,Hayden Rucci,Wisconsin,RuccHa00,2
+2026,JAX,TE,87,ACT,Nate Boerkircher,Texas A&M; Nebraska,BoerNa00,0
+2026,JAX,TE,80,ACT,Quintin Morris,Bowling Green,MorrQu00,5
+2026,JAX,TE,89,ACT,Tanner Koziol,Houston; Ball State,KoziTa00,0
+2026,JAX,WR,81,DEV,Austin Trammell,Rice,TramAu00,5
+2026,JAX,WR,7,ACT,Brian Thomas Jr.,LSU,ThomBr06,2
+2026,JAX,WR,18,ACT,C.J. Williams,Stanford; Wisconsin,WillCJ00,0
+2026,JAX,WR,3,ACT,Jakobi Meyers,N.C. State,MeyeJa01,7
+2026,JAX,WR,19,ACT,Josh Cameron,Baylor,CameJo01,0
+2026,JAX,WR,0,DEV,Michael Wortham,Montana; Eastern Washington,,0
+2026,JAX,WR,11,ACT,Parker Washington,Penn State,WashPa01,3
+2026,JAX,WR,13,DEV,Tim Jones,Southern Mississippi,JoneTi00,5
+2026,JAX,WR,86,DEV,Trebor Pena,Penn State; Syracuse,PenaTr00,0
+2026,KC,DB,17,ACT,Alohi Gilman,Notre Dame,GilmAl00,6
+2026,KC,DB,27,ACT,Chamarri Conner,Virginia Tech,ConnCh01,3
+2026,KC,DB,30,ACT,Christian Roland-Wallace,USC; Arizona,RolaCh00,2
+2026,KC,DB,19,DEV,D'Arco Perkins-McAllister,Louisiana-Monroe,,0
+2026,KC,DB,25,DEV,DeShon Singleton,Nebraska; Hutchinson CC,,0
+2026,KC,DB,21,ACT,Jaden Hicks,Washington State,HickJa01,2
+2026,KC,DB,22,ACT,Jadon Canady,Oregon; Mississippi; Tulane,CanaJa00,0
+2026,KC,DB,26,DEV,Kader Kohou,East Texas A&M,KohoKa00,4
+2026,KC,DB,8,ACT,Kristian Fulton,LSU,FultKr00,6
+2026,KC,DB,38,ACT,L'Jarius Sneed,Louisiana Tech,SneeLJ00,6
+2026,KC,DB,5,ACT,Mansoor Delane,LSU; Virginia Tech,DelaMa00,0
+2026,KC,DB,20,ACT,Nohl Williams,California,WillNo01,1
+2026,KC,DB,34,DEV,Tanner McCalister,Ohio State; Oklahoma State,McCaTa00,3
+2026,KC,DB,29,ACT,Xavier Nwankpa,Iowa,NwanXa00,0
+2026,KC,DL,97,ACT,Ashton Gillotte,Louisville,GillAs00,1
+2026,KC,DL,,ACT,Bryson Eason,Tennessee,,0
+2026,KC,DL,95,ACT,Chris Jones,Mississippi State,JoneCh09,10
+2026,KC,DL,50,DEV,Emmanuel Ogbah,Oklahoma State,OgbaEm00,10
+2026,KC,DL,91,ACT,Felix Anudike-Uzomah,Kansas State,AnudFe00,3
+2026,KC,DL,56,ACT,George Karlaftis,Purdue,KarlGe00,4
+2026,KC,DL,92,ACT,Khyiris Tonga,BYU,TongKh00,5
+2026,KC,DL,68,DEV,Marcus Harris,Auburn; Kansas,HarrMa08,2
+2026,KC,DL,55,PUP,Omarr Norman-Lott,Tennessee; Arizona State,NormOm00,1
+2026,KC,DL,99,ACT,Peter Woods,Clemson,WoodPe00,0
+2026,KC,DL,51,ACT,R Mason Thomas,Oklahoma,MasoR01,0
+2026,KC,DL,57,DEV,Tyreke Smith,Ohio State,SmitTy03,4
+2026,KC,K,7,ACT,Harrison Butker,Georgia Tech,ButkHa00,9
+2026,KC,LB,45,DEV,Cam Jones,Indiana,JoneCa04,3
+2026,KC,LB,48,DEV,Cole Christiansen,Army,ChriCo00,6
+2026,KC,LB,44,ACT,Cooper McDonald,TCU; San Diego State,McDoCo01,1
+2026,KC,LB,23,ACT,Drue Tranquill,Notre Dame,TranDr00,7
+2026,KC,LB,40,RES,Ethan Downs,Oklahoma,DownEt00,1
+2026,KC,LB,43,ACT,Jack Cochrane,South Dakota,CochJa00,4
+2026,KC,LB,,ACT,Jack Pyburn,LSU; Florida,,0
+2026,KC,LB,31,ACT,Jeffrey Bassa,Oregon,BassJe00,1
+2026,KC,LB,32,ACT,Nick Bolton,Missouri,BoltNi00,5
+2026,KC,LS,41,ACT,James Winchester,Oklahoma,WincJa00,11
+2026,KC,OL,61,RES,C.J. Hanson,Holy Cross,,2
+2026,KC,OL,52,ACT,Creed Humphrey,Oklahoma,,5
+2026,KC,OL,,ACT,Diego Pounds,Mississippi; North Carolina,,0
+2026,KC,OL,75,DEV,Ethan Driskell,Marshall,,2
+2026,KC,OL,64,ACT,Hunter Nourzad,Penn State; Cornell,,2
+2026,KC,OL,77,ACT,Jaylon Moore,Western Michigan,,5
+2026,KC,OL,71,ACT,Josh Simmons,Ohio State; San Diego State,,1
+2026,KC,OL,,ACT,Joshua Ezeudu,North Carolina,,4
+2026,KC,OL,70,ACT,Kahlil Benson,Indiana; Colorado,,0
+2026,KC,OL,76,ACT,Kingsley Suamataia,BYU; Oregon,,2
+2026,KC,OL,73,RES,Matt Waletzko,North Dakota,,4
+2026,KC,OL,66,ACT,Mike Caliendo,Western Michigan,,4
+2026,KC,OL,50,DEV,Pete Nygra,Louisville; Northern Illinois,,0
+2026,KC,OL,65,ACT,Trey Smith,Tennessee,,5
+2026,KC,P,14,ACT,Matt Araiza,San Diego State,AraiMa00,2
+2026,KC,QB,19,RES,Chris Oladokun,South Dakota State,OladCh00,4
+2026,KC,QB,14,ACT,Garrett Nussmeier,LSU,NussGa00,0
+2026,KC,QB,6,ACT,Justin Fields,Ohio State,FielJu00,5
+2026,KC,QB,15,ACT,Patrick Mahomes,Texas Tech,MahoPa00,9
+2026,KC,RB,,DEV,Ben VanSumeren,Michigan State; Michigan,VanSBe00,3
+2026,KC,RB,24,ACT,Brashard Smith,SMU; Miami,SmitBr09,1
+2026,KC,RB,35,RES,EJ Smith,Texas A&M; Stanford,SmitEJ00,0
+2026,KC,RB,10,ACT,Emmett Johnson,Nebraska,JohnEm01,0
+2026,KC,RB,42,DEV,Jaydn Ott,Oklahoma; California,OttxJa01,0
+2026,KC,RB,9,ACT,Kenneth Walker III,Michigan State; Wake Forest,WalkKe00,4
+2026,KC,RB,,DEV,Nate Carter,Michigan State; Connecticut,,1
+2026,KC,TE,88,ACT,Jake Briningstool,Clemson,BrinJa00,1
+2026,KC,TE,12,ACT,Jared Wiley,TCU; Texas,WileJa00,2
+2026,KC,TE,84,RES,John Michael Gyllenborg,Wyoming,MichJo03,0
+2026,KC,TE,83,ACT,Noah Gray,Duke,GrayNo00,5
+2026,KC,TE,87,ACT,Travis Kelce,Cincinnati,KelcTr00,13
+2026,KC,WR,85,DEV,Andrew Armstrong,Arkansas; East Texas A&M,ArmsAn01,1
+2026,KC,WR,13,ACT,Cyrus Allen,Cincinnati; Texas A&M; Louisiana Tech,AlleCy00,0
+2026,KC,WR,11,ACT,Jalen Royals,Utah State,RoyaJa00,1
+2026,KC,WR,8,RES,Jeff Caldwell,Cincinnati; Lindenwood,CaldJe01,0
+2026,KC,WR,82,RES,Jimmy Holiday,Louisiana Tech; Western Kentucky; Tennessee,,1
+2026,KC,WR,81,ACT,Nikko Remigio,Fresno State,RemiNi00,3
+2026,KC,WR,7,DEV,Omari Evans,Washington,,0
+2026,KC,WR,4,ACT,Rashee Rice,SMU,RiceRa01,3
+2026,KC,WR,2,ACT,Tyquan Thornton,Baylor,ThorTy00,4
+2026,KC,WR,1,ACT,Xavier Worthy,Texas,WortXa00,2
+2026,LAC,DB,20,ACT,Cam Hart,Notre Dame,HartCa00,2
+2026,LAC,DB,33,ACT,Deane Leonard,Mississippi,LeonDe00,4
+2026,LAC,DB,3,ACT,Derwin James,Florida State,JameDe00,8
+2026,LAC,DB,26,ACT,Donte Jackson,LSU,JackDo02,8
+2026,LAC,DB,2,ACT,Elijah Molden,Washington,MoldEl00,5
+2026,LAC,DB,22,ACT,Genesis Smith,Arizona,SmitGe01,0
+2026,LAC,DB,,DEV,Kaiir Elam,Florida,ElamKa00,4
+2026,LAC,DB,40,ACT,Kendall Williamson,Stanford,WillKe07,3
+2026,LAC,DB,46,DEV,Nikko Reed,Oregon; Colorado,ReedNi00,1
+2026,LAC,DB,27,ACT,R.J. Mickens,Clemson,MickRJ00,1
+2026,LAC,DB,24,ACT,Rodney Shelley,Georgia Tech,,0
+2026,LAC,DB,4,ACT,Tarheeb Still,Maryland,StilTa00,2
+2026,LAC,DB,23,ACT,Tony Jefferson,Oklahoma,JeffTo00,13
+2026,LAC,DL,94,ACT,Dalvin Tomlinson,Alabama,TomlDa00,9
+2026,LAC,DL,99,ACT,Jamaree Caldwell,Oregon; Houston; Independence Comm. College,CaldJa00,1
+2026,LAC,DL,,DEV,Jordan Jefferson,LSU,JeffJo01,2
+2026,LAC,DL,92,ACT,Justin Eboigbe,Alabama,EboiJu00,2
+2026,LAC,DL,91,ACT,Nick Barrett,South Carolina,BarrNi00,0
+2026,LAC,DL,44,RSR,Scott Matlock,Boise State,MatlSc00,3
+2026,LAC,DL,93,ACT,Teair Tart,Florida International,TartTe00,6
+2026,LAC,DL,64,DEV,Terry Webb,SMU; Texas State-San Marcos; Kilgore,,0
+2026,LAC,K,11,ACT,Cameron Dicker,Texas,DickCa00,4
+2026,LAC,LB,90,ACT,Akheem Mesidor,Miami; West Virginia,MesiAk01,0
+2026,LAC,LB,51,DEV,Andre Carter II,Army,CartAn01,3
+2026,LAC,LB,48,ACT,Bud Dupree,Kentucky,DuprAl00,11
+2026,LAC,LB,0,ACT,Daiyan Henley,Washington State; Nevada,HenlDa00,3
+2026,LAC,LB,53,ACT,Del'Shawn Phillips,Illinois,PhilDe00,7
+2026,LAC,LB,6,RES,Denzel Perryman,Miami,PerrDe00,11
+2026,LAC,LB,25,DEV,Junior Colson,Michigan,ColsJu00,2
+2026,LAC,LB,52,ACT,Khalil Mack,Buffalo,MackKh00,12
+2026,LAC,LB,54,RES,Kyle Kennard,South Carolina,KennKy00,1
+2026,LAC,LB,57,DEV,Lander Barton,Utah,,0
+2026,LAC,LB,58,ACT,Marlowe Wax,Syracuse,WaxxMa00,1
+2026,LAC,LB,56,DEV,Nadame Tucker,Western Michigan; Houston; Hutchinson CC; Independence Comm. College,TuckNa00,0
+2026,LAC,LB,43,ACT,Troy Dye,Oregon,DyexTr00,6
+2026,LAC,LB,45,ACT,Tuli Tuipulotu,USC,TuipTu00,3
+2026,LAC,LS,47,ACT,Josh Harris,Auburn,HarrJo02,14
+2026,LAC,OL,73,ACT,Alex Harkey,Oregon; Texas State-San Marcos; Colorado; Tyler JC,,0
+2026,LAC,OL,71,RSR,Branson Taylor,Pittsburgh,,1
+2026,LAC,OL,69,ACT,Cole Strange,Tennessee-Chattanooga,,4
+2026,LAC,OL,67,RSN,Isaiah World,Oregon; Nevada,,0
+2026,LAC,OL,60,ACT,Jacob Spomer,Fresno State; Diablo Valley College,,0
+2026,LAC,OL,66,ACT,Jake Slaughter,Florida,,0
+2026,LAC,OL,76,ACT,Joe Alt,Notre Dame,,2
+2026,LAC,OL,68,DEV,Josh Kaltenberger,Maryland; Purdue,,1
+2026,LAC,OL,74,ACT,Kayode Awosika,Buffalo,,5
+2026,LAC,OL,78,DEV,Laekin Vakalahi,,,2
+2026,LAC,OL,65,ACT,Logan Taylor,Boston College; Virginia,,0
+2026,LAC,OL,70,ACT,Rashawn Slater,Northwestern,,5
+2026,LAC,OL,77,ACT,Travis Burke,Memphis; Florida International; Gardner-Webb,,0
+2026,LAC,OL,75,ACT,Trevor Penning,Northern Iowa,,4
+2026,LAC,OL,79,ACT,Trey Pipkins,Sioux Falls,,7
+2026,LAC,OL,63,RES,Tyler Biadasz,Wisconsin,,6
+2026,LAC,P,16,ACT,J.K. Scott,Alabama,ScotJK00,8
+2026,LAC,QB,7,DEV,DJ Uiagalelei,Florida State; Oregon State; Clemson,UiagDJ00,1
+2026,LAC,QB,10,ACT,Justin Herbert,Oregon,HerbJu00,6
+2026,LAC,QB,5,ACT,Trey Lance,North Dakota State,LancTr00,5
+2026,LAC,RB,30,ACT,Alec Ingold,Wisconsin,IngoAl01,7
+2026,LAC,RB,35,DEV,Amar Johnson,South Dakota State,JohnAm00,1
+2026,LAC,RB,31,DEV,Gregory Desrosiers,Memphis; UMass Amherst; Louisville,,0
+2026,LAC,RB,34,ACT,Keaton Mitchell,East Carolina,MitcKe01,3
+2026,LAC,RB,28,ACT,Kimani Vidal,Troy,VidaKi00,2
+2026,LAC,RB,8,ACT,Omarion Hampton,North Carolina,HampOm00,1
+2026,LAC,TE,88,ACT,Charlie Kolar,Iowa State,KolaCh00,4
+2026,LAC,TE,83,ACT,David Njoku,Miami,NjokDa00,9
+2026,LAC,TE,49,DEV,Evan Svoboda,Wyoming; Snow,,0
+2026,LAC,TE,86,ACT,Oronde Gadsden II,Syracuse,GadsOr01,1
+2026,LAC,TE,,DEV,Patrick Herbert,Oregon,,1
+2026,LAC,WR,89,ACT,Brenen Thompson,Mississippi State; Texas,ThomBr07,0
+2026,LAC,WR,81,RES,Dalevon Campbell,South Carolina,CampDa01,1
+2026,LAC,WR,12,ACT,Derius Davis,TCU,DaviDe02,3
+2026,LAC,WR,,DEV,Gary Jennings,West Virginia,JennGa00,7
+2026,LAC,WR,84,ACT,KeAndre Lambert-Smith,Auburn; Penn State,LambKe01,1
+2026,LAC,WR,15,ACT,Ladd McConkey,Georgia,McCoLa00,2
+2026,LAC,WR,1,ACT,Quentin Johnston,TCU,JohnQu02,3
+2026,LAC,WR,38,RES,Sincere Brown,Colorado; Campbell University,,0
+2026,LAC,WR,,DEV,Theo Wease Jr.,Missouri; Oklahoma,WeasTh00,1
+2026,LAC,WR,9,ACT,Tre Harris,Mississippi; Louisiana Tech,HarrTr03,1
+2026,LAR,DB,36,RES,Alex Johnson,UCLA,,2
+2026,LAR,DB,21,DEV,Cam Lampkin,Washington State; Utah State,LampCa00,2
+2026,LAR,DB,1,ACT,Emmanuel Forbes,Mississippi State,ForbEm00,3
+2026,LAR,DB,2,ACT,Jaylen McCollough,Tennessee,McCoJa02,2
+2026,LAR,DB,35,ACT,Jaylen Watson,Washington State; Ventura,WatsJa02,4
+2026,LAR,DB,30,ACT,Josh Wallace,Michigan; UMass Amherst,WallJo00,2
+2026,LAR,DB,3,ACT,Kam Curl,Arkansas,CurlKa00,6
+2026,LAR,DB,5,ACT,Kamren Kinchens,Miami,KincKa00,2
+2026,LAR,DB,45,DEV,Nick Andersen,Wake Forest,,0
+2026,LAR,DB,25,DEV,Nyzier Fourqurean,Wisconsin,,0
+2026,LAR,DB,37,ACT,Quentin Lake,UCLA,LakeQu00,4
+2026,LAR,DB,34,DEV,Tanner Ingle,N.C. State,InglTa00,3
+2026,LAR,DB,22,ACT,Trent McDuffie,Washington,McDuTr00,4
+2026,LAR,DB,41,RES,Zech McPhearson,Texas Tech; Penn State,McPhZe00,5
+2026,LAR,DL,99,EXE,Aaron Donald,Pittsburgh,DonaAa00,12
+2026,LAR,DL,93,DEV,Bill Norton,Texas; Arizona; Georgia,,1
+2026,LAR,DL,55,ACT,Braden Fiske,Florida State; Western Michigan,FiskBr00,2
+2026,LAR,DL,91,ACT,Kobie Turner,Wake Forest,TurnKo00,3
+2026,LAR,DL,52,DEV,Larrell Murchison,N.C. State; Louisburg,MurcLa00,6
+2026,LAR,DL,95,ACT,Myles Garrett,Texas A&M,GarrMy00,9
+2026,LAR,DL,97,ACT,Poona Ford,Texas,FordPo00,8
+2026,LAR,DL,96,DEV,Tim Keenan III,Alabama,KeenTi00,0
+2026,LAR,DL,57,ACT,Ty Hamilton,Ohio State,HamiTy00,1
+2026,LAR,DL,90,ACT,Tyler Davis,Clemson,DaviTy05,2
+2026,LAR,K,92,ACT,Harrison Mevis,Missouri,MeviHa00,1
+2026,LAR,LB,0,ACT,Byron Young,Tennessee,YounBy01,3
+2026,LAR,LB,40,RES,Daniel Rickert,Virginia; Tennessee Technological Univ,,0
+2026,LAR,LB,59,DEV,Darryl Peterson III,Wisconsin,,0
+2026,LAR,LB,94,ACT,Desjuan Johnson,Toledo,JohnDe08,3
+2026,LAR,LB,,RES,Eddie Walls III,Houston; Florida International,,0
+2026,LAR,LB,58,DEV,Elias Neal,Marshall,NealEl00,2
+2026,LAR,LB,44,ACT,Grant Stuard,Houston,StuaGr00,5
+2026,LAR,LB,10,ACT,Josaiah Stewart,Michigan; Coastal Carolina,StewJo03,1
+2026,LAR,LB,11,RES,Keir Thomas,Florida State,ThomKe04,4
+2026,LAR,LB,53,ACT,Nate Landman,Colorado,LandNa01,4
+2026,LAR,LB,48,ACT,Omar Speights,LSU; Oregon State,SpeiOm00,2
+2026,LAR,LB,56,ACT,Shaun Dolac,Buffalo,DolaSh00,1
+2026,LAR,LB,47,ACT,Wesley Bailey,Louisville; Rutgers,,0
+2026,LAR,LS,49,ACT,Joe Cardona,Navy,,11
+2026,LAR,OL,77,ACT,Alaric Jackson,Iowa,,5
+2026,LAR,OL,64,DEV,Austin Blaske,North Carolina; Georgia,,0
+2026,LAR,OL,50,ACT,Beaux Limmer,Arkansas,,2
+2026,LAR,OL,66,ACT,Bill Murray,William & Mary,,6
+2026,LAR,OL,72,DEV,Blake Hance,Northwestern,,7
+2026,LAR,OL,65,ACT,Coleman Shelton,Washington,,8
+2026,LAR,OL,68,ACT,David Quessenberry,San Jose State,,13
+2026,LAR,OL,63,ACT,Dylan McMahon,N.C. State,,2
+2026,LAR,OL,67,RSR,Justin Dedich,USC,,2
+2026,LAR,OL,79,RSR,Keagen Trost,Missouri; Wake Forest,,0
+2026,LAR,OL,69,ACT,Kevin Dotson,Louisiana-Lafayette,,6
+2026,LAR,OL,73,ACT,Steve Avila,TCU,,3
+2026,LAR,OL,71,ACT,Warren McClendon Jr.,Georgia,,3
+2026,LAR,P,42,ACT,Ethan Evans,Wingate,EvanEt00,3
+2026,LAR,P,14,DEV,Jack Bouwmeester,Texas; Utah; Michigan State,,0
+2026,LAR,QB,2,RES,Matthew Caldwell,Texas; Troy; Gardner-Webb; Jacksonville State,,0
+2026,LAR,QB,9,ACT,Matthew Stafford,Georgia,StafMa00,17
+2026,LAR,QB,13,ACT,Stetson Bennett,Georgia; Jones County JC,BennSt00,3
+2026,LAR,QB,15,ACT,Ty Simpson,Alabama,SimpTy00,0
+2026,LAR,RB,24,ACT,Blake Corum,Michigan,CoruBl00,2
+2026,LAR,RB,33,DEV,Dean Connors,Houston; Rice; Riverside Community College,ConnDe00,0
+2026,LAR,RB,32,DEV,Jordan Waters,N.C. State; Duke,,0
+2026,LAR,RB,23,ACT,Kyren Williams,Notre Dame,WillKy02,4
+2026,LAR,RB,20,ACT,Ronnie Rivers,Fresno State,RiveRo01,4
+2026,LAR,TE,84,ACT,Colby Parkinson,Stanford,ParkCo02,6
+2026,LAR,TE,38,DEV,Dan Villari,Syracuse; Michigan,,0
+2026,LAR,TE,87,ACT,Davis Allen,Clemson,AlleDa02,3
+2026,LAR,TE,86,ACT,Max Klare,Ohio State; Purdue,KlarMa00,0
+2026,LAR,TE,18,ACT,Terrance Ferguson,Oregon,FergTe00,1
+2026,LAR,TE,89,ACT,Tyler Higbee,Western Kentucky,HigbTy00,10
+2026,LAR,WR,5,DEV,Alex Bachman,Wake Forest,BachAl00,7
+2026,LAR,WR,81,DEV,Brennan Presley,Oklahoma State,PresBr00,1
+2026,LAR,WR,6,ACT,CJ Daniels,Miami; LSU; Liberty,DaniCJ00,0
+2026,LAR,WR,17,ACT,Davante Adams,Fresno State,AdamDa01,12
+2026,LAR,WR,88,ACT,Jordan Whittington,Texas,WhitJo04,2
+2026,LAR,WR,4,ACT,Konata Mumpfield,Pittsburgh; Akron,MumpKo00,1
+2026,LAR,WR,12,ACT,Puka Nacua,BYU; Washington,NacuPu00,3
+2026,LAR,WR,8,ACT,Tutu Atwell,Louisville,AtweTu00,5
+2026,LAR,WR,19,ACT,Xavier Smith,Florida A&M,SmitXa00,3
+2026,LV,DB,29,RES,Chigozie Anusiem,Colorado State; California,AnusCh00,2
+2026,LV,DB,43,ACT,Dalton Johnson,Arizona,JohnDa11,0
+2026,LV,DB,26,ACT,Darien Porter,Iowa State,PortDa00,1
+2026,LV,DB,,ACT,Darrell Luter Jr.,South Alabama,LuteDa00,3
+2026,LV,DB,40,DEV,Devin Lafayette,Troy; Northern Illinois,,0
+2026,LV,DB,5,ACT,Eric Stokes,Georgia,StokEr00,5
+2026,LV,DB,22,DEV,Greedy Vance,USC; Florida State; Louisville,VancGr00,1
+2026,LV,DB,35,ACT,Hezekiah Masses,California; Florida International,MassHe00,0
+2026,LV,DB,20,ACT,Isaiah Pola-Mao,USC,PolaIs00,4
+2026,LV,DB,11,ACT,Jeremy Chinn,Southern Illinois,ChinJe00,6
+2026,LV,DB,28,ACT,Jermod McCoy,Tennessee; Oregon State,McCoJe00,0
+2026,LV,DB,3,ACT,Taron Johnson,Weber State,JohnTa01,8
+2026,LV,DB,31,ACT,Treydan Stukes,Arizona,StukTr00,0
+2026,LV,DB,27,ACT,Tristin McCollum,Sam Houston State,McCoTr00,4
+2026,LV,DL,69,ACT,Adam Butler,Vanderbilt,ButlAd00,9
+2026,LV,DL,90,DEV,Brandon Cleveland,N.C. State,ClevBr00,0
+2026,LV,DL,48,DEV,Cian Slone,N.C. State; Utah State,,0
+2026,LV,DL,63,ACT,Foley Fatukasi,Connecticut,FatuFo00,8
+2026,LV,DL,75,DEV,Gary Smith III,UCLA; Duke,,0
+2026,LV,DL,92,ACT,JJ Pegues,Mississippi; Auburn,PeguJJ00,1
+2026,LV,DL,91,DEV,Jahfari Harvey,SMU; Miami,HarvJa00,1
+2026,LV,DL,96,ACT,Jonah Laulu,Oklahoma; Hawaii,LaulJo00,2
+2026,LV,DL,42,RES,Keyron Crawford,Auburn; Arkansas State,CrawKe01,0
+2026,LV,DL,95,ACT,Kwity Paye,Michigan,PayeKw00,5
+2026,LV,DL,51,ACT,Malcolm Koonce,Buffalo,KoonMa00,5
+2026,LV,DL,98,ACT,Maxx Crosby,Eastern Michigan,CrosMa00,7
+2026,LV,DL,93,ACT,Patrick Johnson,Tulane,JohnPa02,5
+2026,LV,DL,99,ACT,Thomas Booker,Stanford,BookTh00,4
+2026,LV,DL,97,ACT,Tonka Hemingway,South Carolina,HemiTo00,1
+2026,LV,K,38,DEV,Kansei Matsuzawa,Hawaii,,0
+2026,LV,K,14,ACT,Matt Gay,Utah; Utah Valley,GayxMa00,7
+2026,LV,LB,54,RES,Brennan Jackson,Washington State,JackBr02,2
+2026,LV,LB,57,DEV,Cameron McGrone,Michigan,McGrCa00,5
+2026,LV,LB,55,ACT,Cody Lindenberg,Minnesota,LindCo00,1
+2026,LV,LB,17,ACT,Nakobe Dean,Georgia,DeanNa00,4
+2026,LV,LB,7,ACT,Quay Walker,Georgia,WalkQu00,4
+2026,LV,LB,50,ACT,Segun Olubi,San Diego State,OlubSe00,4
+2026,LV,LB,44,ACT,Tommy Eichenberg,Ohio State,EichTo00,2
+2026,LV,LS,47,ACT,Alex Ward,UCF,,3
+2026,LV,OL,56,ACT,Atonio Mafi,UCLA,,3
+2026,LV,OL,76,ACT,Caleb Rogers,Texas Tech,,1
+2026,LV,OL,60,ACT,Charles Grant,William & Mary,,1
+2026,LV,OL,71,ACT,DJ Glaze,Maryland,,2
+2026,LV,OL,58,ACT,Jackson Powers-Johnson,Oregon,,2
+2026,LV,OL,77,RES,Justin Pickett,Duke,,0
+2026,LV,OL,62,DEV,Kamar Missouri,Texas-San Antonio; Rutgers,,0
+2026,LV,OL,74,ACT,Kolton Miller,UCLA,,8
+2026,LV,OL,73,DEV,Niklas Henning,Queens University (Canada),,0
+2026,LV,OL,70,ACT,Spencer Burford,Texas-San Antonio,,4
+2026,LV,OL,66,ACT,Trey Zuhn III,Texas A&M,,0
+2026,LV,OL,65,ACT,Tyler Linderbaum,Iowa,,4
+2026,LV,OL,67,DEV,Will Putnam,Clemson,,2
+2026,LV,P,6,ACT,AJ Cole,N.C. State,ColeAJ01,7
+2026,LV,QB,12,ACT,Aidan O'Connell,Purdue,OConAi00,3
+2026,LV,QB,15,ACT,Fernando Mendoza,Indiana; California,MendFe00,0
+2026,LV,QB,8,ACT,Kirk Cousins,Michigan State,CousKi00,14
+2026,LV,RB,2,ACT,Ashton Jeanty,Boise State,JeanAs00,1
+2026,LV,RB,33,RES,Chris Collier,University of Lock Haven,CollCh01,2
+2026,LV,RB,34,ACT,Connor Heyward,Michigan State,HeywCo00,4
+2026,LV,RB,32,DEV,Dare Ogunbowale,Wisconsin,OgunDa00,9
+2026,LV,RB,23,ACT,Dylan Laube,New Hampshire,LaubDy00,2
+2026,LV,RB,30,ACT,Mike Washington Jr.,Arkansas; New Mexico State; Buffalo,,0
+2026,LV,RB,37,DEV,Roman Hemby,Indiana; Maryland,HembRo00,0
+2026,LV,TE,85,DEV,Albert Okwuegbunam,Missouri,OkwuAl00,6
+2026,LV,TE,89,ACT,Brock Bowers,Georgia,BoweBr01,2
+2026,LV,TE,84,RSR,Carter Runyon,Towson; Shenandoah University,RunyCa00,1
+2026,LV,TE,41,DEV,Chris Myarick,Temple,MyarCh00,7
+2026,LV,TE,80,ACT,Ian Thomas,Indiana; Nassau CC,ThomIa00,8
+2026,LV,TE,88,RES,Justin Shorter,Florida; Penn State,ShorJu00,3
+2026,LV,TE,87,ACT,Michael Mayer,Notre Dame,MayeMi00,3
+2026,LV,WR,86,RES,Chase Roberts,BYU,RobeCh00,0
+2026,LV,WR,,DEV,Cody White,Michigan State,,6
+2026,LV,WR,32,RES,Corey Rucker,Arkansas State,,0
+2026,LV,WR,81,ACT,Dareke Young,Lenoir Rhyne,YounDa02,4
+2026,LV,WR,83,DEV,Deven Thompkins,Utah State,ThomDe07,4
+2026,LV,WR,10,RES,Dont'e Thornton Jr.,Tennessee; Oregon,ThorDo00,1
+2026,LV,WR,18,ACT,Jack Bech,TCU; LSU,BechJa00,1
+2026,LV,WR,9,ACT,Jalen Nailor,Michigan State,NailJa00,4
+2026,LV,WR,19,ACT,Malik Benson,Oregon; Florida State; Alabama; Hutchinson CC,BensMa00,0
+2026,LV,WR,1,ACT,Tre Tucker,Cincinnati,TuckTr00,3
+2026,MIA,DB,3,ACT,Chris Johnson,San Diego State,JohnCh09,0
+2026,MIA,DB,11,ACT,Dante Trader Jr.,Maryland,TradDa00,1
+2026,MIA,DB,22,PUP,Darrell Baker Jr.,Georgia Southern,BakeDa02,4
+2026,MIA,DB,27,DEV,Ethan Bonner,Stanford,BonnEt00,3
+2026,MIA,DB,33,ACT,Jason Marshall Jr.,Florida,MarsJa00,1
+2026,MIA,DB,,DEV,Jaylin Simpson,Auburn,SimpJa00,2
+2026,MIA,DB,8,ACT,Julius Brents,Kansas State,BrenJu00,3
+2026,MIA,DB,,ACT,Julius Wood,East Carolina; Blinn College,WoodJu00,2
+2026,MIA,DB,43,DEV,Major Burns,LSU; Georgia,,0
+2026,MIA,DB,,ACT,Marcellas Dial Jr.,South Carolina; Georgia Military,DialMa00,2
+2026,MIA,DB,31,ACT,Michael Taaffe,Texas,TaafMi00,0
+2026,MIA,DB,,ACT,Reese Taylor,Purdue,TaylRe01,3
+2026,MIA,DB,29,PUP,Storm Duck,Louisville,DuckSt00,2
+2026,MIA,DB,23,ACT,Zayne Anderson,BYU,AndeZa02,5
+2026,MIA,DL,98,DEV,Clelin Ferrell,Clemson,FerrCl00,7
+2026,MIA,DL,,DEV,Jordan Miller,SMU; Miami,,2
+2026,MIA,DL,94,ACT,Jordan Phillips,Maryland; Tennessee,PhilJo02,1
+2026,MIA,DL,97,ACT,Keith Cooper Jr.,Houston; Tulane,,1
+2026,MIA,DL,78,RSR,Kenneth Grant,Michigan,GranKe01,1
+2026,MIA,DL,,ACT,Malik Herring,Georgia,HerrMa02,5
+2026,MIA,DL,57,DEV,Max Llewellyn,Iowa,LlewMa00,0
+2026,MIA,DL,,DEV,Mazi Smith,Michigan,SmitMa06,3
+2026,MIA,DL,95,RES,Rene Konga,Louisville; Rutgers,,0
+2026,MIA,DL,51,ACT,Robert Beal Jr.,Georgia,BealRo00,3
+2026,MIA,DL,59,DEV,Rodney McGraw,Western Michigan,,0
+2026,MIA,DL,92,ACT,Zach Sieler,Ferris State,SielZa00,8
+2026,MIA,DL,93,ACT,Zeek Biggers,Georgia Tech,BiggZe01,1
+2026,MIA,K,47,ACT,Riley Patterson,Memphis,PattRi01,5
+2026,MIA,LB,,DEV,Amari Gainer,North Carolina; Florida State,GainAm00,2
+2026,MIA,LB,44,ACT,Chop Robinson,Penn State; Maryland,RobiCh00,2
+2026,MIA,LB,42,ACT,Jackson Woodard,UNLV; Arkansas,WoodJa02,1
+2026,MIA,LB,10,ACT,Jacob Rodriguez,Texas Tech; Virginia,RodrJa00,0
+2026,MIA,LB,20,ACT,Jordyn Brooks,Texas Tech,BrooJo01,6
+2026,MIA,LB,9,ACT,Joshua Uche,Michigan,UcheJo00,6
+2026,MIA,LB,19,ACT,Kyle Louis,Pittsburgh,LouiKy00,0
+2026,MIA,LB,,DEV,Liam Anderson,Holy Cross,,3
+2026,MIA,LB,56,ACT,Ronnie Harrison,Alabama,HarrRo02,8
+2026,MIA,LB,17,RSR,Trey Moore,Texas; Texas-San Antonio,MoorTr02,0
+2026,MIA,LB,40,ACT,Willie Gay Jr.,Mississippi State,GayJWi00,6
+2026,MIA,LS,46,ACT,Tucker Addington,Sam Houston State,,4
+2026,MIA,OL,55,ACT,Aaron Brewer,Texas State-San Marcos,,6
+2026,MIA,OL,60,ACT,Andrew Meyer,Texas-El Paso,,2
+2026,MIA,OL,73,ACT,Austin Jackson,USC,,6
+2026,MIA,OL,75,ACT,Caedan Wallace,Penn State; West Virginia,,2
+2026,MIA,OL,,RES,Carter Warren,Pittsburgh,,3
+2026,MIA,OL,,ACT,Chukwuebuka Godrick,,,3
+2026,MIA,OL,63,ACT,DJ Campbell,Texas,,0
+2026,MIA,OL,72,DEV,Gottlieb Ayedze,Maryland; Frostburg State,,2
+2026,MIA,OL,,ACT,Jarrett Kingston,USC; Washington State,,2
+2026,MIA,OL,71,ACT,Jonah Savaiinaea,Arizona,,1
+2026,MIA,OL,74,ACT,Kadyn Proctor,Alabama,,0
+2026,MIA,OL,52,ACT,Patrick Paul,Houston,,2
+2026,MIA,P,48,ACT,Bradley Pinion,Clemson,PiniBr00,11
+2026,MIA,QB,,ACT,Brady Cook,Missouri,CookBr03,1
+2026,MIA,QB,,ACT,Kyle McCord,Syracuse; Ohio State,McCoKy00,1
+2026,MIA,QB,2,ACT,Malik Willis,Liberty; Auburn,WillMa12,4
+2026,MIA,RB,37,DEV,Carlos Washington,Southeastern Louisiana,WashCa00,3
+2026,MIA,RB,34,ACT,DJ Herman,San Diego State,,0
+2026,MIA,RB,28,ACT,De'Von Achane,Texas A&M,AchaDe00,3
+2026,MIA,RB,,DEV,Jarquez Hunter,Auburn,HuntJa03,1
+2026,MIA,RB,5,ACT,Jaylen Wright,Tennessee,WrigJa04,2
+2026,MIA,RB,0,ACT,Ollie Gordon II,Oklahoma State,GordOl00,1
+2026,MIA,TE,89,RES,Ben Sims,Baylor,SimsBe00,3
+2026,MIA,TE,87,RES,Cole Turner,Nevada,TurnCo00,4
+2026,MIA,TE,85,ACT,Greg Dulcich,UCLA,DulcGr00,4
+2026,MIA,TE,,ACT,Justin Joly,N.C. State; Connecticut,JolyJu00,0
+2026,MIA,TE,49,ACT,Seydou Traore,Mississippi State; Arkansas State,TraoSe00,0
+2026,MIA,TE,,DEV,Tre Watson,Texas A&M; Fresno State,,1
+2026,MIA,TE,82,ACT,Will Kacmarek,Ohio State; Ohio,KacmWi00,0
+2026,MIA,WR,7,ACT,Caleb Douglas,Texas Tech; Florida,DougCa00,0
+2026,MIA,WR,18,ACT,Chris Bell,Louisville,BellCh00,0
+2026,MIA,WR,17,DEV,Jalen Reagor,TCU,ReagJa00,6
+2026,MIA,WR,1,ACT,Jalen Tolbert,South Alabama,TolbJa00,4
+2026,MIA,WR,83,ACT,Kevin Coleman Jr.,Missouri; Mississippi State; Louisville; Jackson State University,ColeKe03,0
+2026,MIA,WR,6,ACT,Malik Washington,Virginia; Northwestern,WashMa00,2
+2026,MIA,WR,,ACT,Ryan Miller,Furman,MillRy01,3
+2026,MIA,WR,,DEV,Will Sheppard,Colorado; Vanderbilt,,1
+2026,MIN,DB,40,DEV,Bryce Phillips,San Diego State; Tennessee State,,0
+2026,MIN,DB,7,ACT,Byron Murphy,Washington,MurpBy00,7
+2026,MIN,DB,20,ACT,Charles Demmings,Stephen F. Austin State,DemmCh00,0
+2026,MIN,DB,38,DEV,Da'Veawn Armstead,North Texas; TCU; Sam Houston State,,0
+2026,MIN,DB,2,ACT,Isaiah Rodgers,UMass Amherst,RodgIs00,6
+2026,MIN,DB,39,ACT,Jacob Thomas,James Madison,,0
+2026,MIN,DB,8,ACT,Jakobe Thomas,Miami; Tennessee; Middle Tennessee State,ThomJa07,0
+2026,MIN,DB,23,ACT,James Pierre,Florida Atlantic,PierJa01,6
+2026,MIN,DB,24,ACT,Jay Ward,LSU,WardJa00,3
+2026,MIN,DB,44,ACT,Josh Metellus,Michigan,MeteJo00,6
+2026,MIN,DB,25,DEV,Kahlef Hailassie,Western Kentucky; Oregon,HailKa00,3
+2026,MIN,DB,29,RES,Marcus Allen,North Carolina,,0
+2026,MIN,DB,37,DEV,Tavierre Thomas,Ferris State,ThomTa01,8
+2026,MIN,DB,26,ACT,Theo Jackson,Tennessee,JackTh00,4
+2026,MIN,DB,28,RES,Tyreek Chappell,Texas A&M,,0
+2026,MIN,DB,34,ACT,Zemaiah Vaughn,Utah,VaugZe00,1
+2026,MIN,DL,95,ACT,Caleb Banks,Florida; Louisville,BankCa01,0
+2026,MIN,DL,97,ACT,Domonique Orange,Iowa State,OranDo00,0
+2026,MIN,DL,99,ACT,Elijah Williams,Morgan State,WillEl00,1
+2026,MIN,DL,96,DEV,Jahvaree Ritzie,North Carolina,,0
+2026,MIN,DL,61,ACT,Jalen Redmond,Oklahoma,RedmJa01,2
+2026,MIN,DL,50,ACT,Levi Drake Rodriguez,East Texas A&M,RodrLe00,2
+2026,MIN,DL,,DEV,Naquan Jones,Michigan State,JoneNa01,5
+2026,MIN,DL,94,RES,Taki Taimani,Oregon; Washington,TaimTa00,2
+2026,MIN,DL,90,ACT,Tyrion Ingram-Dawkins,Georgia,IngrTy00,1
+2026,MIN,K,16,ACT,Will Reichard,Alabama,ReicWi00,2
+2026,MIN,LB,43,ACT,Andrew Van Ginkel,Wisconsin; Iowa Western CC; South Dakota,VanGAn00,7
+2026,MIN,LB,59,DEV,Bangally Kamara,Kansas; South Carolina; Pittsburgh,,0
+2026,MIN,LB,51,ACT,Blake Cashman,Minnesota,CashBl00,7
+2026,MIN,LB,98,ACT,Bo Richter,Air Force,RichBo01,2
+2026,MIN,LB,40,ACT,Chaz Chambliss,Georgia,ChamCh01,1
+2026,MIN,LB,15,ACT,Dallas Turner,Alabama,TurnDa01,2
+2026,MIN,LB,55,ACT,Eric Wilson,Cincinnati; Northwestern,WilsEr00,9
+2026,MIN,LB,0,ACT,Ivan Pace Jr.,Cincinnati; Miami (Ohio),PaceIv00,3
+2026,MIN,LB,48,RES,Jacob Roberts,Wake Forest; North Carolina A&T,,0
+2026,MIN,LB,41,ACT,Jake Golday,Cincinnati; Central Arkansas,GoldJa01,0
+2026,MIN,LB,32,RES,Jamal Adams,LSU,AdamJa00,9
+2026,MIN,LB,54,RES,Kenny Dyson,Bryant,DysoKe01,2
+2026,MIN,LB,,DEV,Kyle Van Noy,BYU,VanNKy00,12
+2026,MIN,LB,92,RES,Tyler Batty,BYU,BattTy00,1
+2026,MIN,LS,42,ACT,Andrew DePaola,Rutgers,,12
+2026,MIN,OL,64,ACT,Blake Brandel,Oregon State,,6
+2026,MIN,OL,75,ACT,Brian O'Neill,Pittsburgh,,8
+2026,MIN,OL,78,ACT,Caleb Tiernan,Northwestern,,0
+2026,MIN,OL,71,ACT,Christian Darrisaw,Virginia Tech,,5
+2026,MIN,OL,74,ACT,Donovan Jackson,Ohio State,,1
+2026,MIN,OL,68,DEV,Henry Byrd,Princeton,,3
+2026,MIN,OL,,DEV,Jack Nelson,Wisconsin,,1
+2026,MIN,OL,60,ACT,Joe Huber,Wisconsin,,1
+2026,MIN,OL,65,RSR,Michael Jurgens,Wake Forest,,2
+2026,MIN,OL,,ACT,Nick Samac,Michigan State,,2
+2026,MIN,OL,72,ACT,Ryan Van Demark,Connecticut,,4
+2026,MIN,OL,,ACT,Trevor Keegan,Michigan,,2
+2026,MIN,OL,76,ACT,Will Fries,Penn State,,5
+2026,MIN,P,47,ACT,Brett Thorson,Georgia,,0
+2026,MIN,QB,11,ACT,Carson Wentz,North Dakota State,WentCa00,10
+2026,MIN,QB,9,ACT,J.J. McCarthy,Michigan,McCaJJ00,2
+2026,MIN,QB,1,ACT,Kyler Murray,Oklahoma; Texas A&M,MurrKy00,7
+2026,MIN,QB,12,DEV,Max Brosmer,Minnesota; New Hampshire,BrosMa00,1
+2026,MIN,RB,33,ACT,Aaron Jones,Texas-El Paso,JoneAa00,9
+2026,MIN,RB,,DEV,DeeJay Dallas,Miami,DallDe00,6
+2026,MIN,RB,21,ACT,Demond Claiborne,Wake Forest,ClaiDe00,0
+2026,MIN,RB,17,RES,Jermar Jefferson,Oregon State,JeffJe00,5
+2026,MIN,RB,27,ACT,Jordan Mason,Georgia Tech,MasoJo00,4
+2026,MIN,RB,45,ACT,Max Bredeson,Michigan,BredMa00,0
+2026,MIN,TE,85,ACT,Ben Yurosek,Georgia; Stanford,YuroBe00,1
+2026,MIN,TE,83,RES,Bryson Nesbit,North Carolina,,1
+2026,MIN,TE,,DEV,Cam Grandy,Illinois State; Missouri Western,GranCa00,2
+2026,MIN,TE,86,ACT,Gavin Bartholomew,Pittsburgh,BartGa00,1
+2026,MIN,TE,84,ACT,Josh Oliver,San Jose State,OlivJo00,7
+2026,MIN,TE,87,ACT,T.J. Hockenson,Iowa,HockTJ00,7
+2026,MIN,WR,89,DEV,Dillon Bell,Georgia,,0
+2026,MIN,WR,19,RES,Dontae Fleming,Tulane,,1
+2026,MIN,WR,14,ACT,Jauan Jennings,Tennessee,JennJa00,6
+2026,MIN,WR,82,SUS,Jeshaun Jones,Maryland,JoneJe01,2
+2026,MIN,WR,3,ACT,Jordan Addison,USC; Pittsburgh,AddiJo00,3
+2026,MIN,WR,18,ACT,Justin Jefferson,LSU,JeffJu00,6
+2026,MIN,WR,46,DEV,Michael Briscoe,Cal Poly (San Luis Obispo),,0
+2026,MIN,WR,4,ACT,Myles Price,Indiana; Texas Tech,PricMy00,1
+2026,MIN,WR,13,ACT,Tai Felton,Maryland,FeltTa00,1
+2026,MIN,WR,30,DEV,Trayvon Rudolph,Toledo; Northern Illinois,,0
+2026,NE,DB,41,RSN,Brenden Schooler,Texas; Arizona; Oregon,SchoBr00,4
+2026,NE,DB,7,ACT,Carlton Davis III,Auburn,DaviCa02,8
+2026,NE,DB,29,ACT,Channing Canada,TCU; Trinity Valley CC,,0
+2026,NE,DB,22,ACT,Charles Woods,SMU; West Virginia; Illinois State,WoodCh01,2
+2026,NE,DB,0,ACT,Christian Gonzalez,Oregon,GonzCh00,3
+2026,NE,DB,4,ACT,Craig Woodson,California,WoodCr00,1
+2026,NE,DB,24,ACT,Dell Pettus,Troy,PettDe00,2
+2026,NE,DB,,ACT,Jaylen Reed,Penn State,ReedJa04,1
+2026,NE,DB,21,ACT,Karon Prunty,Wake Forest,PrunKa00,0
+2026,NE,DB,31,ACT,Kevin Byard,Middle Tennessee State,ByarKe01,10
+2026,NE,DB,28,DEV,Kindle Vildor,Georgia Southern,VildKi00,6
+2026,NE,DB,25,ACT,Marcus Jones,Houston; Troy,JoneMa06,4
+2026,NE,DB,33,DEV,Mike Brown,Miami (Ohio),BrowMi02,4
+2026,NE,DL,90,ACT,Christian Barmore,Alabama,BarmCh00,5
+2026,NE,DL,94,ACT,Cory Durden,N.C. State; Florida State,DurdCo00,3
+2026,NE,DL,95,DEV,Eric Gregory,Arkansas,GregEr00,1
+2026,NE,DL,62,RES,Isaiah Iton,Rutgers; Hutchinson CC,,2
+2026,NE,DL,,DEV,Jalen Hunt,Cincinnati; Michigan State,,0
+2026,NE,DL,98,DEV,Jeremiah Pharms Jr.,Friends U.,PharJe00,4
+2026,NE,DL,92,ACT,Joshua Farmer,Florida State,FarmJo00,1
+2026,NE,DL,93,ACT,Leonard Taylor III,Miami,TaylLe01,2
+2026,NE,DL,97,ACT,Milton Williams,Louisiana Tech,WillMi08,5
+2026,NE,K,36,ACT,Andy Borregales,Miami,BorrAn00,1
+2026,NE,LB,53,ACT,Christian Elliss,Idaho,ElliCh00,5
+2026,NE,LB,,ACT,Darius Muasau,UCLA; Hawaii,MuasDa00,2
+2026,NE,LB,5,ACT,Dre'Mont Jones,Ohio State,JoneDr00,7
+2026,NE,LB,91,ACT,Elijah Ponder,Cal Poly (San Luis Obispo),PondEl02,1
+2026,NE,LB,,ACT,Erick Hunter,Morgan State,,0
+2026,NE,LB,50,ACT,Gabe Jacas,Illinois,JacaGa00,0
+2026,NE,LB,2,PUP,Harold Landry III,Boston College,LandHa00,8
+2026,NE,LB,,DEV,Jose Ramirez,Eastern Michigan,RamiJo00,3
+2026,NE,LB,35,DEV,K.J. Britt,Auburn,BritKJ00,5
+2026,NE,LB,59,RES,Khalil Jacobs,Missouri; South Alabama,,0
+2026,NE,LB,48,ACT,Namdi Obiazor,TCU; Iowa Western CC,ObiaNa00,0
+2026,NE,LB,45,ACT,Quintayvious Hutchins,Boston College,HutcQu00,0
+2026,NE,LB,51,DEV,Riley Wilson,Arizona; Hawaii; Montana,,0
+2026,NE,LB,14,ACT,Robert Spillane,Western Michigan,SpilRo00,8
+2026,NE,LS,47,ACT,Julian Ashby,Vanderbilt; Furman,,1
+2026,NE,OL,75,ACT,Alijah Vera-Tucker,USC,,5
+2026,NE,OL,77,ACT,Ben Brown,Mississippi,,4
+2026,NE,OL,74,ACT,Caleb Lomu,Utah,,0
+2026,NE,OL,68,ACT,Dametrious Crownover,Texas A&M,,0
+2026,NE,OL,70,ACT,Greg Van Roten,Penn,,14
+2026,NE,OL,64,DEV,Jacob Rizy,Florida State; Harvard,,0
+2026,NE,OL,,DEV,Jake Kubas,North Dakota State,,2
+2026,NE,OL,55,ACT,Jared Wilson,Georgia,,1
+2026,NE,OL,72,DEV,Lorenz Metz,Cincinnati,,2
+2026,NE,OL,52,RSR,Marcus Bryant,Missouri; SMU,,1
+2026,NE,OL,71,ACT,Mike Onwenu,Michigan,,6
+2026,NE,OL,76,ACT,Morgan Moses,Virginia,,12
+2026,NE,OL,,ACT,Walter Rouse,Oklahoma; Stanford,,2
+2026,NE,OL,66,ACT,Will Campbell,LSU,,1
+2026,NE,P,17,RES,Bryce Baringer,Michigan State; Illinois,BariBr00,3
+2026,NE,P,,DEV,Mitch Wishnowsky,Utah; Santa Barbara,WishMi00,7
+2026,NE,QB,15,ACT,Behren Morton,Texas Tech,MortBe00,0
+2026,NE,QB,10,ACT,Drake Maye,North Carolina,MayeDr00,2
+2026,NE,QB,16,ACT,Tommy DeVito,Illinois; Syracuse,DeViTo00,3
+2026,NE,RB,,ACT,Corey Kiner,Cincinnati; LSU,KineCo00,1
+2026,NE,RB,26,DEV,Hassan Haskins,Michigan,HaskHa00,4
+2026,NE,RB,34,DEV,Lan Larison,UC Davis,LariLa00,1
+2026,NE,RB,39,RES,Myles Montgomery,UCF; Cincinnati,,0
+2026,NE,RB,44,ACT,Reggie Gilliam,Toledo,GillRe00,6
+2026,NE,RB,38,ACT,Rhamondre Stevenson,Oklahoma; Cerritos College,StevRh00,5
+2026,NE,RB,32,ACT,TreVeyon Henderson,Ohio State,HendTr02,1
+2026,NE,TE,,ACT,Cameron Latu,Alabama,LatuCa01,3
+2026,NE,TE,82,ACT,Eli Raridon,Notre Dame,RariEl00,0
+2026,NE,TE,85,ACT,Hunter Henry,Arkansas,HenrHu00,10
+2026,NE,TE,80,RES,Julian Hill,Campbell University,HillJu02,3
+2026,NE,TE,,DEV,Shane Zylstra,Minnesota State,ZylsSh00,5
+2026,NE,TE,84,ACT,Tanner Arkin,Illinois; Colorado State,,0
+2026,NE,WR,1,ACT,A.J. Brown,Mississippi,BrowAJ00,7
+2026,NE,WR,88,DEV,Cameron Dorner,North Texas; Shepherd,,0
+2026,NE,WR,3,ACT,DeMario Douglas,Liberty,DougDe00,3
+2026,NE,WR,86,ACT,Efton Chism III,Eastern Washington,ChisEf00,1
+2026,NE,WR,29,RES,Jeremiah Webb,South Alabama; South Dakota,,1
+2026,NE,WR,83,DEV,Kyle Dixon,Culver-Stockton College,,0
+2026,NE,WR,18,ACT,Kyle Williams,Washington State,WillKy03,1
+2026,NE,WR,13,ACT,Mack Hollins,North Carolina,HollMa00,9
+2026,NE,WR,87,ACT,Romeo Doubs,Nevada,DoubRo00,4
+2026,NO,DB,,RES,David Long,Michigan,LongDa02,7
+2026,NO,DB,,ACT,Decamerion Richardson,Mississippi State,RichDe01,2
+2026,NO,DB,38,ACT,Jayden Price,North Dakota State,,1
+2026,NO,DB,7,ACT,Jonas Sanker,Virginia,SankJo00,1
+2026,NO,DB,31,ACT,Jordan Howden,Minnesota,HowdJo00,3
+2026,NO,DB,23,ACT,Julian Blackmon,Utah,BlacJu01,6
+2026,NO,DB,21,ACT,Justin Reid,Stanford,ReidJu00,8
+2026,NO,DB,1,ACT,Kool-Aid McKinstry,Alabama,McKiKo00,2
+2026,NO,DB,36,RES,Lorenzo Styles Jr.,Ohio State; Notre Dame,StylLo00,0
+2026,NO,DB,22,ACT,Martin Emerson,Mississippi State,EmerMa00,4
+2026,NO,DB,42,ACT,Michael Reid,South Dakota; Monmouth,,1
+2026,NO,DB,29,ACT,Quincy Riley,Louisville; Middle Tennessee State,RileQu00,1
+2026,NO,DB,25,RES,Rejzohn Wright,Oregon State,,3
+2026,NO,DB,34,DEV,TJ Hall,Iowa,HallTJ00,0
+2026,NO,DL,90,RES,Bryan Bresee,Clemson,BresBr00,3
+2026,NO,DL,96,ACT,Carl Granderson,Wyoming,GranCa01,7
+2026,NO,DL,99,ACT,Chase Young,Ohio State,YounCh04,6
+2026,NO,DL,52,ACT,Christen Miller,Georgia,MillCh01,0
+2026,NO,DL,50,ACT,Colby Wooden,Auburn,WoodCo01,3
+2026,NO,DL,92,ACT,Davon Godchaux,LSU,GodcDa00,9
+2026,NO,DL,40,DEV,Fadil Diggs,Syracuse; Texas A&M,DiggFa00,1
+2026,NO,DL,62,DEV,Jay'Viar Suggs,Wisconsin; LSU; Grand Valley,,0
+2026,NO,DL,95,ACT,John Ridgeway,Arkansas; Illinois State,RidgJo00,4
+2026,NO,DL,97,ACT,Khristian Boyd,Northern Iowa,BoydKh00,2
+2026,NO,DL,63,RES,Michael Heldman,Central Michigan,,0
+2026,NO,DL,93,ACT,Nathan Shepherd,Fort Hays; Simon Fraser,ShepNa00,8
+2026,NO,DL,98,ACT,Tyree Wilson,Texas Tech,WilsTy01,3
+2026,NO,DL,91,ACT,Vernon Broughton,Texas,BrouVe00,1
+2026,NO,K,39,DEV,Charlie Smyth,,SmytCh00,2
+2026,NO,K,10,ACT,Daniel Carlson,Auburn,CarlDa00,8
+2026,NO,LB,54,ACT,Anfernee Jennings,Alabama,JennAn00,6
+2026,NO,LB,94,ACT,Cameron Jordan,California,JordCa00,15
+2026,NO,LB,58,ACT,Chris Rumph II,Duke,RumpCh00,5
+2026,NO,LB,28,ACT,Danny Stutsman,Oklahoma,StutDa00,1
+2026,NO,LB,44,ACT,Isaiah Stalbird,South Dakota State,StalIs00,2
+2026,NO,LB,47,DEV,Jackson Sirmon,California; Washington,SirmJa00,2
+2026,NO,LB,53,RSR,Jaylan Ford,Texas,FordJa02,2
+2026,NO,LB,55,ACT,Kaden Elliss,Idaho,ElliKa00,7
+2026,NO,LB,20,ACT,Pete Werner,Ohio State,WernPe00,5
+2026,NO,LS,49,ACT,Zach Wood,SMU,,9
+2026,NO,OL,70,DEV,Alan Herron,Maryland; Shorter University,,0
+2026,NO,OL,79,DEV,Alex Wollschlaeger,Kentucky; Bowling Green,,0
+2026,NO,OL,72,ACT,Asim Richards,North Carolina,,3
+2026,NO,OL,51,ACT,Cesar Ruiz,Michigan,,6
+2026,NO,OL,76,ACT,David Edwards,Wisconsin,,7
+2026,NO,OL,77,RES,Dillon Radunz,North Dakota State,,5
+2026,NO,OL,73,DEV,Easton Kilty,Kansas State; North Dakota,,1
+2026,NO,OL,78,ACT,Erik McCoy,Texas A&M,,7
+2026,NO,OL,65,ACT,Jeremiah Wright,Auburn,,0
+2026,NO,OL,71,ACT,Kelvin Banks Jr.,Texas,,1
+2026,NO,OL,74,ACT,Mason Murphy,Auburn; USC,,0
+2026,NO,OL,64,PUP,Nick Saldiveri,Old Dominion,,3
+2026,NO,OL,75,ACT,Taliese Fuaga,Oregon State,,2
+2026,NO,OL,66,ACT,Will Sherman,Colorado,,5
+2026,NO,P,17,ACT,Ryan Wright,Tulane,WrigRy00,4
+2026,NO,QB,2,ACT,Spencer Rattler,South Carolina; Oklahoma,RattSp00,2
+2026,NO,QB,6,ACT,Tyler Shough,Louisville; Texas Tech; Oregon,ShouTy00,1
+2026,NO,QB,4,ACT,Zach Wilson,BYU,WilsZa00,5
+2026,NO,RB,41,ACT,Alvin Kamara,Tennessee; Hutchinson CC; Alabama,KamaAl00,9
+2026,NO,RB,30,ACT,Audric Estimé,Notre Dame,EstiAu00,2
+2026,NO,RB,43,DEV,CJ Donaldson,Ohio State; West Virginia,DonaCJ00,0
+2026,NO,RB,24,RES,Devin Neal,Kansas,NealDe00,1
+2026,NO,RB,5,ACT,Kendre Miller,TCU,MillKe01,3
+2026,NO,RB,3,ACT,Travis Etienne,Clemson,EtieTr00,5
+2026,NO,RB,32,RES,Ty Chandler,North Carolina,ChanTy01,4
+2026,NO,RB,,DEV,Zamir White,Georgia,WhitZa01,4
+2026,NO,TE,83,ACT,Juwan Johnson,Oregon; Penn State,JohnJu02,6
+2026,NO,TE,80,RES,Moliki Matavao,UCLA,MataMo00,1
+2026,NO,TE,87,ACT,Noah Fant,Iowa,FantNo00,7
+2026,NO,TE,88,ACT,Oscar Delp,Georgia,DelpOs01,0
+2026,NO,TE,,DEV,Stone Smartt,Old Dominion,SmarSt00,4
+2026,NO,TE,82,DEV,Treyton Welch,Wyoming,,2
+2026,NO,WR,19,ACT,Barion Brown,LSU; Kentucky,BrowBa02,0
+2026,NO,WR,89,SUS,Brock Rechsteiner,Jacksonville State,,0
+2026,NO,WR,18,ACT,Bryce Lance,North Dakota State,LancBr00,0
+2026,NO,WR,,DEV,Cedric Tillman,Tennessee,TillCe01,3
+2026,NO,WR,12,ACT,Chris Olave,Ohio State,OlavCh00,4
+2026,NO,WR,14,ACT,Devaughn Vele,Utah,VeleDe00,2
+2026,NO,WR,85,DEV,Jalen Moreno-Cropper,Fresno State,MoreJa01,3
+2026,NO,WR,0,RSR,Jordyn Tyson,Arizona State; Colorado,TysoJo00,0
+2026,NO,WR,81,DEV,Kevin Austin Jr.,Notre Dame,AustKe00,4
+2026,NO,WR,15,PUP,Mason Tipton,Yale,TiptMa00,2
+2026,NO,WR,10,DEV,Trey Palmer,Nebraska; LSU,PalmTr00,3
+2026,NYG,DB,22,ACT,Andru Phillips,Kentucky,PhilAn02,2
+2026,NYG,DB,24,ACT,Ar'Darius Washington,TCU,WashAr00,5
+2026,NYG,DB,12,ACT,Colton Hood,Tennessee; Colorado; Auburn,HoodCo00,0
+2026,NYG,DB,2,ACT,Deonte Banks,Maryland,BankDe00,3
+2026,NYG,DB,28,ACT,Elijah Campbell,Northern Iowa,CampEl00,6
+2026,NYG,DB,,DEV,Elijah Jones,Boston College,JoneEl00,2
+2026,NYG,DB,20,ACT,Greg Newsome II,Northwestern,NewsGr00,5
+2026,NYG,DB,35,RES,Jarrick Bernard-Converse,LSU; Oklahoma State,BernJa01,3
+2026,NYG,DB,25,ACT,Jason Pinnock,Pittsburgh,PinnJa01,5
+2026,NYG,DB,8,ACT,Jevon Holland,Oregon,HollJe02,5
+2026,NYG,DB,38,RSR,Korie Black,Oklahoma State,BlacKo00,1
+2026,NYG,DB,31,ACT,Nic Jones,Ball State,JoneNi00,3
+2026,NYG,DB,21,ACT,Paulson Adebo,Stanford,AdebPa00,5
+2026,NYG,DB,43,DEV,Raheem Layne,Indiana,LaynRa00,4
+2026,NYG,DB,36,RES,Rico Payton,Pittsburg State (KS); Southern Illinois,PaytRi00,2
+2026,NYG,DB,39,RES,Thaddeus Dixon,North Carolina; Washington; Long Beach City College,,0
+2026,NYG,DB,27,ACT,Tyler Nubin,Minnesota,NubiTy00,2
+2026,NYG,DL,99,ACT,Basil Okoye,,,3
+2026,NYG,DL,,DEV,Ben Barten,Wisconsin,,0
+2026,NYG,DL,97,ACT,Bobby Jamison-Travis,Auburn; Iowa Western CC,JamiBo00,0
+2026,NYG,DL,57,ACT,Chauncey Golston,Iowa,GolsCh00,5
+2026,NYG,DL,98,ACT,DJ Reader,Clemson,ReadD.00,10
+2026,NYG,DL,91,ACT,Darius Alexander,Toledo,AlexDa01,1
+2026,NYG,DL,94,DEV,Josh Tupou,Colorado,TupoJo00,9
+2026,NYG,DL,95,RES,Roy Robertson-Harris,Texas-El Paso,RobeRo00,10
+2026,NYG,DL,93,ACT,Shelby Harris,Illinois State; Wisconsin,HarrSh00,12
+2026,NYG,K,34,ACT,Dominic Zvada,Michigan; Arkansas State,ZvadDo00,0
+2026,NYG,LB,3,ACT,Abdul Carter,Penn State,CartAb00,1
+2026,NYG,LB,52,ACT,Arvell Reese,Ohio State,ReesAr00,0
+2026,NYG,LB,0,ACT,Brian Burns,Florida State,BurnBr00,7
+2026,NYG,LB,55,DEV,Chandler Martin,Memphis; East Tennessee State,MartCh02,1
+2026,NYG,LB,51,ACT,Jack Kelly,BYU; Weber State,KellJa00,0
+2026,NYG,LB,5,ACT,Kayvon Thibodeaux,Oregon,ThibKa00,4
+2026,NYG,LB,41,ACT,Micah McFadden,Indiana,McFaMi01,4
+2026,NYG,LB,48,DEV,Trace Ford,Oklahoma; Oklahoma State,,1
+2026,NYG,LB,49,ACT,Tremaine Edmunds,Virginia Tech,EdmuTr01,8
+2026,NYG,LB,46,ACT,Zaire Barnes,Western Michigan,BarnZa00,3
+2026,NYG,LS,58,ACT,Ben Mann,Boston College; Yale,,0
+2026,NYG,OL,64,ACT,Aaron Stinnie,James Madison,,8
+2026,NYG,OL,78,ACT,Andrew Thomas,Georgia,,6
+2026,NYG,OL,60,ACT,Bryan Hudson,Louisville,,2
+2026,NYG,OL,,DEV,Darian Kinnard,Kentucky,,4
+2026,NYG,OL,65,ACT,Francis Mauigoa,Miami,,0
+2026,NYG,OL,,DEV,Geno VanDeMark,Alabama; Michigan State,,0
+2026,NYG,OL,74,ACT,J.C. Davis,Illinois; New Mexico; Contra Costa,,0
+2026,NYG,OL,79,DEV,Jarrod Gray,,,0
+2026,NYG,OL,72,ACT,Jermaine Eluemunor,Texas A&M; Lackawanna JC,,9
+2026,NYG,OL,61,ACT,John Michael Schmitz,Minnesota,,3
+2026,NYG,OL,76,ACT,Jon Runyan,Michigan,,6
+2026,NYG,OL,,DEV,Kingsley Eguakun,Florida,,2
+2026,NYG,OL,71,ACT,Marcus Mbow,Purdue,,1
+2026,NYG,OL,70,DEV,Ryan Schernecke,Kutztown,,0
+2026,NYG,P,15,ACT,Jordan Stout,Penn State,StouJo00,4
+2026,NYG,QB,2,DEV,Jake Haener,Fresno State; Washington,HaenJa00,3
+2026,NYG,QB,19,ACT,Jameis Winston,Florida State,WinsJa00,11
+2026,NYG,QB,6,ACT,Jaxson Dart,Mississippi; USC,DartJa00,1
+2026,NYG,RB,44,ACT,Cam Skattebo,Arizona State; Sacramento State,SkatCa00,1
+2026,NYG,RB,26,ACT,Devin Singletary,Florida Atlantic,SingDe00,7
+2026,NYG,RB,,DEV,Grant Finley,Missouri Western,,0
+2026,NYG,RB,22,ACT,Najee Harris,Alabama,HarrNa00,5
+2026,NYG,RB,45,ACT,Patrick Ricard,Maine,RicaPa00,9
+2026,NYG,RB,29,ACT,Tyrone Tracy Jr.,Purdue; Iowa,TracTy00,2
+2026,NYG,TE,85,ACT,Chris Manhertz,Canisius College,ManhCh00,11
+2026,NYG,TE,9,ACT,Isaiah Likely,Coastal Carolina,LikeIs00,4
+2026,NYG,TE,84,ACT,Theo Johnson,Penn State,JohnTh00,2
+2026,NYG,TE,86,ACT,Thomas Fidone II,Nebraska,FidoTh00,1
+2026,NYG,WR,87,DEV,Braxton Berrios,Miami,BerrBr00,8
+2026,NYG,WR,82,RES,Calvin Austin III,Memphis,AustCa00,4
+2026,NYG,WR,,DEV,Charlie Jones,Purdue; Iowa,JoneCh11,3
+2026,NYG,WR,83,DEV,Dalen Cambre,Louisiana,CambDa00,1
+2026,NYG,WR,18,ACT,Darius Slayton,Auburn,SlayDa01,7
+2026,NYG,WR,17,ACT,Darnell Mooney,Tulane,MoonDa00,6
+2026,NYG,WR,80,RES,Gunner Olszewski,Bemidji State University,OlszGu00,7
+2026,NYG,WR,13,DEV,Jalin Hyatt,Tennessee,HyatJa00,3
+2026,NYG,WR,88,ACT,Malachi Fields,Notre Dame; Virginia,FielMa00,0
+2026,NYG,WR,1,ACT,Malik Nabers,LSU,NabeMa00,2
+2026,NYG,WR,13,ACT,Odell Beckham Jr.,LSU,BeckOd00,12
+2026,NYJ,DB,8,ACT,Andre Cisco,Syracuse,CiscAn00,5
+2026,NYJ,DB,1,ACT,Azareye'h Thomas,Florida State,ThomAz00,1
+2026,NYJ,DB,21,ACT,Brandon Stephens,SMU; UCLA,StepBr01,5
+2026,NYJ,DB,23,ACT,D'Angelo Ponds,Indiana; James Madison,PondDA00,0
+2026,NYJ,DB,6,ACT,Dane Belton,Iowa,BeltDa00,4
+2026,NYJ,DB,2,ACT,Jarvis Brownlee Jr.,Louisville; Florida,BrowJa09,2
+2026,NYJ,DB,33,DEV,Jordan Clark,Notre Dame; Arizona State,ClarJo00,1
+2026,NYJ,DB,27,ACT,Malachi Moore,Alabama,MoorMa04,1
+2026,NYJ,DB,29,ACT,Minkah Fitzpatrick,Alabama,FitzMi00,8
+2026,NYJ,DB,38,DEV,Mory Bamba,BYU; Tyler JC,,0
+2026,NYJ,DB,26,ACT,Nahshon Wright,Oregon State,WrigNa00,5
+2026,NYJ,DB,37,ACT,Qwan'tez Stiggers,,StigQw00,2
+2026,NYJ,DB,22,DEV,Samuel Womack,Toledo,WomaSa00,4
+2026,NYJ,DB,30,RES,Tre Brown,Oklahoma,BrowTr03,5
+2026,NYJ,DB,34,RSR,VJ Payne,Kansas State,PaynVJ00,0
+2026,NYJ,DL,55,ACT,Braiden McGregor,Michigan,McGrBr00,2
+2026,NYJ,DL,95,ACT,Darrell Jackson Jr.,Florida State; Maryland,JackDa06,0
+2026,NYJ,DL,93,ACT,David Onyemata,Manitoba (Canada),OnyeDa00,10
+2026,NYJ,DL,97,ACT,Harrison Phillips,Stanford,PhilHa00,8
+2026,NYJ,DL,96,DEV,Jack Heflin,Iowa,HeflJa00,5
+2026,NYJ,DL,46,ACT,Joseph Ossai,Texas,OssaJo00,5
+2026,NYJ,DL,91,ACT,Jowon Briggs,Cincinnati; Virginia,BrigJo00,2
+2026,NYJ,DL,57,RES,Kingsley Jonathan,Syracuse,JonaKi00,4
+2026,NYJ,DL,92,DEV,Nate Lynn,William & Mary,,2
+2026,NYJ,DL,54,DEV,Paschal Ekeji,,,0
+2026,NYJ,DL,98,DEV,Payton Page,Clemson,PagePa00,1
+2026,NYJ,DL,99,ACT,T'Vondre Sweat,Texas,SweaTV01,2
+2026,NYJ,DL,94,PUP,Tyler Baron,Miami; Tennessee,BaroTy00,1
+2026,NYJ,DL,9,ACT,Will McDonald IV,Iowa State,McDoWi00,3
+2026,NYJ,K,,ACT,Blake Grupe,Notre Dame; Arkansas State,GrupBl00,3
+2026,NYJ,K,19,DEV,Jason Sanders,New Mexico,SandJa00,8
+2026,NYJ,LB,31,ACT,David Bailey,Texas Tech; Stanford,,0
+2026,NYJ,LB,56,ACT,Demario Davis,Arkansas State,DaviDe00,14
+2026,NYJ,LB,51,ACT,Francisco Mauigoa,Miami; Washington State,MauiFr00,1
+2026,NYJ,LB,48,DEV,Jaden Keller,Virginia Tech,,0
+2026,NYJ,LB,44,ACT,Jamien Sherwood,Auburn,SherJa00,5
+2026,NYJ,LB,52,ACT,Kingsley Enagbare,South Carolina,EnagKi00,4
+2026,NYJ,LB,41,ACT,Marcelino McCrary-Ball,Indiana,McCrMa01,4
+2026,NYJ,LB,43,RES,Mykal Walker,Fresno State,WalkMy00,6
+2026,NYJ,LB,,ACT,Trevin Wallace,Kentucky,WallTr00,2
+2026,NYJ,LB,,DEV,Troy Reeder,Delaware,ReedTr01,7
+2026,NYJ,LS,42,ACT,Thomas Hennessy,Duke,,9
+2026,NYJ,OL,72,RSR,Anez Cooper,Miami,,0
+2026,NYJ,OL,70,ACT,Armand Membou,Missouri,,1
+2026,NYJ,OL,79,ACT,Chukwuma Okorafor,Western Michigan,,8
+2026,NYJ,OL,64,ACT,Dylan Parham,Memphis,,4
+2026,NYJ,OL,66,ACT,Joe Tippmann,Wisconsin,,3
+2026,NYJ,OL,,ACT,Jordan Meredith,Western Kentucky,,4
+2026,NYJ,OL,71,ACT,Josh Myers,Ohio State,,5
+2026,NYJ,OL,60,DEV,Kohl Levao,Hawaii; City College (SF),,2
+2026,NYJ,OL,77,DEV,Marquis Hayes,Oklahoma,,4
+2026,NYJ,OL,61,ACT,Max Mitchell,Louisiana-Lafayette,,4
+2026,NYJ,OL,74,ACT,Olumuyiwa Fashanu,Penn State,,2
+2026,NYJ,OL,65,DEV,Xavier Newman-Johnson,Baylor,,4
+2026,NYJ,P,14,ACT,Austin McNamara,Texas Tech,McNaAu00,1
+2026,NYJ,QB,11,DEV,Bailey Zappe,Western Kentucky; Houston Christian University,ZappBa00,4
+2026,NYJ,QB,10,ACT,Cade Klubnik,Clemson,KlubCa00,0
+2026,NYJ,QB,7,ACT,Geno Smith,West Virginia,SmitGe00,13
+2026,NYJ,RB,,DEV,Al-Jay Henderson,,,
+2026,NYJ,RB,47,ACT,Andrew Beck,Texas,BeckAn01,7
+2026,NYJ,RB,0,ACT,Braelon Allen,Wisconsin,AlleBr05,2
+2026,NYJ,RB,20,ACT,Breece Hall,Iowa State,HallBr03,4
+2026,NYJ,RB,40,RES,Chip Trayanum,Toledo; Kentucky; Ohio State; Arizona State,TrayCh00,0
+2026,NYJ,RB,,RES,Dominic Richardson,Tulsa; New Mexico State,,0
+2026,NYJ,RB,32,ACT,Isaiah Davis,South Dakota State,DaviIs00,2
+2026,NYJ,RB,3,ACT,Kene Nwangwu,Iowa State,NwanKe00,5
+2026,NYJ,TE,49,RES,Connor Hulstein,Marist; Princeton,,0
+2026,NYJ,TE,86,ACT,Jelani Woods,Virginia,WoodJe01,4
+2026,NYJ,TE,89,ACT,Jeremy Ruckert,Ohio State,RuckJe00,4
+2026,NYJ,TE,16,ACT,Kenyon Sadiq,Oregon,SadiKe00,0
+2026,NYJ,TE,85,ACT,Mason Taylor,LSU,TaylMa02,1
+2026,NYJ,WR,15,ACT,Adonai Mitchell,Texas; Georgia,MitcAd00,2
+2026,NYJ,WR,82,ACT,Arian Smith,Georgia,SmitAr01,1
+2026,NYJ,WR,5,ACT,Garrett Wilson,Ohio State,WilsGa00,4
+2026,NYJ,WR,18,ACT,Isaiah Williams,Illinois,WillIs03,2
+2026,NYJ,WR,81,DEV,Jamaal Pritchett,South Alabama; Tuskegee University,PritJa00,1
+2026,NYJ,WR,84,DEV,Malik McClain,Arizona State; Penn State; Florida,,0
+2026,NYJ,WR,83,ACT,Omar Cooper Jr.,Indiana,CoopOm00,0
+2026,NYJ,WR,17,ACT,Tim Patrick,Utah; Grossmont,PatrTi00,9
+2026,PHI,DB,31,RES,Andre' Sam,LSU; Marshall; McNeese State,SamxAn00,2
+2026,PHI,DB,24,ACT,Andrew Mukuba,Texas; Clemson,MukuAn00,1
+2026,PHI,DB,21,DEV,Cole Wisniewski,Texas Tech; North Dakota State,WisnCo00,0
+2026,PHI,DB,33,ACT,Cooper DeJean,Iowa,DeJeCo00,2
+2026,PHI,DB,23,RSR,Jakorian Bennett,Maryland,BennJa00,3
+2026,PHI,DB,32,ACT,Jonathan Jones,Auburn,JoneJo03,10
+2026,PHI,DB,7,ACT,Kelee Ringo,Georgia,RingKe00,3
+2026,PHI,DB,22,ACT,Mac McWilliams,UCF; UAB,McWiMa01,1
+2026,PHI,DB,29,ACT,Marcus Epps,Wyoming,EppsMa00,7
+2026,PHI,DB,36,DEV,Maximus Pulley,Wofford; Western Kentucky,,0
+2026,PHI,DB,35,ACT,Michael Carter II,Duke,CartMi02,5
+2026,PHI,DB,27,ACT,Quinyon Mitchell,Toledo,MitcQu00,2
+2026,PHI,DB,2,ACT,Riq Woolen,Texas-San Antonio,WoolTa00,4
+2026,PHI,DB,,DEV,Robert Longerbeam,Rutgers,LongRo00,1
+2026,PHI,DB,,RSN,Tucker Large,Washington State; South Dakota State,,0
+2026,PHI,DL,94,ACT,Byron Young,Alabama,YounBy00,3
+2026,PHI,DL,96,DEV,Gabe Hall,Baylor,,2
+2026,PHI,DL,98,ACT,Jalen Carter,Georgia,CartJa05,3
+2026,PHI,DL,90,ACT,Jordan Davis,Georgia,DaviJo03,4
+2026,PHI,DL,,DEV,Mason Reiger,Wisconsin; Louisville,ReigMa00,0
+2026,PHI,DL,97,ACT,Moro Ojomo,Texas,OjomMo00,3
+2026,PHI,DL,95,ACT,Ty Robinson,Nebraska,RobiTy02,1
+2026,PHI,DL,93,DEV,Uar Bernard,,BernUa00,0
+2026,PHI,K,4,ACT,Jake Elliott,Memphis,ElliJa03,9
+2026,PHI,LB,57,ACT,A.J. Epenesa,Iowa,EpenAJ00,6
+2026,PHI,LB,17,ACT,Arnold Ebiketie,Penn State,EbikAr00,4
+2026,PHI,LB,59,DEV,Chance Campbell,Mississippi,CampCh02,4
+2026,PHI,LB,58,ACT,Jalyx Hunt,Houston Christian University; Cornell,HuntJa02,2
+2026,PHI,LB,54,ACT,Jeremiah Trotter Jr.,Clemson,TrotJe01,2
+2026,PHI,LB,11,ACT,Jihaad Campbell,Alabama,CampJi00,1
+2026,PHI,LB,52,ACT,Jonathan Greenard,Florida; Louisville,GreeJo04,6
+2026,PHI,LB,46,DEV,Joshua Weru,,,0
+2026,PHI,LB,50,DEV,Keyshawn James-Newby,New Mexico; Idaho; Montana College of Technology,JameKe01,0
+2026,PHI,LB,3,ACT,Nolan Smith,Georgia,SmitNo02,3
+2026,PHI,LB,42,ACT,Smael Mondon Jr.,Georgia,MondSm01,1
+2026,PHI,LB,53,ACT,Zack Baun,Wisconsin,BaunZa00,6
+2026,PHI,LS,37,ACT,Rocco Underwood,Florida,,0
+2026,PHI,OL,51,ACT,Cam Jurgens,Nebraska,,4
+2026,PHI,OL,66,ACT,Drew Kendall,Boston College,,1
+2026,PHI,OL,74,ACT,Fred Johnson,Florida,,7
+2026,PHI,OL,75,DEV,Jake Majors,Texas,,1
+2026,PHI,OL,67,DEV,John Ojukwu,Boise State,,3
+2026,PHI,OL,68,ACT,Jordan Mailata,,,8
+2026,PHI,OL,,DEV,Kiran Amegadjie,Yale,,2
+2026,PHI,OL,69,ACT,Landon Dickerson,Alabama,,5
+2026,PHI,OL,65,ACT,Lane Johnson,Oklahoma; Kilgore,,13
+2026,PHI,OL,72,ACT,Markel Bell,Miami; Holmes County JC,,0
+2026,PHI,OL,76,ACT,Micah Morris,Georgia,,0
+2026,PHI,OL,56,ACT,Tyler Steen,Alabama; Vanderbilt,,3
+2026,PHI,OL,61,ACT,Willie Lampkin,North Carolina; Coastal Carolina,,1
+2026,PHI,P,10,ACT,Braden Mann,Texas A&M,MannBr01,6
+2026,PHI,QB,14,ACT,Andy Dalton,TCU,DaltAn00,15
+2026,PHI,QB,10,ACT,Cole Payton,North Dakota State,PaytCo00,0
+2026,PHI,QB,1,ACT,Jalen Hurts,Oklahoma; Alabama,HurtJa00,6
+2026,PHI,QB,16,ACT,Tanner McKee,Stanford,McKeTa01,3
+2026,PHI,RB,34,DEV,Carson Steele,UCLA; Ball State,SteeCa00,2
+2026,PHI,RB,39,DEV,Dameon Pierce,Florida,PierDa01,4
+2026,PHI,RB,,DEV,Jaydon Blue,Texas,BlueJa01,1
+2026,PHI,RB,26,ACT,Saquon Barkley,Penn State,BarkSa00,8
+2026,PHI,RB,8,ACT,Tank Bigsby,Auburn,BigsTa00,3
+2026,PHI,RB,28,ACT,Will Shipley,Clemson,ShipWi00,2
+2026,PHI,TE,88,ACT,Dallas Goedert,South Dakota State,GoedDa00,8
+2026,PHI,TE,84,ACT,E.J. Jenkins,Georgia Tech; South Carolina; St. Francis PA,JenkEJ00,3
+2026,PHI,TE,87,ACT,Eli Stowers,Vanderbilt; New Mexico State; Texas A&M,StowEl00,0
+2026,PHI,TE,81,RSR,Grant Calcaterra,SMU; Oklahoma,CalcGr00,4
+2026,PHI,TE,83,ACT,Johnny Mundt,Oregon,MundJo00,9
+2026,PHI,WR,18,DEV,Britain Covey,Utah,CoveBr00,4
+2026,PHI,WR,82,DEV,Danny Gray,SMU,GrayDa02,4
+2026,PHI,WR,80,ACT,Darius Cooper,Tarleton State,CoopDa01,1
+2026,PHI,WR,6,ACT,DeVonta Smith,Alabama,SmitDe07,5
+2026,PHI,WR,13,ACT,Dontayvion Wicks,Virginia,WickDo00,3
+2026,PHI,WR,19,ACT,Elijah Moore,Mississippi,MoorEl00,5
+2026,PHI,WR,89,RES,Johnny Wilson,Florida State; Arizona State,WilsJo03,2
+2026,PHI,WR,9,ACT,Makai Lemon,USC,LemoMa00,0
+2026,PHI,WR,0,ACT,Marquise Brown,Oklahoma; College of the Canyons,BrowMa04,7
+2026,PIT,DB,22,ACT,Asante Samuel Jr.,Florida State,SamuAs00,5
+2026,PIT,DB,,DEV,Bishop Fitzgerald,USC; N.C. State; Coffeyville CC,,0
+2026,PIT,DB,26,ACT,Brandin Echols,Kentucky,EchoBr00,5
+2026,PIT,DB,,DEV,Car'lin Vigers,Louisiana-Monroe; Independence Comm. College,,1
+2026,PIT,DB,,RES,Daequan Hardy,Penn State,HardDa02,2
+2026,PIT,DB,23,ACT,Daylen Everette,Georgia,EverDa00,0
+2026,PIT,DB,25,RSR,DeShon Elliott,Texas,ElliDe02,8
+2026,PIT,DB,19,DEV,Doneiko Slaughter,Arkansas; Tennessee,,0
+2026,PIT,DB,34,PUP,Donte Kent,Central Michigan,KentDo00,1
+2026,PIT,DB,5,ACT,Jalen Ramsey,Florida State,RamsJa00,10
+2026,PIT,DB,35,ACT,Jamel Dean,Auburn; Ohio State,DeanJa00,7
+2026,PIT,DB,3,ACT,Jaquan Brisker,Penn State; Lackawanna JC,BrisJa01,4
+2026,PIT,DB,24,ACT,Joey Porter Jr.,Penn State,PortJo02,3
+2026,PIT,DB,31,ACT,Rayshawn Jenkins,Miami,JenkRa00,9
+2026,PIT,DB,28,ACT,Robert Spears-Jennings,Oklahoma,SpeaRo01,0
+2026,PIT,DB,49,DEV,Sebastian Castro,Iowa,CastSe01,1
+2026,PIT,DL,97,ACT,Cameron Heyward,Ohio State,HeywCa01,15
+2026,PIT,DL,99,ACT,Derrick Harmon,Oregon; Michigan State,HarmDe01,1
+2026,PIT,DL,93,DEV,Esezi Otomewo,Minnesota,OtomEs00,4
+2026,PIT,DL,96,ACT,Gabe Rubio,Notre Dame,,0
+2026,PIT,DL,95,ACT,Keeanu Benton,Wisconsin,BentKe00,3
+2026,PIT,DL,92,ACT,Kevin Jobity Jr.,Syracuse,,0
+2026,PIT,DL,65,DEV,Kyler Baugh,Minnesota; Houston Christian University,,2
+2026,PIT,DL,91,RES,Logan Lee,Iowa,LeexLo00,2
+2026,PIT,DL,69,ACT,Sebastian Joseph-Day,Rutgers,JoseSe00,8
+2026,PIT,DL,94,ACT,Yahya Black,Iowa,BlacYa00,1
+2026,PIT,K,9,ACT,Chris Boswell,Rice,BoswCh00,12
+2026,PIT,LB,56,ACT,Alex Highsmith,Charlotte,HighAl02,6
+2026,PIT,LB,,DEV,Bradyn Swinson,LSU; Oregon,SwinBr01,1
+2026,PIT,LB,44,ACT,Carson Bruener,Washington,BrueCa00,1
+2026,PIT,LB,55,ACT,Cole Holcomb,North Carolina,HolcCo00,7
+2026,PIT,LB,33,ACT,Jack Sawyer,Ohio State,SawyJa00,1
+2026,PIT,LB,53,DEV,Jacoby Windmon,Michigan State; UNLV,WindJa00,2
+2026,PIT,LB,45,DEV,Julius Welschof,Charlotte,,2
+2026,PIT,LB,51,ACT,Nick Herbig,Wisconsin,HerbNi00,3
+2026,PIT,LB,6,ACT,Patrick Queen,LSU,QueePa00,6
+2026,PIT,LB,41,ACT,Payton Wilson,N.C. State,WilsPa00,2
+2026,PIT,LB,90,ACT,T.J. Watt,Wisconsin,WattT.00,9
+2026,PIT,LS,46,ACT,Christian Kuntz,Duquesne,KuntCh02,8
+2026,PIT,OL,67,ACT,Brock Hoffman,Virginia Tech; Coastal Carolina,,4
+2026,PIT,OL,72,DEV,Doug Nester,West Virginia; Virginia Tech,,2
+2026,PIT,OL,60,ACT,Dylan Cook,Montana; Northern Montana State University,,4
+2026,PIT,OL,73,ACT,Gennings Dunker,Iowa,,0
+2026,PIT,OL,68,RSR,Jack Driscoll,Auburn; UMass Amherst,,6
+2026,PIT,OL,66,ACT,Mason McCormick,South Dakota State,,2
+2026,PIT,OL,71,ACT,Max Iheanachor,Arizona State,,0
+2026,PIT,OL,62,ACT,Ryan McCollum,Texas A&M,,5
+2026,PIT,OL,74,ACT,Spencer Anderson,Maryland,,3
+2026,PIT,OL,79,DEV,Steven Jones,Oregon,,2
+2026,PIT,OL,76,ACT,Troy Fautanu,Washington,,2
+2026,PIT,OL,54,ACT,Zach Frazier,West Virginia,,2
+2026,PIT,P,19,ACT,Cameron Johnston,Ohio State,JohnCa02,8
+2026,PIT,QB,8,ACT,Aaron Rodgers,California; Butte College,RodgAa00,21
+2026,PIT,QB,16,ACT,Drew Allar,Penn State,AllaDr00,0
+2026,PIT,QB,2,ACT,Mason Rudolph,Oklahoma State,RudoMa00,8
+2026,PIT,QB,18,ACT,Will Howard,Ohio State; Kansas State,HowaWi01,1
+2026,PIT,RB,29,ACT,Eli Heidenreich,Navy,HeidEl00,0
+2026,PIT,RB,30,ACT,Jaylen Warren,Oklahoma State,WarrJa01,4
+2026,PIT,RB,35,DEV,Lew Nichols III,Central Michigan,NichLe00,3
+2026,PIT,RB,84,DEV,Max Hurleman,Notre Dame; Colgate,,1
+2026,PIT,RB,13,ACT,Rico Dowdle,South Carolina,DowdRi01,6
+2026,PIT,RB,37,ACT,Riley Nowakowski,Indiana; Wisconsin,NowaRi00,0
+2026,PIT,RB,21,DEV,Travis Homer,Miami,HomeTr00,7
+2026,PIT,TE,80,ACT,Darnell Washington,Georgia,WashDa03,3
+2026,PIT,TE,81,DEV,Lake McRee,USC,,0
+2026,PIT,TE,88,ACT,Pat Freiermuth,Penn State,FreiPa00,5
+2026,PIT,TE,83,ACT,Robert Tonyan,Indiana State,TonyRo00,9
+2026,PIT,WR,15,ACT,Ben Skowronek,Notre Dame; Northwestern,SkowBe00,5
+2026,PIT,WR,,DEV,Brandon Johnson,UCF; Tennessee,JohnBr23,4
+2026,PIT,WR,87,DEV,Brandon Smith,Iowa,SmitBr07,5
+2026,PIT,WR,85,RES,Cole Burgess,Cortland State Of New York,BurgCo00,2
+2026,PIT,WR,4,ACT,DK Metcalf,Mississippi,MetcDK00,7
+2026,PIT,WR,17,ACT,Germie Bernard,Alabama; Washington; Michigan State,BernGe00,0
+2026,PIT,WR,10,ACT,Kaden Wetjen,Iowa; Iowa Western CC,WetjKa00,0
+2026,PIT,WR,11,ACT,Michael Pittman,USC,PittMi01,6
+2026,PIT,WR,14,ACT,Roman Wilson,Michigan,WilsRo02,2
+2026,SEA,DB,30,DEV,AJ Finley,Mississippi,FinlAJ00,3
+2026,SEA,DB,35,DEV,Andre Fuller,Toledo; University of Arkansas at Pine Bluff,FullAn00,0
+2026,SEA,DB,27,ACT,Avery Smith,Toledo,SmitAv00,0
+2026,SEA,DB,9,RES,Bud Clark,TCU,ClarBu00,0
+2026,SEA,DB,21,ACT,Devon Witherspoon,Illinois,WithDe00,3
+2026,SEA,DB,29,ACT,Josh Jobe,Alabama,JobeJo00,4
+2026,SEA,DB,20,ACT,Julian Love,Notre Dame,LoveJu00,7
+2026,SEA,DB,1,ACT,Julian Neal,Arkansas; Fresno State,NealJu00,0
+2026,SEA,DB,43,DEV,Maxen Hook,Toledo,,1
+2026,SEA,DB,37,DEV,Michael Dansby,Arizona; San Jose State,DansMi00,0
+2026,SEA,DB,28,ACT,Nehemiah Pritchett,Auburn,PritNe00,2
+2026,SEA,DB,3,ACT,Nick Emmanwori,South Carolina,EmmaNi00,1
+2026,SEA,DB,24,DEV,Rodney Thomas,Yale,ThomRo07,4
+2026,SEA,DB,,EXE,Terrion Arnold,Alabama,ArnoTe00,2
+2026,SEA,DB,16,DEV,Trevon Diggs,Alabama,DiggTr00,6
+2026,SEA,DB,39,ACT,Ty Okada,Montana State,OkadTy00,3
+2026,SEA,DL,95,ACT,Brandon Pili,USC,PiliBr00,3
+2026,SEA,DL,91,ACT,Byron Murphy II,Texas,MurpBy01,2
+2026,SEA,DL,97,DEV,Deven Eastern,Minnesota,EastDe00,0
+2026,SEA,DL,90,ACT,Jarran Reed,Alabama; East Mississippi JC,ReedJa02,10
+2026,SEA,DL,99,ACT,Leonard Williams,USC,WillLe02,11
+2026,SEA,DL,94,ACT,Mike Morris,Michigan,MorrMi00,3
+2026,SEA,DL,98,ACT,Rylie Mills,Notre Dame,MillRy02,1
+2026,SEA,DL,92,DEV,Uso Seumalo,Kansas State; Garden City CC,,0
+2026,SEA,K,5,ACT,Jason Myers,Marist,MyerJa00,11
+2026,SEA,LB,42,RES,Aaron Smith,South Carolina State,,0
+2026,SEA,LB,93,DEV,Aidan Hubbard,Northwestern,,0
+2026,SEA,LB,44,ACT,Chazz Surratt,North Carolina,SurrCh00,5
+2026,SEA,LB,57,ACT,Connor O'Toole,Utah,OTooCo00,1
+2026,SEA,LB,56,ACT,Dante Fowler Jr.,Florida,FowlDa00,11
+2026,SEA,LB,0,ACT,DeMarcus Lawrence,Boise State; Butler County JC,LawrDe00,12
+2026,SEA,LB,58,ACT,Derick Hall,Auburn,HallDe04,3
+2026,SEA,LB,32,ACT,Drake Thomas,N.C. State,ThomDr00,3
+2026,SEA,LB,13,ACT,Ernest Jones,South Carolina,JoneEr01,5
+2026,SEA,LB,59,DEV,Marvin Jones Jr.,Oklahoma; Florida State; Georgia,,0
+2026,SEA,LB,52,ACT,Patrick O'Connell,Montana,OConPa01,3
+2026,SEA,LB,46,RES,Power Echols,North Carolina,,1
+2026,SEA,LB,48,ACT,Tyrice Knight,Texas-El Paso; Independence Comm. College,KnigTy00,2
+2026,SEA,LB,7,ACT,Uchenna Nwosu,USC,NwosUc00,8
+2026,SEA,LS,41,ACT,Chris Stoll,Penn State,,3
+2026,SEA,OL,72,ACT,Abraham Lucas,Washington State,,4
+2026,SEA,OL,79,RES,Amari Kight,UCF; Alabama,,1
+2026,SEA,OL,75,ACT,Anthony Bradford,LSU,,3
+2026,SEA,OL,70,ACT,Beau Stephens,Iowa,,0
+2026,SEA,OL,77,ACT,Bryce Cabeldue,Kansas,,1
+2026,SEA,OL,67,ACT,Charles Cross,Mississippi State,,4
+2026,SEA,OL,64,ACT,Christian Haynes,Connecticut,,2
+2026,SEA,OL,62,DEV,Federico Maranges,Florida Atlantic,,1
+2026,SEA,OL,76,ACT,Grey Zabel,North Dakota State,,1
+2026,SEA,OL,61,ACT,Jalen Sundell,North Dakota State,,2
+2026,SEA,OL,74,ACT,Josh Jones,Houston,,6
+2026,SEA,OL,73,DEV,Logan Brown,Kansas; Wisconsin,,1
+2026,SEA,OL,78,RES,Mason Richman,Iowa,,1
+2026,SEA,OL,55,ACT,Olu Oluwatimi,Michigan; Virginia,,3
+2026,SEA,P,4,ACT,Michael Dickson,Texas,DickMi00,8
+2026,SEA,QB,2,ACT,Drew Lock,Missouri,LockDr00,7
+2026,SEA,QB,6,ACT,Jalen Milroe,Alabama,MilrJa00,1
+2026,SEA,QB,14,ACT,Sam Darnold,USC,DarnSa00,8
+2026,SEA,RB,38,ACT,Brady Russell,Colorado,RussBr00,3
+2026,SEA,RB,23,ACT,Emanuel Wilson,Fort Valley State College,WilsEm00,3
+2026,SEA,RB,36,ACT,George Holani,Boise State,HolaGe00,2
+2026,SEA,RB,31,DEV,Jacardia Wright,Missouri State; Kansas State,WrigJa05,1
+2026,SEA,RB,8,ACT,Jadarian Price,Notre Dame,PricJa02,0
+2026,SEA,RB,40,RES,Robbie Ouzts,Alabama,OuztRo00,1
+2026,SEA,RB,26,PUP,Zach Charbonnet,UCLA; Michigan,CharZa00,3
+2026,SEA,TE,88,ACT,AJ Barner,Michigan; Indiana,BarnAJ00,2
+2026,SEA,TE,18,ACT,Elijah Arroyo,Miami,ArroEl00,1
+2026,SEA,TE,81,ACT,Eric Saubert,Drake,SaubEr00,9
+2026,SEA,TE,89,ACT,Nick Kallerup,Minnesota,KallNi00,1
+2026,SEA,WR,10,ACT,Cooper Kupp,Eastern Washington,KuppCo00,9
+2026,SEA,WR,84,DEV,Emmanuel Henderson Jr.,Kansas; Alabama,HendEm00,0
+2026,SEA,WR,85,RSR,Irvin Charles,"Indiana PA,  University of; Penn State",CharIr00,4
+2026,SEA,WR,19,RES,Jake Bobo,UCLA; Duke,BoboJa00,3
+2026,SEA,WR,11,ACT,Jaxon Smith-Njigba,Ohio State,SmitJa06,3
+2026,SEA,WR,,DEV,Julian Hicks,Albany; Akron; Central Michigan,,2
+2026,SEA,WR,87,ACT,Montorie Foster Jr,Michigan State,FostMo00,1
+2026,SEA,WR,22,ACT,Rashid Shaheed,Weber State,ShahRa00,4
+2026,SEA,WR,86,DEV,Ricky White III,UNLV; Michigan State,WhitRi01,1
+2026,SEA,WR,15,ACT,Tory Horton,Colorado State; Nevada,HortTo00,1
+2026,SEA,WR,33,DEV,Velus Jones Jr.,Tennessee; USC,JoneVe00,4
+2026,SF,DB,29,ACT,Ashtyn Davis,California,DaviAs00,6
+2026,SF,DB,,DEV,Brandon Codrington,North Carolina Central,CodrBr00,2
+2026,SF,DB,29,RES,Darrick Forrest,Cincinnati,ForrDa00,5
+2026,SF,DB,2,ACT,Deommodore Lenoir,Oregon,LenoDe00,5
+2026,SF,DB,35,ACT,Ephesians Prysock,Washington; Arizona,PrysEp00,0
+2026,SF,DB,25,ACT,Jack Jones,Arizona State,JoneJa10,4
+2026,SF,DB,43,DEV,Jakob Robinson,BYU; Utah State,,1
+2026,SF,DB,38,DEV,Jalen Stroman,Notre Dame; Virginia Tech,StroJa03,0
+2026,SF,DB,27,ACT,Ji'Ayir Brown,Penn State; Lackawanna JC,BrowJi01,3
+2026,SF,DB,6,ACT,Malik Mustapha,Wake Forest,MustMa00,2
+2026,SF,DB,36,ACT,Marques Sigle,Kansas State; North Dakota State,SiglMa00,1
+2026,SF,DB,22,RES,Nate Hobbs,Illinois,HobbNa00,5
+2026,SF,DB,0,ACT,Renardo Green,Florida State,GreeRe00,2
+2026,SF,DB,33,ACT,Siran Neal,Jacksonville State,NealSi00,8
+2026,SF,DB,20,ACT,Upton Stout,Western Kentucky; North Texas,StouUp00,1
+2026,SF,DL,95,ACT,Alfred Collins,Texas,CollAl01,1
+2026,SF,DL,99,ACT,CJ West,Indiana; Kent State,WestCJ00,1
+2026,SF,DL,93,ACT,Gracen Halton,Oklahoma,HaltGr00,0
+2026,SF,DL,96,ACT,James Thompson Jr.,Illinois; Wisconsin,,0
+2026,SF,DL,56,ACT,Keion White,Georgia Tech; Old Dominion,WhitKe03,3
+2026,SF,DL,90,DEV,Kevin Givens,Penn State,GiveKe01,7
+2026,SF,DL,59,RES,Mikail Kamara,Indiana; James Madison,,0
+2026,SF,DL,98,PUP,Mykel Williams,Georgia,WillMy00,1
+2026,SF,DL,97,ACT,Nick Bosa,Ohio State,BosaNi00,7
+2026,SF,DL,92,ACT,Osa Odighizuwa,UCLA,OdigOs00,5
+2026,SF,DL,94,ACT,Romello Height,Texas Tech; Georgia Tech; USC; Auburn,HeigRo00,0
+2026,SF,DL,91,ACT,Sam Okuayinonu,Maryland,OkuaSa00,4
+2026,SF,DL,55,DEV,Sebastian Valdez,Washington; Montana State,,1
+2026,SF,DL,,RES,Victor Dimukeje,Duke,DimuVi00,5
+2026,SF,DL,,DEV,Vincent Anthony Jr.,Duke,,0
+2026,SF,K,18,ACT,Eddy Pineiro,Florida,PineEd00,8
+2026,SF,LB,,RES,Andrew Farmer,Lane College,FarmAn00,3
+2026,SF,LB,57,ACT,Dre Greenlaw,Arkansas,GreeDr00,7
+2026,SF,LB,54,ACT,Fred Warner,BYU,WarnFr00,8
+2026,SF,LB,49,ACT,Garret Wallow,TCU,WallGa00,5
+2026,SF,LB,53,ACT,Jaden Dugger,Louisiana; Georgetown,DuggJa00,0
+2026,SF,LB,41,DEV,Jalen Graham,Purdue,GrahJa02,3
+2026,SF,LB,51,ACT,Luke Gifford,Nebraska,GiffLu00,7
+2026,SF,LB,45,RES,Nick Martin,Oklahoma State,MartNi01,1
+2026,SF,LB,59,DEV,Ogbo Okoronkwo,Oklahoma,OkorOg00,8
+2026,SF,LB,48,ACT,Tatum Bethune,Florida State; UCF,BethTa00,2
+2026,SF,LS,46,DEV,Jon Weeks,Baylor,,16
+2026,SF,OL,62,RSR,Austen Pleasants,Ohio,,6
+2026,SF,OL,78,RES,Brett Toth,Army,,7
+2026,SF,OL,74,ACT,Carver Willis,Washington; Kansas State,,0
+2026,SF,OL,68,ACT,Colton McKivitz,West Virginia,,6
+2026,SF,OL,75,ACT,Connor Colby,Iowa,,1
+2026,SF,OL,77,ACT,Dominick Puni,Kansas; Central Missouri,,2
+2026,SF,OL,66,DEV,Drake Nugent,Michigan; Stanford,,2
+2026,SF,OL,69,ACT,Enrique Cruz,Kansas,,0
+2026,SF,OL,,DEV,Foster Sarell,Stanford,,5
+2026,SF,OL,67,DEV,Isaac Alarcon,,,6
+2026,SF,OL,64,ACT,Jake Brendel,UCLA,,10
+2026,SF,OL,58,ACT,Jarrett Patterson,Notre Dame,,3
+2026,SF,OL,,RES,Nick Zakelj,Fordham,,4
+2026,SF,OL,71,ACT,Trent Williams,Oklahoma,,16
+2026,SF,OL,76,ACT,Vederian Lowe,Illinois,,4
+2026,SF,P,15,ACT,Corliss Waitman,South Alabama,WaitCo00,6
+2026,SF,QB,13,ACT,Brock Purdy,Iowa State,PurdBr00,4
+2026,SF,QB,14,ACT,Kurtis Rourke,Indiana,RourKu01,1
+2026,SF,QB,10,ACT,Mac Jones,Alabama,JoneMa05,5
+2026,SF,RB,23,ACT,Christian McCaffrey,Stanford,McCaCh01,9
+2026,SF,RB,31,PUP,Isaac Guerendo,Louisville; Wisconsin,GuerIs00,2
+2026,SF,RB,29,ACT,Jordan James,Oregon,JameJo01,1
+2026,SF,RB,26,ACT,Kaelon Black,Indiana; James Madison,BlacKa00,0
+2026,SF,RB,44,ACT,Kyle Juszczyk,Harvard,JuszKy00,13
+2026,SF,RB,35,DEV,Sincere McCormick,Texas-San Antonio,McCoSi00,4
+2026,SF,TE,9,ACT,Brayden Willis,Oklahoma,WillBr06,3
+2026,SF,TE,85,ACT,George Kittle,Iowa,KittGe00,9
+2026,SF,TE,88,ACT,Jake Tonges,California,TongJa00,4
+2026,SF,TE,,DEV,Khalil Dinkins,Penn State,,0
+2026,SF,TE,89,ACT,Luke Farrell,Ohio State,FarrLu00,5
+2026,SF,WR,3,RSR,Christian Kirk,Texas A&M,KirkCh01,8
+2026,SF,WR,7,ACT,De'Zhaun Stribling,Mississippi; Oklahoma State; Washington State,StriDe01,0
+2026,SF,WR,19,ACT,Deebo Samuel Sr.,South Carolina,SamuDe00,7
+2026,SF,WR,11,ACT,Demarcus Robinson,Florida,RobiDe01,10
+2026,SF,WR,4,ACT,Jacob Cowing,Arizona; Texas-El Paso,CowiJa00,2
+2026,SF,WR,17,ACT,Jordan Watkins,Mississippi; Louisville,WatkJo00,1
+2026,SF,WR,0,DEV,KhaDarel Hodge,Prairie View A&M; Hinds CC; Alcorn State,HodgKh00,8
+2026,SF,WR,5,ACT,Mike Evans,Texas A&M,EvanMi00,12
+2026,SF,WR,1,RES,Ricky Pearsall,Florida; Arizona State,PearRi00,2
+2026,SF,WR,18,DEV,Wesley Grimes,N.C. State; Wake Forest,,0
+2026,SF,WR,84,DEV,Will Pauling,Notre Dame; Wisconsin; Cincinnati,,0
+2026,TB,DB,31,ACT,Antoine Winfield Jr.,Minnesota,WinfAn00,6
+2026,TB,DB,24,ACT,Ayden Garnes,Arizona; West Virginia,,0
+2026,TB,DB,21,ACT,Benjamin Morrison,Notre Dame,MorrBe00,1
+2026,TB,DB,35,DEV,Ifeatu Melifonwu,Syracuse,MeliIf00,5
+2026,TB,DB,36,DEV,JJ Roberts,Marshall,,1
+2026,TB,DB,25,ACT,Jacob Parrish,Kansas State,ParrJa01,1
+2026,TB,DB,32,RSR,Josh Hayes,Kansas State; Virginia; North Dakota State,HayeJo01,3
+2026,TB,DB,22,ACT,Keionte Scott,Miami; Auburn; Snow,ScotKe01,0
+2026,TB,DB,,ACT,Kevin Knowles,Florida State,KnowKe00,1
+2026,TB,DB,29,ACT,Miles Killebrew,Southern Utah State,KillMi00,10
+2026,TB,DB,,DEV,Sean Murphy-Bunting,Central Michigan,BuntSe00,7
+2026,TB,DB,,DEV,Silas Walters,Miami (Ohio),,0
+2026,TB,DB,23,ACT,Tykee Smith,Georgia; West Virginia,SmitTy05,2
+2026,TB,DB,26,RES,Xavier Williams,Cincinnati; Middle Tennessee State; UCF; Charlotte,,0
+2026,TB,DB,27,ACT,Zyon McCollum,Sam Houston State,McCoZy02,4
+2026,TB,DL,91,ACT,A'Shawn Robinson,Alabama,RobiAS00,10
+2026,TB,DL,94,ACT,Calijah Kancey,Pittsburgh,KancCa00,3
+2026,TB,DL,90,ACT,DeMonte Capehart,Clemson,CapeDe00,0
+2026,TB,DL,73,RES,Deshawn McKnight,Arizona; Tennessee-Martin,,0
+2026,TB,DL,95,ACT,Elijah Roberts,SMU; Miami,RobeEl01,1
+2026,TB,DL,92,ACT,Elijah Simmons,Tennessee,SimmEl00,1
+2026,TB,DL,93,DEV,Jayson Jones,Auburn; Oregon,,1
+2026,TB,DL,56,ACT,Rakeem Nunez-Roches,Southern Mississippi,NuneRa00,11
+2026,TB,DL,50,ACT,Vita Vea,Washington,VeaxVi00,8
+2026,TB,K,4,ACT,Chase McLaughlin,Illinois,McLaCh00,7
+2026,TB,LB,97,ACT,Al-Quadin Muhammad,Miami,MuhaAl00,9
+2026,TB,LB,34,ACT,Alex Anzalone,Florida,AnzaAl00,9
+2026,TB,LB,98,ACT,Anthony Nelson,Iowa,NelsAn01,7
+2026,TB,LB,52,ACT,Christian Rozeboom,South Dakota State,RozeCh00,6
+2026,TB,LB,51,ACT,David Walker,Central Arkansas; Southern Arkansas,WalkDa03,1
+2026,TB,LB,48,DEV,Javin Wright,Nebraska,,0
+2026,TB,LB,45,ACT,Josiah Trotter,Missouri,TrotJo00,0
+2026,TB,LB,59,RES,Mohamed Kamara,Colorado State,KamaMo00,2
+2026,TB,LB,3,ACT,Rueben Bain Jr.,Miami,BainRu00,0
+2026,TB,LB,8,ACT,SirVocea Dennis,Pittsburgh,DennSi00,3
+2026,TB,LB,57,DEV,Yasir Holmes,Tarleton State; Frostburg State,,0
+2026,TB,LB,0,ACT,Yaya Diaby,Louisville,DiabYa00,3
+2026,TB,LS,86,ACT,Evan Deckers,Duke,,3
+2026,TB,OL,68,ACT,Ben Bredeson,Michigan,,6
+2026,TB,OL,66,DEV,Ben Scott,Nebraska; Arizona State,,1
+2026,TB,OL,70,ACT,Benjamin Chukwuma,Georgia State,,1
+2026,TB,OL,75,ACT,Billy Schrauth,Notre Dame,,0
+2026,TB,OL,69,ACT,Cody Mauch,North Dakota State,,3
+2026,TB,OL,65,ACT,Dan Feeney,Indiana,,9
+2026,TB,OL,62,ACT,Graham Barton,Duke,,2
+2026,TB,OL,61,DEV,Henry Lutovsky,Nebraska,,0
+2026,TB,OL,77,ACT,Justin Skule,Vanderbilt,,7
+2026,TB,OL,67,ACT,Luke Goedeke,Central Michigan,,4
+2026,TB,OL,72,ACT,Luke Haggard,Indiana,,3
+2026,TB,OL,76,DEV,Paul Rubelt,UCF,,0
+2026,TB,OL,78,ACT,Tristan Wirfs,Iowa,,6
+2026,TB,P,9,ACT,Riley Dixon,Syracuse,DixoRi00,10
+2026,TB,QB,6,ACT,Baker Mayfield,Oklahoma; Texas Tech,MayfBa00,8
+2026,TB,QB,,DEV,Easton Stick,North Dakota State,SticEa00,7
+2026,TB,QB,10,ACT,Jalon Daniels,Kansas,DaniJa03,0
+2026,TB,RB,7,ACT,Bucky Irving,Oregon; Minnesota,IrviBu00,2
+2026,TB,RB,18,DEV,Josh Williams,LSU,WillJo011,1
+2026,TB,RB,1,ACT,Kenny Gainwell,Memphis,GainKe00,5
+2026,TB,RB,44,ACT,Sean Tucker,Syracuse,TuckSe00,3
+2026,TB,TE,84,ACT,Bauer Sharp,LSU; Oklahoma; Southeastern Louisiana,SharBa00,0
+2026,TB,TE,,DEV,CJ Dippre,Alabama; Maryland,DippCJ00,1
+2026,TB,TE,88,ACT,Cade Otton,Washington,OttoCa00,4
+2026,TB,TE,41,ACT,Ko Kieft,Minnesota,KiefKo00,4
+2026,TB,TE,87,ACT,Payne Durham,Purdue,DurhPa00,3
+2026,TB,WR,14,ACT,Chris Godwin Jr.,Penn State,GodwCh00,9
+2026,TB,WR,80,RSR,David Sills,West Virginia,SillDa01,7
+2026,TB,WR,8,DEV,Dean Patterson IV,Georgia Tech; Florida International; Findlay,,0
+2026,TB,WR,2,ACT,Emeka Egbuka,Ohio State,EgbuEm01,1
+2026,TB,WR,83,DEV,Eric Rivers Jr.,Georgia Tech; Florida International; Memphis,RiveEr00,0
+2026,TB,WR,85,DEV,Garrett Greene,West Virginia,,1
+2026,TB,WR,11,ACT,Jalen McMillan,Washington,McMiJa01,2
+2026,TB,WR,19,ACT,Kameron Johnson,Barton College,JohnKa01,2
+2026,TB,WR,17,ACT,Ted Hurst III,Georgia State; Valdosta State,HursTe00,0
+2026,TB,WR,15,ACT,Tez Johnson,Oregon; Troy,JohnTe03,1
+2026,TEN,DB,24,ACT,Alontae Taylor,Tennessee,TaylAl01,4
+2026,TEN,DB,37,ACT,Amani Hooker,Iowa,HookAm00,7
+2026,TEN,DB,18,ACT,Cordale Flott,LSU,FlotCo00,4
+2026,TEN,DB,41,DEV,Erick Hallett,Pittsburgh,HallEr00,3
+2026,TEN,DB,16,DEV,Jalen McMurray,Tennessee; Temple,,0
+2026,TEN,DB,28,DEV,Jerrick Reed II,New Mexico; Northwest Mississippi CC,ReedJe00,3
+2026,TEN,DB,25,RSR,Joshua Williams,Fayetteville State University,WillJo03,4
+2026,TEN,DB,30,RES,Kendell Brooks,Michigan State; North Greenville College,BrooKe02,2
+2026,TEN,DB,23,ACT,Kevin Winston Jr.,Penn State,WinsKe02,1
+2026,TEN,DB,26,ACT,Marcus Harris,California; Idaho; Oregon State,HarrMa10,1
+2026,TEN,DB,,ACT,Melvin Smith Jr.,Southern Arkansas,,1
+2026,TEN,DB,21,ACT,Micah Robinson,Tulane,RobiMi01,1
+2026,TEN,DB,,DEV,Shemar Bartholomew,Georgia Southern; Northwestern State (LA),BartSh00,2
+2026,TEN,DB,,ACT,Terrell Burgess,Utah,BurgTe00,6
+2026,TEN,DB,38,ACT,Tony Adams,Illinois,AdamTo03,4
+2026,TEN,DL,96,ACT,Jackie Marshall,Baylor,MarsJa02,0
+2026,TEN,DL,57,ACT,Jacob Martin,Temple,MartJa02,8
+2026,TEN,DL,97,DEV,Jalyn Holmes,Ohio State,HolmJa01,8
+2026,TEN,DL,92,RES,Jaylen Harrell,Michigan,HarrJa05,2
+2026,TEN,DL,98,ACT,Jeffery Simmons,Mississippi State,SimmJe01,7
+2026,TEN,DL,11,ACT,Jermaine Johnson II,Florida State,JohnJe07,4
+2026,TEN,DL,91,ACT,John Franklin-Myers,Stephen F. Austin State,FranJo02,8
+2026,TEN,DL,95,ACT,Jordan Elliott,Missouri; Texas,ElliJo02,6
+2026,TEN,DL,15,ACT,Keldric Faulk,Auburn,FaulKe01,0
+2026,TEN,DL,68,DEV,Laki Tasi,,,1
+2026,TEN,DL,,ACT,Nazir Stackhouse,Georgia,StacNa00,1
+2026,TEN,DL,7,ACT,Oluwafemi Oladejo,UCLA; California,OladOl00,1
+2026,TEN,DL,90,ACT,Solomon Thomas,Stanford,ThomSo00,9
+2026,TEN,DL,58,RES,Tanoh Kpassagnon,Villanova,KpasTa00,9
+2026,TEN,DL,94,DEV,Timmy Horne,Kansas State,HornTi00,4
+2026,TEN,DL,56,ACT,Truman Jones,Harvard,JoneTr01,3
+2026,TEN,K,6,ACT,Joey Slye,Virginia Tech,SlyeJo00,7
+2026,TEN,LB,53,ACT,Anthony Hill Jr.,Texas,HillAn01,0
+2026,TEN,LB,33,ACT,Cedric Gray,North Carolina,GrayCe00,2
+2026,TEN,LB,50,ACT,Cody Barton,Utah,BartCo00,7
+2026,TEN,LB,40,RES,Dominique Hampton,Washington,HampDo00,2
+2026,TEN,LB,54,RSR,Dorian Mausi,Auburn; Duke,,1
+2026,TEN,LB,52,ACT,James Williams,Miami,WillJa15,2
+2026,TEN,LB,45,RES,Milo Eifler,Illinois,EiflMi00,5
+2026,TEN,LB,44,DEV,Mohamoud Diabate,Utah,DiabMo00,3
+2026,TEN,LB,,ACT,Owen Pappoe,Auburn,PappOw00,3
+2026,TEN,LS,46,ACT,Morgan Cox,Tennessee,,16
+2026,TEN,OL,51,ACT,Austin Schlottmann,TCU,,8
+2026,TEN,OL,78,ACT,Brandon Crenshaw-Dickson,Florida; San Diego State,,1
+2026,TEN,OL,75,ACT,Dan Moore Jr.,Texas A&M,,5
+2026,TEN,OL,67,DEV,Drew Moss,Colorado State; Lamar,,1
+2026,TEN,OL,66,ACT,Fernando Carmona,Arkansas; San Jose State,,0
+2026,TEN,OL,71,ACT,Garrett Dellinger,LSU,,1
+2026,TEN,OL,55,ACT,JC Latham,Alabama,,2
+2026,TEN,OL,64,ACT,Jackson Slater,Sacramento State,,1
+2026,TEN,OL,,ACT,James Hudson,Cincinnati,,5
+2026,TEN,OL,79,ACT,Pat Coogan,Indiana; Notre Dame,,0
+2026,TEN,OL,77,ACT,Peter Skoronski,Northwestern,,3
+2026,TEN,OL,62,DEV,Rasheed Miller,Louisville; Georgia Southern,,0
+2026,TEN,P,3,ACT,Tommy Townsend,Florida,TownTo01,6
+2026,TEN,QB,1,ACT,Cam Ward,Miami; Washington State; Incarnate Word,WardCa00,1
+2026,TEN,QB,16,DEV,Hendon Hooker,Tennessee; Virginia Tech,HookHe00,3
+2026,TEN,QB,10,ACT,Mitchell Trubisky,North Carolina,TrubMi00,9
+2026,TEN,RB,36,ACT,Julius Chestnut,Sacred Heart University,ChesJu00,4
+2026,TEN,RB,31,DEV,Kalel Mullings,Michigan,MullKa00,1
+2026,TEN,RB,35,DEV,Michael Carter,North Carolina,CartMi03,5
+2026,TEN,RB,32,ACT,Nicholas Singleton,Penn State,SingNi01,0
+2026,TEN,RB,20,ACT,Tony Pollard,Memphis,PollTo00,7
+2026,TEN,RB,2,ACT,Tyjae Spears,Tulane,SpeaTy00,3
+2026,TEN,TE,82,ACT,Daniel Bellinger,San Diego State,BellDa00,4
+2026,TEN,TE,88,ACT,David Martin-Robinson,Temple,MartDa01,2
+2026,TEN,TE,84,ACT,Gunnar Helm,Texas,HelmGu00,1
+2026,TEN,TE,81,RES,Jaren Kanak,Oklahoma,KanaJa00,0
+2026,TEN,TE,83,DEV,Joel Wilson,Central Michigan,,3
+2026,TEN,TE,86,ACT,Kylen Granson,SMU,GranKy00,5
+2026,TEN,WR,0,ACT,Calvin Ridley,Alabama,RidlCa00,8
+2026,TEN,WR,14,ACT,Carnell Tate,Ohio State,TateCa00,0
+2026,TEN,WR,17,ACT,Chimere Dike,Florida; Wisconsin,DikeCh00,1
+2026,TEN,WR,5,ACT,Elic Ayomanor,Stanford,AyomEl00,1
+2026,TEN,WR,85,DEV,K.J. Osborn,Miami; Buffalo,OsboKJ00,6
+2026,TEN,WR,19,DEV,Tyren Montgomery,John Carroll University; Nicholls State; LSU,MontTy02,0
+2026,TEN,WR,4,ACT,Wan'Dale Robinson,Kentucky,RobiWa01,4
+2026,TEN,WR,87,DEV,Xavier Restrepo,Miami,RestXa00,1
+2026,WAS,DB,2,ACT,Amik Robertson,Louisiana Tech,RobeAm00,6
+2026,WAS,DB,29,DEV,Darius Rush,South Carolina,RushDa00,3
+2026,WAS,DB,30,ACT,Fabian Moreau,UCLA,MoreFa00,9
+2026,WAS,DB,38,DEV,Fred Davis,Northwestern; Jacksonville State; UCF; Clemson,,0
+2026,WAS,DB,,DEV,Isaac Yiadom,Boston College,YiadIs00,8
+2026,WAS,DB,39,ACT,Jeremy Reaves,South Alabama,ReavJe00,8
+2026,WAS,DB,36,RES,Malik Spencer,Michigan State,,0
+2026,WAS,DB,0,ACT,Mike Sainristil,Michigan,SainMi00,2
+2026,WAS,DB,25,ACT,Nick Cross,Maryland,CrosNi00,4
+2026,WAS,DB,35,ACT,Percy Butler,Louisiana-Lafayette,ButlPe00,4
+2026,WAS,DB,20,ACT,Quan Martin,Illinois,MartJa04,3
+2026,WAS,DB,31,ACT,Rasul Douglas,West Virginia; Nassau CC,DougRa00,9
+2026,WAS,DB,,DEV,Terell Smith,Minnesota,SmitTe05,3
+2026,WAS,DB,23,RSR,Trey Amos,Mississippi; Alabama; Louisiana,AmosTr00,1
+2026,WAS,DB,18,ACT,Tyler Owens,Texas Tech; Texas,OwenTy00,2
+2026,WAS,DL,55,DEV,Byron Cowart,Maryland; Auburn,CowaBy00,7
+2026,WAS,DL,90,ACT,Charles Omenihu,Texas,OmenCh00,7
+2026,WAS,DL,53,DEV,DJ Johnson,Oregon; Miami,JohnDJ00,3
+2026,WAS,DL,94,ACT,Daron Payne,Alabama,PaynDa00,8
+2026,WAS,DL,91,PUP,Deatrich Wise,Arkansas,WiseDe00,9
+2026,WAS,DL,92,SUS,Dorance Armstrong,Kansas,ArmsDo00,8
+2026,WAS,DL,93,RES,Drake Jackson,USC,JackDr01,4
+2026,WAS,DL,99,ACT,Javon Kinlaw,South Carolina; Jones County JC,KinlJa00,6
+2026,WAS,DL,60,DEV,Jeffrey M'ba,SMU; Purdue; Auburn; Independence Comm. College,,0
+2026,WAS,DL,95,RES,Jer'Zhan Newton,Illinois,NewtJe00,2
+2026,WAS,DL,50,ACT,Ricky Barber,UCF; Western Kentucky,BarbRi00,1
+2026,WAS,DL,96,ACT,Shy Tuttle,Tennessee,TuttSh00,7
+2026,WAS,DL,59,RES,T.J. Maguranyanga,,MaguTJ00,1
+2026,WAS,DL,97,ACT,Tim Settle,Virginia Tech,SettTi00,8
+2026,WAS,K,19,ACT,Drew Stevens,Iowa,StevDr00,0
+2026,WAS,LB,51,DEV,Ale Kaho,UCLA; Alabama,KahoAl00,1
+2026,WAS,LB,,RES,Curtis Jacobs,Penn State,JacoCu00,2
+2026,WAS,LB,4,ACT,Frankie Luvu,Washington State,LuvuFr00,8
+2026,WAS,LB,41,ACT,Javontae Jean-Baptiste,Notre Dame; Ohio State,JeanJa00,2
+2026,WAS,LB,58,ACT,Jordan Magee,Temple,MageJo00,2
+2026,WAS,LB,48,ACT,Joshua Josephs,Tennessee,JoseJo00,0
+2026,WAS,LB,45,ACT,K'Lavon Chaisson,LSU,ChaiKL00,6
+2026,WAS,LB,56,ACT,Kain Medrano,UCLA,MedrKa00,1
+2026,WAS,LB,54,ACT,Leo Chenal,Wisconsin,ChenLe00,4
+2026,WAS,LB,98,ACT,Odafe Oweh,Penn State,OwehJa00,5
+2026,WAS,LB,52,ACT,Sonny Styles,Ohio State,StylSo01,0
+2026,WAS,LS,69,ACT,Tyler Ott,Harvard,,11
+2026,WAS,OL,71,ACT,Andrew Wylie,Eastern Michigan,,9
+2026,WAS,OL,74,ACT,Brandon Coleman,TCU; Trinity Valley CC,,2
+2026,WAS,OL,75,ACT,Chris Paul,Tulsa,,4
+2026,WAS,OL,,ACT,D.J. Humphries,Florida,,11
+2026,WAS,OL,,DEV,Esa Pole,Washington State; Chabot College,,1
+2026,WAS,OL,72,ACT,Josh Conerly Jr.,Oregon,,1
+2026,WAS,OL,61,DEV,Julian Good-Jones,Iowa State,,3
+2026,WAS,OL,78,RES,Laremy Tunsil,Mississippi,,10
+2026,WAS,OL,66,ACT,Matt Gulbin,Michigan State; Wake Forest,,0
+2026,WAS,OL,67,ACT,Nick Allegretti,Illinois,,7
+2026,WAS,OL,76,ACT,Sam Cosmi,Texas,,5
+2026,WAS,OL,62,ACT,Tanoa Togiai,Utah,,0
+2026,WAS,OL,73,DEV,Trent Scott,Grambling State,,8
+2026,WAS,P,10,ACT,Tress Way,Oklahoma,WayxTr00,12
+2026,WAS,QB,16,ACT,Athan Kaliakmanis,Rutgers; Minnesota,KaliAt00,0
+2026,WAS,QB,5,ACT,Jayden Daniels,LSU; Arizona State,DaniJa02,2
+2026,WAS,QB,8,ACT,Marcus Mariota,Oregon,MariMa01,11
+2026,WAS,QB,15,DEV,Sam Hartman,Notre Dame; Wake Forest,HartSa00,2
+2026,WAS,RB,24,DEV,Craig Reynolds,Kutztown,ReynCr00,7
+2026,WAS,RB,22,ACT,Jacory Croskey-Merritt,Arizona; New Mexico; Alabama State,CrosJa00,1
+2026,WAS,RB,26,RSR,Jeremy McNichols,Boise State,McNiJe00,9
+2026,WAS,RB,31,ACT,Kaytron Allen,Penn State,AlleKa01,0
+2026,WAS,RB,1,ACT,Rachaad White,Arizona State; Mt. San Antonio; Kearney State,WhitRa01,4
+2026,WAS,RB,30,DEV,Robert Henry Jr.,Texas-San Antonio,HenrRo00,0
+2026,WAS,TE,82,ACT,Ben Sinnott,Kansas State,SinnBe00,2
+2026,WAS,TE,85,ACT,Chig Okonkwo,Maryland,OkonCh00,4
+2026,WAS,TE,80,ACT,Colson Yankoff,UCLA; Washington,YankCo00,2
+2026,WAS,TE,,DEV,Jack Westover,Washington,WestJa01,2
+2026,WAS,TE,87,ACT,John Bates,Boise State,BateJo00,5
+2026,WAS,TE,,DEV,Joshua Simon,South Carolina; Western Kentucky,SimoJo03,1
+2026,WAS,TE,40,RES,Quentin Moore,Washington; Independence Comm. College,,0
+2026,WAS,WR,14,ACT,Antonio Williams,Clemson,WillAn04,0
+2026,WAS,WR,6,ACT,Dyami Brown,North Carolina,BrowDy00,5
+2026,WAS,WR,84,RES,Jacoby Jones,UCF; Ohio,JoneJa16,1
+2026,WAS,WR,86,DEV,Jaden Bradley,UNLV; Charlotte; Pittsburgh,,0
+2026,WAS,WR,83,ACT,Jaylin Lane,Virginia Tech; Middle Tennessee State,LaneJa00,1
+2026,WAS,WR,11,ACT,Luke McCaffrey,Rice; Nebraska,McCaLu00,2
+2026,WAS,WR,3,ACT,Stefon Diggs,Maryland,DiggSt00,11
+2026,WAS,WR,17,ACT,Terry McLaurin,Ohio State,McLaTe00,7
+2026,WAS,WR,13,ACT,Treylon Burks,Arkansas,BurkTr00,4
