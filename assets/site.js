@@ -1,9 +1,9 @@
 /**
  * Client-side behaviour for the pool site.
  *
- * There is deliberately very little of it: every number on every page is
- * server-rendered, so this only handles the three things that genuinely depend
- * on the viewer — their theme, their time zone, and motion on first paint.
+ * Most durable numbers are server-rendered. This layer handles the parts that
+ * genuinely belong to the viewer or the live browser: identity, time zone,
+ * interactive scenarios, and ESPN's in-the-moment score feed.
  *
  * The logic is factored into pure functions with no DOM access so it can be
  * unit tested directly; `init()` is the only part that touches the document.
@@ -13,7 +13,6 @@ export const THEME_KEY = 'pool-theme';
 export const TZ_KEY = 'pool-tz';
 export const ME_KEY = 'pool-me';
 export const DETAIL_KEY = 'pool-detail';
-export const SLATE_KEY = 'pool-slate';
 export const COMPARE_KEY = 'pool-compare';
 export const DEFAULT_TZ = 'America/New_York';
 export const DEFAULT_THEME = 'dark';
@@ -547,6 +546,12 @@ export const ESPN_SCOREBOARD_LEGACY =
 export const LIVE_POLL_MS = 20_000;
 export const PREGAME_POLL_MS = 180_000;
 
+/** One request covers Canton through the last preseason weekend. */
+export function preseasonScoreboardUrl(season) {
+  const year = String(season);
+  return `${ESPN_SCOREBOARD}?seasontype=1&dates=${year}0715-${year}0915&limit=1000`;
+}
+
 /** ESPN and nflverse use different abbreviations for two clubs. */
 export function normalizeEspnTeam(team) {
   return ({ WSH: 'WAS', JAC: 'JAX', LA: 'LAR' })[team] || team;
@@ -570,16 +575,24 @@ export function parseEspnScoreboard(payload) {
     const displayClock = event?.status?.displayClock || '';
     games.push({
       id: String(event.id),
+      seasonType: Number(event?.season?.type || 0),
+      week: Number(event?.week?.number || 0),
+      date: event.date || competition.date || '',
       away: normalizeEspnTeam(away.team?.abbreviation),
       home: normalizeEspnTeam(home.team?.abbreviation),
       awayScore: String(away.score ?? '0'),
       homeScore: String(home.score ?? '0'),
+      awayWinner: Boolean(away.winner),
+      homeWinner: Boolean(home.winner),
       state,
+      status: event?.status?.type?.shortDetail || event?.status?.type?.detail || '',
       clock: state === 'in' ? `Q${period} ${displayClock}`.trim() : '',
       down: situation.downDistanceText || '',
       possession: possession ? normalizeEspnTeam(possession.team?.abbreviation) : '',
       redZone: Boolean(situation.isRedZone),
       lastPlay: situation.lastPlay?.text || '',
+      venue: competition.venue?.fullName || '',
+      network: competition.broadcasts?.flatMap((item) => item.names || []).join(', ') || '',
     });
   }
   return games;
@@ -643,18 +656,96 @@ export function scenarioStandings(data, selections) {
     }));
 }
 
+/**
+ * The selected entrant's genuinely best winner-only slate.
+ *
+ * "Best" is deliberately board-first: lowest finishing rank, then the widest
+ * cushion over their closest rival, then their own points. Every away/home
+ * combination is visited, so the likeliest slate is one of the candidates and
+ * a dream slate can never rank the entrant worse than chalk did. Manual ties
+ * remain available, but a preset called "dream" should call winners rather
+ * than manufacture sixteen fantastically convenient NFL ties.
+ */
+export function dreamScenario(data, meSlug = '') {
+  const entrants = data?.entrants || [];
+  const games = data?.games || [];
+  const me = entrants.findIndex((entrant) => entrant.slug === meSlug);
+  if (me < 0 || !games.length) return {};
+
+  // A real NFL slate tops out at sixteen games. Keep malformed input from
+  // turning an interactive button into an exponential browser lock-up.
+  if (games.length > 16) {
+    return Object.fromEntries(games.map((game) => [game.id, game.favorite || game.home]));
+  }
+
+  const totals = entrants.map((entrant) => Number(entrant.banked));
+  const calls = new Array(games.length);
+  let best = null;
+  let bestCalls = null;
+
+  const score = (chalk) => {
+    const mine = totals[me];
+    const margins = totals.filter((_total, index) => index !== me).map((total) => mine - total);
+    return {
+      rank: 1 + margins.filter((margin) => margin < -1e-9).length,
+      margin: margins.length ? Math.min(...margins) : 0,
+      total: mine,
+      chalk,
+    };
+  };
+  const better = (candidate, incumbent) => (
+    !incumbent
+    || candidate.rank < incumbent.rank
+    || (candidate.rank === incumbent.rank && candidate.margin > incumbent.margin + 1e-9)
+    || (candidate.rank === incumbent.rank
+      && Math.abs(candidate.margin - incumbent.margin) <= 1e-9
+      && candidate.total > incumbent.total + 1e-9)
+    || (candidate.rank === incumbent.rank
+      && Math.abs(candidate.margin - incumbent.margin) <= 1e-9
+      && Math.abs(candidate.total - incumbent.total) <= 1e-9
+      && candidate.chalk > incumbent.chalk)
+  );
+
+  const visit = (index, chalk) => {
+    if (index === games.length) {
+      const candidate = score(chalk);
+      if (better(candidate, best)) {
+        best = candidate;
+        bestCalls = [...calls];
+      }
+      return;
+    }
+    const game = games[index];
+    // Favourite first makes a perfectly level optimum deterministic and calm.
+    const outcomes = [game.favorite, game.away, game.home]
+      .filter((outcome, i, all) => outcome && all.indexOf(outcome) === i);
+    for (const outcome of outcomes) {
+      for (let entrant = 0; entrant < entrants.length; entrant += 1) {
+        totals[entrant] += Number(game.points?.[entrants[entrant].slug]?.[outcome] || 0);
+      }
+      calls[index] = outcome;
+      visit(index + 1, chalk + Number(outcome === game.favorite));
+      for (let entrant = 0; entrant < entrants.length; entrant += 1) {
+        totals[entrant] -= Number(game.points?.[entrants[entrant].slug]?.[outcome] || 0);
+      }
+    }
+  };
+  visit(0, 0);
+  return Object.fromEntries(games.map((game, index) => [game.id, bestCalls[index]]));
+}
+
 export function scenarioPreset(data, preset, meSlug = '') {
   if (preset === 'reset') return {};
+  if (preset === 'dream') return dreamScenario(data, meSlug);
   const out = {};
   for (const game of data.games) {
     if (preset === 'likely') out[game.id] = game.favorite;
     if (preset === 'chaos') out[game.id] = game.chaos;
-    if (preset === 'dream' && game.dream?.[meSlug]) out[game.id] = game.dream[meSlug];
   }
   return out;
 }
 
-function paintGamedayOrder(doc, win) {
+function paintGamedayOrder(doc, win, animate = false) {
   const grid = doc.querySelector('[data-gameday-cards]');
   if (!grid) return;
   const slug = doc.documentElement.dataset.me || '';
@@ -667,8 +758,13 @@ function paintGamedayOrder(doc, win) {
     );
     return priority(b) - priority(a);
   });
-  for (const card of cards) grid.append(card);
-  if (win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const changed = cards.some((card, index) => grid.children[index] !== card);
+  if (!changed) return;
+  grid.append(...cards);
+  // Initial identity restoration is state hydration, not an interaction. Its
+  // FLIP animation was the "double reload" seen on arrival. Only an identity
+  // change the viewer just made should visibly move the cards.
+  if (!animate || win.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   for (const card of cards) {
     const was = before.get(card);
     const now = card.getBoundingClientRect();
@@ -679,6 +775,41 @@ function paintGamedayOrder(doc, win) {
       [{ transform: `translateY(${shift.toFixed(1)}px)` }, { transform: 'none' }],
       { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
     );
+  }
+}
+
+function paintScenarioDrilldown(doc, root, data, game, chosen) {
+  const fieldset = root.querySelector(`[data-scenario-game="${game.id}"]`);
+  const lens = fieldset?.querySelector('[data-scenario-drilldown]');
+  if (!lens) return;
+
+  const call = lens.querySelector('[data-scenario-call]');
+  const impact = lens.querySelector('[data-scenario-impact]');
+  if (!chosen) {
+    if (call) call.textContent = `${game.away} at ${game.home}`;
+    if (impact) impact.textContent = 'Choose a result to see exactly who scores.';
+    for (const link of lens.querySelectorAll('[data-scenario-team]')) {
+      link.classList.remove('is-called');
+    }
+    return;
+  }
+  const opponent = chosen === game.away ? game.home : game.away;
+  if (call) call.textContent = chosen === 'TIE' ? `${game.away} and ${game.home} tie` : `${chosen} over ${opponent}`;
+
+  const gains = data.entrants
+    .map((entrant) => ({
+      name: entrant.name,
+      gain: Number(game.points?.[entrant.slug]?.[chosen] || 0),
+    }))
+    .filter((entrant) => entrant.gain > 0)
+    .sort((a, b) => b.gain - a.gain || a.name.localeCompare(b.name));
+  if (impact) {
+    impact.textContent = gains.length
+      ? gains.map((entrant) => `${entrant.name} +${entrant.gain.toFixed(2)}`).join(' · ')
+      : 'No one in this pool scores from that result.';
+  }
+  for (const link of lens.querySelectorAll('[data-scenario-team]')) {
+    link.classList.toggle('is-called', link.dataset.scenarioTeam === chosen);
   }
 }
 
@@ -711,6 +842,8 @@ function initScenario(doc, win) {
       for (const button of fieldset.querySelectorAll('[data-scenario-choice]')) {
         button.setAttribute('aria-pressed', String(button.dataset.scenarioChoice === chosen));
       }
+      const game = data.games.find((candidate) => String(candidate.id) === fieldset.dataset.scenarioGame);
+      if (game) paintScenarioDrilldown(doc, root, data, game, chosen);
     }
     const me = doc.documentElement.dataset.me || '';
     const meRank = standings.find((entrant) => entrant.slug === me)?.rank ?? null;
@@ -725,6 +858,7 @@ function initScenario(doc, win) {
     previousMeRank = meRank;
     const hash = serializeScenario(selections, data.games);
     win.history?.replaceState?.(null, '', `${doc.location?.pathname || ''}${hash}`);
+    return standings;
   };
 
   root.addEventListener('click', (event) => {
@@ -735,6 +869,8 @@ function initScenario(doc, win) {
         ? undefined : choice.dataset.scenarioChoice;
       if (!selections[game]) delete selections[game];
       paint();
+      const lens = choice.closest('[data-scenario-game]').querySelector('[data-scenario-drilldown]');
+      if (lens) lens.open = true;
       return;
     }
     const preset = event.target.closest?.('[data-scenario-preset]')?.dataset.scenarioPreset;
@@ -746,8 +882,18 @@ function initScenario(doc, win) {
         return;
       }
       selections = scenarioPreset(data, preset, me);
-      if (status) status.textContent = '';
-      paint();
+      const standings = paint();
+      if (status && preset === 'dream') {
+        const mine = standings.find((entrant) => entrant.slug === me);
+        const next = standings.find((entrant) => entrant.slug !== me);
+        const margin = mine && next ? mine.total - next.total : 0;
+        const finish = mine?.rank === 1
+          ? (margin > 0.005 ? ` · ${margin.toFixed(2)} pts clear` : ' · tied for first')
+          : '';
+        status.textContent = mine ? `${mine.name}'s best slate lands at #${mine.rank}${finish}.` : '';
+      } else if (status) {
+        status.textContent = preset === 'reset' ? 'Scenario cleared.' : `${preset === 'likely' ? 'Likeliest' : 'Chaos'} slate called.`;
+      }
     }
   });
 
@@ -757,9 +903,13 @@ function initScenario(doc, win) {
       const copy = win.navigator?.clipboard?.writeText;
       if (typeof copy !== 'function') throw new Error('clipboard unavailable');
       await copy.call(win.navigator.clipboard, win.location?.href || doc.location?.href);
-      if (status) status.textContent = 'Scenario link copied.';
+      if (status) {
+        status.textContent = 'Link copied — paste it into a text or group chat. Opening it recreates these exact picks.';
+      }
     } catch {
-      if (status) status.textContent = 'Copy the scenario URL from your address bar.';
+      if (status) {
+        status.textContent = 'Your picks are in the address bar. Copy that URL to share this exact board.';
+      }
     }
   });
 
@@ -893,6 +1043,136 @@ function initLiveHarness(doc, win) {
   });
 }
 
+function renderPreseasonSchedule(doc, root, games, week) {
+  const list = root.querySelector('[data-preseason-games]');
+  if (!list) return;
+  const wanted = week === 'all'
+    ? [...games]
+    : games.filter((game) => game.week === Number(week));
+  wanted.sort((a, b) => String(a.date).localeCompare(String(b.date)) || a.id.localeCompare(b.id));
+  list.textContent = '';
+  const teamBase = root.dataset.teamBase || '/team/';
+  const zone = doc.querySelector('[data-tz-select]')?.value || DEFAULT_TZ;
+
+  for (const game of wanted) {
+    const row = doc.createElement('article');
+    row.className = `preseason-game is-${game.state}`;
+
+    const when = doc.createElement('div');
+    when.className = 'preseason-when';
+    const time = doc.createElement('time');
+    time.dateTime = game.date;
+    time.textContent = formatTimestamp(game.date, zone, 'en-US', KICKOFF_FORMAT);
+    const state = doc.createElement('span');
+    state.className = 'preseason-status';
+    state.textContent = game.state === 'in'
+      ? game.clock
+      : (game.status || (game.state === 'post' ? 'Final' : 'Scheduled'));
+    when.append(time, state);
+
+    const matchup = doc.createElement('div');
+    matchup.className = 'preseason-matchup';
+    for (const [team, score, winner] of [
+      [game.away, game.awayScore, game.awayWinner],
+      [game.home, game.homeScore, game.homeWinner],
+    ]) {
+      const side = doc.createElement('a');
+      side.className = `preseason-side${winner ? ' is-winner' : ''}`;
+      side.href = `${teamBase}${team}/`;
+      const name = doc.createElement('span');
+      name.textContent = team;
+      const points = doc.createElement('strong');
+      points.textContent = game.state === 'pre' ? '—' : score;
+      side.append(name, points);
+      matchup.append(side);
+    }
+
+    const facts = [game.venue, game.network].filter(Boolean);
+    row.append(when, matchup);
+    if (facts.length) {
+      const meta = doc.createElement('p');
+      meta.className = 'preseason-meta';
+      meta.textContent = facts.join(' · ');
+      row.append(meta);
+    }
+    list.append(row);
+  }
+
+  const summary = root.querySelector('[data-preseason-summary]');
+  if (summary) {
+    const finals = wanted.filter((game) => game.state === 'post').length;
+    const live = wanted.filter((game) => game.state === 'in').length;
+    summary.textContent = `${wanted.length} game${wanted.length === 1 ? '' : 's'}`
+      + (live ? ` · ${live} live` : '')
+      + (finals ? ` · ${finals} final` : '');
+  }
+  if (!wanted.length) {
+    const empty = doc.createElement('p');
+    empty.className = 'empty';
+    empty.textContent = 'ESPN returned no games for this preseason window.';
+    list.append(empty);
+  }
+}
+
+function initPreseasonSchedule(doc, win) {
+  const root = doc.querySelector('[data-preseason-schedule]');
+  if (!root || typeof win.fetch !== 'function') return;
+  const link = doc.querySelector('a[href="#preseason"]');
+  let games = [];
+  let request = 0;
+  const selectedWeek = () => root.querySelector(
+    '[data-preseason-week][aria-pressed="true"]',
+  )?.dataset.preseasonWeek || '4';
+
+  const load = async () => {
+    const mine = ++request;
+    const state = root.querySelector('[data-preseason-state]');
+    root.dataset.loading = 'true';
+    if (state) state.textContent = 'Loading preseason…';
+    try {
+      const season = root.dataset.espnSeason || new Date().getFullYear();
+      games = (await fetchEspnGames(win, preseasonScoreboardUrl(season)))
+        .filter((game) => game.seasonType === 1);
+      if (mine !== request) return;
+      delete root.dataset.loading;
+      root.dataset.loaded = 'true';
+      renderPreseasonSchedule(doc, root, games, selectedWeek());
+      if (state) state.textContent = `${games.length} games loaded · live in your browser`;
+      const delay = livePollDelay(games);
+      if (delay && doc.location?.hash === '#preseason') win.setTimeout(load, delay);
+    } catch {
+      if (mine !== request) return;
+      delete root.dataset.loading;
+      delete root.dataset.loaded;
+      if (state) state.textContent = 'Feed unavailable · choose PRE to retry';
+    }
+  };
+  const ensureLoaded = () => {
+    if (!root.dataset.loaded && !root.dataset.loading) load();
+  };
+
+  link?.addEventListener('click', ensureLoaded);
+  win.addEventListener?.('hashchange', () => {
+    if (doc.location?.hash === '#preseason') ensureLoaded();
+  });
+  root.addEventListener('click', (event) => {
+    const button = event.target.closest?.('[data-preseason-week]');
+    if (!button) return;
+    for (const other of root.querySelectorAll('[data-preseason-week]')) {
+      other.setAttribute('aria-pressed', String(other === button));
+    }
+    if (root.dataset.loaded) {
+      renderPreseasonSchedule(doc, root, games, button.dataset.preseasonWeek);
+    } else {
+      ensureLoaded();
+    }
+  });
+  doc.querySelector('[data-tz-select]')?.addEventListener('change', () => {
+    if (root.dataset.loaded) renderPreseasonSchedule(doc, root, games, selectedWeek());
+  });
+  if (doc.location?.hash === '#preseason') ensureLoaded();
+}
+
 function initLiveGames(doc, win) {
   if (!doc.querySelector('[data-gameday-card]') || typeof win.fetch !== 'function') return;
   const poll = async () => {
@@ -907,6 +1187,31 @@ function initLiveGames(doc, win) {
     }
   };
   poll();
+}
+
+/** Keep the status/identity strip tucked directly beneath the sticky masthead. */
+function initStickyChrome(doc, win) {
+  const masthead = doc.querySelector('.masthead');
+  const viewer = doc.querySelector('.viewer-bar');
+  if (!masthead || !viewer) return;
+  const place = () => {
+    const mastheadHeight = Math.ceil(masthead.getBoundingClientRect().height);
+    const viewerHeight = Math.ceil(viewer.getBoundingClientRect().height);
+    if (mastheadHeight > 0) {
+      doc.documentElement.style.setProperty('--masthead-height', `${mastheadHeight}px`);
+    }
+    if (viewerHeight > 0) {
+      doc.documentElement.style.setProperty('--viewer-height', `${viewerHeight}px`);
+    }
+  };
+  place();
+  if (typeof win.ResizeObserver === 'function') {
+    const observer = new win.ResizeObserver(place);
+    observer.observe(masthead);
+    observer.observe(viewer);
+  } else {
+    win.addEventListener?.('resize', place);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -990,9 +1295,14 @@ function initDetail(doc, storage) {
  * lives in the stylesheet, costs nothing per row, and survives switching week
  * without anything being re-marked.
  */
-function initSlate(doc, storage) {
+function initSlate(doc) {
   const button = doc.querySelector('[data-slate-toggle]');
   if (!button) return;
+
+  // This filter is a temporary view, not a viewer preference. Every new page
+  // visit begins with the complete NFL schedule, even if an older version of
+  // the site left a remembered attribute behind.
+  delete doc.documentElement.dataset.slate;
 
   const paint = () => {
     button.setAttribute(
@@ -1006,7 +1316,6 @@ function initSlate(doc, storage) {
     const on = doc.documentElement.dataset.slate === 'pool';
     if (on) delete doc.documentElement.dataset.slate;
     else doc.documentElement.dataset.slate = 'pool';
-    storage.set(SLATE_KEY, on ? 'all' : 'pool');
     paint();
   });
 }
@@ -1045,6 +1354,19 @@ function initGameDetail(doc) {
       button.setAttribute('aria-expanded', String(open));
     });
   }
+
+  // Scenario links land on one exact matchup. Arriving at a highlighted but
+  // still-collapsed row is not a drill-down, so reveal its full head-to-head
+  // facts immediately and keep direct hash changes in step too.
+  const openTarget = () => {
+    const row = doc.querySelector('.game:target');
+    const button = row?.querySelector('[data-game-open]');
+    if (!row || !button) return;
+    row.classList.add('is-open');
+    button.setAttribute('aria-expanded', 'true');
+  };
+  openTarget();
+  doc.defaultView?.addEventListener('hashchange', openTarget);
 }
 
 /**
@@ -1376,7 +1698,8 @@ function initSchedule(doc, nowMs) {
   // Which week you are *looking at*, which is the hash if you followed one and
   // the current week otherwise. Kept in step with the back button.
   const markVisible = () => {
-    const shown = doc.location?.hash?.replace('#week-', '') || current;
+    const hash = doc.location?.hash || '';
+    const shown = hash === '#preseason' ? 'preseason' : (hash.replace('#week-', '') || current);
     for (const link of links) {
       if (link.dataset.weekLink === shown) link.setAttribute('aria-current', 'true');
       else link.removeAttribute('aria-current');
@@ -1987,15 +2310,16 @@ export function init(doc = document, win = window) {
   // that name entrants are scoped by it; see scopedKey.
   const scope = doc.documentElement.dataset.pool || '';
   initTheme(doc, storage, win);
+  initStickyChrome(doc, win);
   initDetail(doc, storage);
-  initSlate(doc, storage);
+  initSlate(doc);
   initGameDetail(doc);
   // Identity first: the comparison chart opens on whoever the viewer says
   // they are, so it has to know before it paints.
   initMe(doc, storage, scopedKey(ME_KEY, scope));
   paintGamedayOrder(doc, win);
   doc.querySelector('[data-me-select]')?.addEventListener(
-    'change', () => paintGamedayOrder(doc, win),
+    'change', () => paintGamedayOrder(doc, win, true),
   );
   // The clock comes in through `win` so a test can stand anywhere in the season
   // without touching global time — the same discipline the Python side follows
@@ -2003,6 +2327,7 @@ export function init(doc = document, win = window) {
   const nowMs = (win.Date ?? Date).now();
   initTimeZone(doc, storage, nowMs);
   initSchedule(doc, nowMs);
+  initPreseasonSchedule(doc, win);
   initScenario(doc, win);
   initLiveGames(doc, win);
   initLiveHarness(doc, win);

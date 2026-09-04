@@ -29,6 +29,7 @@ import {
   countUpValue,
   drawField,
   driveLabel,
+  dreamScenario,
   easeOutCubic,
   fieldGeometry,
   fieldPalette,
@@ -44,6 +45,7 @@ import {
   normalizeEspnTeam,
   parseEspnScoreboard,
   parseScenarioHash,
+  preseasonScoreboardUrl,
   relativeAge,
   rowTops,
   safeStorage,
@@ -68,6 +70,8 @@ const ISO = '2026-02-09T14:30:00+00:00';
 // leave the next one there — which is exactly how it broke the first time.
 beforeEach(() => {
   document.documentElement.removeAttribute('data-pool');
+  document.documentElement.style.removeProperty('--masthead-height');
+  document.documentElement.style.removeProperty('--viewer-height');
 });
 
 describe('nextTheme', () => {
@@ -276,7 +280,7 @@ describe('Gameday scenario helpers', () => {
     games: [
       {
         id: '2026_01_KC_SEA', away: 'KC', home: 'SEA', tie: true,
-        favorite: 'KC', chaos: 'SEA', dream: { a: 'SEA', b: 'KC' },
+        favorite: 'KC', chaos: 'SEA',
         points: {
           a: { KC: 0, SEA: 5, TIE: 2.5 },
           b: { KC: 4, SEA: 0, TIE: 2 },
@@ -285,7 +289,7 @@ describe('Gameday scenario helpers', () => {
       },
       {
         id: '2026_02_BUF_MIA', away: 'BUF', home: 'MIA', tie: false,
-        favorite: 'MIA', chaos: 'BUF', dream: { a: 'BUF', b: 'MIA' },
+        favorite: 'MIA', chaos: 'BUF',
         points: { a: { BUF: 1, MIA: 0 }, b: { BUF: 0, MIA: 3 }, c: { BUF: 0, MIA: 0 } },
       },
     ],
@@ -321,18 +325,56 @@ describe('Gameday scenario helpers', () => {
     expect(scenarioPreset(data, 'dream')).toEqual({});
     expect(scenarioPreset(data, 'reset')).toEqual({});
   });
+
+  test('a dream optimizes the whole board and can never demote a chalk leader', () => {
+    const trap = {
+      entrants: [
+        { slug: 'brian', name: 'Brian', banked: 10 },
+        { slug: 'rival', name: 'Rival', banked: 9.5 },
+        { slug: 'third', name: 'Third', banked: 0 },
+      ],
+      games: [{
+        id: 'trap', away: 'SAFE', home: 'SHINY', favorite: 'SAFE', chaos: 'SHINY',
+        points: {
+          brian: { SAFE: 0, SHINY: 5 },
+          rival: { SAFE: 0, SHINY: 6 },
+          third: { SAFE: 0, SHINY: 0 },
+        },
+      }],
+    };
+
+    // SHINY gives Brian the larger isolated gain, but gives the rival even
+    // more and costs first. Whole-board optimization keeps the safe call.
+    expect(dreamScenario(trap, 'brian')).toEqual({ trap: 'SAFE' });
+    expect(scenarioStandings(trap, scenarioPreset(trap, 'dream', 'brian'))
+      .find((entrant) => entrant.slug === 'brian').rank).toBe(1);
+    expect(dreamScenario(trap, '')).toEqual({});
+  });
+
+  test('oversized malformed slates fail calm instead of locking the browser', () => {
+    const games = Array.from({ length: 17 }, (_, i) => ({
+      id: `g${i}`, away: 'A', home: 'H', favorite: 'A', points: { a: { A: 0, H: 1 } },
+    }));
+    expect(Object.values(dreamScenario({ entrants: [{ slug: 'a', banked: 0 }], games }, 'a')))
+      .toEqual(Array(17).fill('A'));
+  });
 });
 
 describe('ESPN live scoreboard adapter', () => {
   const payload = {
     events: [{
       id: 401,
-      status: { period: 3, displayClock: '4:12', type: { state: 'in' } },
+      date: '2026-08-21T23:00:00Z',
+      season: { type: 1 },
+      week: { number: 3 },
+      status: { period: 3, displayClock: '4:12', type: { state: 'in', shortDetail: '4:12 - 3rd' } },
       competitions: [{
         competitors: [
-          { id: '1', homeAway: 'away', score: '17', team: { abbreviation: 'WSH' } },
-          { id: '2', homeAway: 'home', score: '20', team: { abbreviation: 'JAC' } },
+          { id: '1', homeAway: 'away', score: '17', winner: false, team: { abbreviation: 'WSH' } },
+          { id: '2', homeAway: 'home', score: '20', winner: true, team: { abbreviation: 'JAC' } },
         ],
+        venue: { fullName: 'Test Field' },
+        broadcasts: [{ names: ['ESPN'] }],
         situation: {
           possession: '1', downDistanceText: '3rd & 7 at JAX 42', isRedZone: true,
           lastPlay: { text: 'Pass complete for 12 yards.' },
@@ -350,8 +392,12 @@ describe('ESPN live scoreboard adapter', () => {
     expect(game).toMatchObject({
       away: 'WAS', home: 'JAX', awayScore: '17', homeScore: '20',
       state: 'in', clock: 'Q3 4:12', possession: 'WAS', redZone: true,
-      down: '3rd & 7 at JAX 42', lastPlay: 'Pass complete for 12 yards.',
+      down: '3rd & 7 at JAX 42', lastPlay: 'Pass complete for 12 yards.', week: 3,
+      date: '2026-08-21T23:00:00Z', status: '4:12 - 3rd', venue: 'Test Field',
+      network: 'ESPN', homeWinner: true, awayWinner: false,
+      seasonType: 1,
     });
+    expect(preseasonScoreboardUrl(2026)).toContain('dates=20260715-20260915');
   });
 
   test('polls by game state instead of hammering a quiet feed', () => {
@@ -458,12 +504,11 @@ describe('Gameday DOM wiring', () => {
     expect(win.fetch.mock.calls[1][0]).toContain('week=3');
   });
 
-  test('scenario controls repaint totals and identity-aware dream calls', () => {
+  test('scenario controls repaint totals, share exact picks, and build identity-aware dream calls', async () => {
     const data = {
       entrants: [{ slug: 'a', name: 'Alex', banked: 10 }, { slug: 'b', name: 'Blair', banked: 12 }],
       games: [{
         id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
-        dream: { a: 'SEA', b: 'KC' },
         points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
       }],
     };
@@ -472,7 +517,13 @@ describe('Gameday DOM wiring', () => {
       <section data-scenario>
         <button data-scenario-preset="dream">Dream</button>
         <button data-scenario-preset="reset">Reset</button>
-        <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button></fieldset>
+        <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button>
+          <details data-scenario-drilldown><summary>Matchup details</summary>
+            <strong data-scenario-call></strong><span data-scenario-impact></span>
+            <a data-scenario-team="KC" href="/team/KC/#game-g">KC</a>
+            <a data-scenario-team="SEA" href="/team/SEA/#game-g">SEA</a>
+          </details>
+        </fieldset>
         <ol data-scenario-board>
           <li data-slug="a"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
           <li data-slug="b"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
@@ -481,6 +532,8 @@ describe('Gameday DOM wiring', () => {
       </section>
       <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
     const win = fakeWindow();
+    win.location = { href: 'https://example.test/football-pool/gameday/#scenario=SEA' };
+    win.navigator = { clipboard: { writeText: vi.fn(async () => {}) } };
     init(document, win);
 
     document.querySelector('[data-scenario-preset="dream"]').click();
@@ -492,8 +545,87 @@ describe('Gameday DOM wiring', () => {
     expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('15.00');
     expect(document.querySelector('li[data-slug="a"] .scenario-rank').textContent).toBe('1');
     expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-scenario-drilldown]').open).toBe(false);
+    expect(document.querySelector('[data-scenario-call]').textContent).toBe('SEA over KC');
+    expect(document.querySelector('[data-scenario-impact]').textContent).toContain('Alex +5.00');
+    expect(document.querySelector('[data-scenario-team="SEA"]').classList.contains('is-called')).toBe(true);
+    expect(document.querySelector('[data-scenario-status]').textContent).toContain("Alex's best slate lands at #1");
+    document.querySelector('[data-scenario-choice="SEA"]').click();
+    expect(document.querySelector('[data-scenario-drilldown]').open).toBe(true);
     document.querySelector('[data-scenario-preset="reset"]').click();
     expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('10.00');
+    expect(document.querySelector('[data-scenario-impact]').textContent).toContain('Choose a result');
+    document.querySelector('[data-scenario-share]').click();
+    await settle();
+    expect(win.navigator.clipboard.writeText)
+      .toHaveBeenCalledWith('https://example.test/football-pool/gameday/#scenario=SEA');
+    expect(document.querySelector('[data-scenario-status]').textContent)
+      .toContain('paste it into a text or group chat');
+  });
+
+  test('the Schedule PRE tab lazily renders scores, venue, network, and team links', async () => {
+    document.body.innerHTML = `
+      <select data-tz-select><option value="America/New_York">Eastern</option></select>
+      <a href="#preseason">PRE</a>
+      <section data-preseason-schedule data-espn-season="2026" data-team-base="/football-pool/team/">
+        <span data-preseason-state></span>
+        <button data-preseason-week="all">All</button>
+        <button data-preseason-week="3" aria-pressed="true">Week 2</button>
+        <p data-preseason-summary></p><div data-preseason-games></div>
+      </section>`;
+    const win = fakeWindow();
+    const finished = structuredClone(postPayload);
+    finished.events[0].date = '2026-08-21T23:00:00Z';
+    finished.events[0].season = { type: 1 };
+    finished.events[0].week = { number: 3 };
+    finished.events[0].status.type.shortDetail = 'Final';
+    finished.events[0].competitions[0].venue = { fullName: 'Test Field' };
+    finished.events[0].competitions[0].broadcasts = [{ names: ['ESPN'] }];
+    finished.events[0].competitions[0].competitors[1].winner = true;
+    win.fetch = vi.fn(async () => response(finished));
+    init(document, win);
+    expect(win.fetch).not.toHaveBeenCalled();
+
+    const preseasonLink = document.querySelector('a[href="#preseason"]');
+    preseasonLink.addEventListener('click', (event) => event.preventDefault());
+    preseasonLink.click();
+    await settle();
+
+    expect(win.fetch).toHaveBeenCalledOnce();
+    expect(win.fetch.mock.calls[0][0]).toContain('seasontype=1');
+    expect(win.fetch.mock.calls[0][0]).toContain('limit=1000');
+    expect(document.querySelector('[data-preseason-state]').textContent).toContain('1 games loaded');
+    expect(document.querySelector('.preseason-game').textContent).toContain('KC');
+    expect(document.querySelector('.preseason-game').textContent).toContain('Test Field · ESPN');
+    expect(document.querySelector('.preseason-side.is-winner').href).toContain('/football-pool/team/SEA/');
+    expect(document.querySelector('[data-preseason-summary]').textContent).toContain('1 game · 1 final');
+  });
+
+  test('stored identity ordering settles once without replaying the interaction animation', () => {
+    document.body.innerHTML = `
+      <select data-me-select><option value=""></option><option value="a">Alex</option></select>
+      <div data-gameday-cards>
+        <article data-gameday-card="low" data-drama="1"><div data-slug="a" data-priority="1"></div></article>
+        <article data-gameday-card="high" data-drama="2"><div data-slug="a" data-priority="9"></div></article>
+      </div>`;
+    const cards = Array.from(document.querySelectorAll('[data-gameday-card]'));
+    for (const card of cards) card.animate = vi.fn();
+    const win = fakeWindow({ store: new Map([[ME_KEY, 'a']]) });
+    init(document, win);
+
+    expect(Array.from(document.querySelectorAll('[data-gameday-card]'), (card) => card.dataset.gamedayCard))
+      .toEqual(['high', 'low']);
+    expect(cards.every((card) => card.animate.mock.calls.length === 0)).toBe(true);
+  });
+
+  test('the viewer strip measures itself beneath the sticky masthead', () => {
+    document.body.innerHTML = '<header class="masthead"></header><div class="viewer-bar"></div>';
+    document.querySelector('.masthead').getBoundingClientRect = () => ({ height: 64 });
+    document.querySelector('.viewer-bar').getBoundingClientRect = () => ({ height: 48 });
+    init(document, fakeWindow());
+
+    expect(document.documentElement.style.getPropertyValue('--masthead-height')).toBe('64px');
+    expect(document.documentElement.style.getPropertyValue('--viewer-height')).toBe('48px');
   });
 });
 
@@ -1103,7 +1235,7 @@ describe('only the games that matter', () => {
       </ul>`;
   });
 
-  test('the filter is one attribute on the root, and it is remembered', () => {
+  test('the filter is one temporary attribute on the root', () => {
     const win = fakeWindow();
     init(document, win);
     const button = document.querySelector('[data-slate-toggle]');
@@ -1111,26 +1243,21 @@ describe('only the games that matter', () => {
     button.click();
     expect(document.documentElement.dataset.slate).toBe('pool');
     expect(button.getAttribute('aria-pressed')).toBe('true');
-    expect(win._store.get('pool-slate')).toBe('pool');
 
     button.click();
     expect(document.documentElement.dataset.slate).toBeUndefined();
     expect(button.getAttribute('aria-pressed')).toBe('false');
-    // Stored as a value rather than removed, so a browser that already has
-    // "pool" in it is actually told to stop.
-    expect(win._store.get('pool-slate')).toBe('all');
+    expect(win._store.has('pool-slate')).toBe(false);
   });
 
-  test('a filter already applied before paint is what the button reports', () => {
-    // The inline script in base.html sets the attribute before first paint;
-    // site.js is deferred and must agree with what it finds rather than
-    // resetting it.
+  test('every page visit defaults back to every NFL game', () => {
+    // Clear an attribute left by a cached copy of the older, remembered filter.
     document.documentElement.dataset.slate = 'pool';
     init(document, fakeWindow());
 
     expect(document.querySelector('[data-slate-toggle]').getAttribute('aria-pressed'))
-      .toBe('true');
-    expect(document.documentElement.dataset.slate).toBe('pool');
+      .toBe('false');
+    expect(document.documentElement.dataset.slate).toBeUndefined();
   });
 
   test('a page without the filter is left alone', () => {
@@ -1143,7 +1270,7 @@ describe('opening a game up', () => {
   const gameMarkup = () => {
     document.body.innerHTML = `
       <ul class="games">
-        <li class="game" data-game="G1">
+        <li class="game" id="game-G1" data-game="G1">
           <div class="game-when"><time>Sun</time></div>
           <div class="game-side"><a class="team-chip" href="/team/KC/">KC</a>
             <span class="owners"><a class="owner" href="/entrant/bo/">Bo</a></span></div>
@@ -1177,6 +1304,18 @@ describe('opening a game up', () => {
     click(row.querySelector('[data-game-open]'));
     expect(row.classList.contains('is-open')).toBe(false);
     expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('false');
+  });
+
+  test('an exact matchup link arrives with the head-to-head facts open', () => {
+    window.location.hash = '#game-G1';
+    gameMarkup();
+    init(document, fakeWindow());
+
+    const [row] = rows();
+    expect(row.matches(':target')).toBe(true);
+    expect(row.classList.contains('is-open')).toBe(true);
+    expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('true');
+    window.location.hash = '';
   });
 
   test('clicking the row anywhere else opens it too', () => {
@@ -1278,6 +1417,7 @@ function scheduleMarkup() {
   document.documentElement.removeAttribute('data-me');
   document.body.innerHTML = `
     <nav>
+      <a href="#preseason" data-week-link="preseason">PRE</a>
       <a href="#week-1" data-week-link="1">1</a>
       <a href="#week-2" data-week-link="2">2</a>
       <a href="#week-3" data-week-link="3">3</a>
@@ -1330,6 +1470,15 @@ describe('the schedule week switcher', () => {
     const current = document.querySelector('[data-week-link][aria-current]');
     expect(current.dataset.weekLink).toBe('3');
     // ...without moving which week is "now". They are different questions.
+    expect(document.querySelector('.is-now').dataset.weekLink).toBe('2');
+  });
+
+  test('the preseason deep link marks PRE without changing the current regular week', () => {
+    window.location.hash = '#preseason';
+    init(document, fakeWindow({ now: Date.parse('2026-09-20T18:00:00Z') }));
+
+    expect(document.querySelector('[data-week-link][aria-current]').dataset.weekLink)
+      .toBe('preseason');
     expect(document.querySelector('.is-now').dataset.weekLink).toBe('2');
   });
 
