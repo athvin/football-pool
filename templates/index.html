@@ -110,8 +110,8 @@
           {{ team_chip(t, 'scored' if r.contributions.get(t, 0) > 0 else 'dim') }}
         {% endfor %}
         <span class="badge you" data-me-only>you</span>
-        {% if r.eliminated %}<span class="badge out">eliminated</span>{% endif %}
-        {% if r.money %}<span class="badge money">{{ r.money|money }}</span>{% endif %}
+        {% if r.eliminated %}<span class="badge out" title="{{ glossary['eliminated'].definition }}">eliminated</span>{% endif %}
+        {% if r.money %}<span class="badge money" title="Payout if the season ended today">{{ r.money|money }}</span>{% endif %}
       </span>
     </span>
 
@@ -120,9 +120,13 @@
       {% if r.rank_delta %}
       <span class="row-sub">
         {% if r.rank_delta > 0 %}
-          <span class="delta up" style="--i: {{ r.index }}">▲{{ r.rank_delta }}</span>
+          <span class="delta up" style="--i: {{ r.index }}"
+                aria-label="Up {{ r.rank_delta }} {{ 'place' if r.rank_delta == 1 else 'places' }} from the previous completed week"
+                title="Up {{ r.rank_delta }} {{ 'place' if r.rank_delta == 1 else 'places' }} from the previous completed week">▲{{ r.rank_delta }}</span>
         {% else %}
-          <span class="delta down" style="--i: {{ r.index }}">▼{{ -r.rank_delta }}</span>
+          <span class="delta down" style="--i: {{ r.index }}"
+                aria-label="Down {{ -r.rank_delta }} {{ 'place' if r.rank_delta == -1 else 'places' }} from the previous completed week"
+                title="Down {{ -r.rank_delta }} {{ 'place' if r.rank_delta == -1 else 'places' }} from the previous completed week">▼{{ -r.rank_delta }}</span>
         {% endif %}
       </span>
       {% endif %}

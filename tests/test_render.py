@@ -1983,10 +1983,20 @@ def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     assert "Rooting board" in html
     assert "What-if scoreboard" in html
     assert 'id="gameday-data"' in html
-    assert "Drama = pool swing" in html
+    assert 'data-scenario-preset="help"' in html
+    assert "Who else helps me?" in html
+    assert "Preseason Week 1" in html and "Preseason Week 3" in html
+    assert "data-live-team-chips hidden" in html
+    assert 'data-live-team="KC"' in html
+    assert "Drama" in html and "= pool swing" in html
+    assert "Pool swing multiplied by how uncertain the NFL result is" in html
     assert 'data-scenario-drilldown' in html
     assert "matchup page" in html
     assert '"dream":' not in html
+    scenario = json.loads(
+        re.search(r'<script type="application/json" id="gameday-data">(.*?)</script>', html).group(1)
+    )
+    assert all(entrant["teams"] for entrant in scenario["entrants"])
     for output, text in _real_pages(site_mid_forecast.written):
         assert 'href="/gameday/"' in text, output
 
@@ -2239,6 +2249,35 @@ def test_the_jargon_carries_its_definition_where_it_is_used(site_final):
     assert 'class="def"' in html
     # The definition itself, not merely a reference to one.
     assert "The most the whole pool could bank in this week" in html
+
+
+def test_tooltips_cover_dynamic_values_and_icon_only_controls(site_mid_forecast):
+    """Hover help reaches the gaps that are not glossary-shaped."""
+    index = (site_mid_forecast.path / "index.html").read_text()
+    schedule = (site_mid_forecast.path / "schedule" / "index.html").read_text()
+    gameday = (site_mid_forecast.path / "gameday" / "index.html").read_text()
+
+    assert 'title="Open this site\'s source on GitHub (new tab)"' in index
+    assert 'title="Switch to light theme"' in index
+    assert re.search(r'title="Show what \w+ at \w+ is worth"', schedule)
+    assert 'title="Preseason"' in schedule
+    assert "Hall of Fame" in schedule
+    assert "Preseason Week 1" in schedule
+    assert "Modelled chance that" in schedule
+    assert "Call the model's favourite in every game" in gameday
+    assert "Call the slate that gives you the best finish" in gameday
+    assert "Assume your teams win, then call the other games for your best finish" in gameday
+
+
+def test_team_metrics_carry_their_glossary_definitions(site_mid_forecast):
+    teams = (site_mid_forecast.path / "teams" / "index.html").read_text()
+    team = (site_mid_forecast.path / "team" / "KC" / "index.html").read_text()
+    season = (site_mid_forecast.path / "season" / "index.html").read_text()
+
+    assert "Everything this team has scored for each entry holding it" in teams
+    assert "Everything this team has scored for each entry holding it" in team
+    assert "How much of an entry&#39;s banked total came from the team shown" in team
+    assert "How much of an entry&#39;s banked total came from the team shown" in season
 
 
 def test_the_definition_is_the_button_s_accessible_name(site_final):

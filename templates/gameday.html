@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% from '_glossary.html' import info, term with context %}
 {% from '_links.html' import team_chip %}
 
 {% block title %}Gameday · {{ season.year }} {{ season.pool.name }}{% endblock %}
@@ -29,7 +30,7 @@
       <p class="eyebrow">Signal, not noise</p>
       <h2 class="section-title" id="rooting-title">Rooting board</h2>
     </div>
-    <p class="section-note">Drama = pool swing × outcome uncertainty</p>
+    <p class="section-note">{{ term('drama', 'Drama') }} = pool swing × outcome uncertainty</p>
   </div>
 
   <div class="gameday-grid{% if gameday.rewind %} is-rewind{% endif %}" data-gameday-cards>
@@ -40,7 +41,7 @@
       <header class="gameday-card-head">
         <div>
           <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
-          {% if g.played %}<span class="badge">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
+          {% if g.played %}<span class="badge"{% if g.overtime %} title="Overtime"{% endif %}>Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
         </div>
         <div class="drama-score" aria-label="Drama index {{ g.drama }} out of 100">
           <span>Drama</span><strong>{{ g.drama }}</strong>
@@ -64,7 +65,9 @@
             <strong class="gameday-score">{{ side.score }}</strong>
           {% else %}
             <strong>{{ side.stake|points }} <span>pts</span></strong>
-            {% if side.p_win is not none %}<small class="model">{{ '%.0f%%'|format(side.p_win * 100) }} win</small>{% endif %}
+            {% if side.p_win is not none %}<small class="model"
+              aria-label="{{ '%.0f%%'|format(side.p_win * 100) }} modelled chance that {{ side.team }} wins"
+              title="{{ glossary['game_win_chance'].definition }}">{{ '%.0f%%'|format(side.p_win * 100) }} win</small>{% endif %}
           {% endif %}
           {% if side.owners %}<small>{{ side.owners|map(attribute='name')|join(', ') }}</small>{% else %}<small>unowned</small>{% endif %}
         </div>
@@ -91,7 +94,7 @@
       </div>
 
       <div class="rooting-anon">
-        <strong>{{ g.swing|points }} swing</strong>
+        <strong>{{ g.swing|points }} {{ term('swing', 'swing') }}</strong>
         <span>{% if g.derby %}Pool picks on both sidelines{% elif g.idle %}No direct pool points{% else %}The pool has one side{% endif %}</span>
       </div>
 
@@ -108,8 +111,8 @@
         </p>
         {% if r.model %}
         <div class="rooting-odds model">
-          <span><b>{{ g.away.team }}</b> {{ '%.0f%%'|format(r.model.away_first * 100) }} win pool · {{ '%.0f%%'|format(r.model.away_cash * 100) }} cash · ${{ '%.0f'|format(r.model.away_payout) }} EV</span>
-          <span><b>{{ g.home.team }}</b> {{ '%.0f%%'|format(r.model.home_first * 100) }} win pool · {{ '%.0f%%'|format(r.model.home_cash * 100) }} cash · ${{ '%.0f'|format(r.model.home_payout) }} EV</span>
+          <span><b>{{ g.away.team }}</b> {{ '%.0f%%'|format(r.model.away_first * 100) }} {{ term('p_first', 'win pool') }} · {{ '%.0f%%'|format(r.model.away_cash * 100) }} {{ term('p_cash', 'cash') }} · ${{ '%.0f'|format(r.model.away_payout) }} {{ term('expected_payout', 'EV') }}</span>
+          <span><b>{{ g.home.team }}</b> {{ '%.0f%%'|format(r.model.home_first * 100) }} {{ term('p_first', 'win pool') }} · {{ '%.0f%%'|format(r.model.home_cash * 100) }} {{ term('p_cash', 'cash') }} · ${{ '%.0f'|format(r.model.home_payout) }} {{ term('expected_payout', 'EV') }}</span>
         </div>
         {% else %}
         <p class="rooting-fallback">Based on the immediate points this result gives you versus the field; the season model is unavailable.</p>
@@ -134,13 +137,19 @@
       <h2 class="section-title" id="scenario-title">What-if scoreboard</h2>
     </div>
     <div class="scenario-presets" aria-label="Scenario presets">
-      <button type="button" data-scenario-preset="likely">Likeliest</button>
-      <button type="button" data-scenario-preset="chaos">Chaos</button>
-      <button type="button" data-scenario-preset="dream">My dream slate</button>
-      <button type="button" data-scenario-preset="reset">Reset</button>
+      <button type="button" data-scenario-preset="likely" title="Call the model's favourite in every game">Likeliest</button>
+      <button type="button" data-scenario-preset="chaos" title="Call the model's underdog in every game">Chaos</button>
+      <button type="button" data-scenario-preset="dream" title="Call the slate that gives you the best finish">My dream slate</button>
+      <button type="button" data-scenario-preset="help" title="Assume your teams win, then call the other games for your best finish">Who else helps me?</button>
+      <button type="button" data-scenario-preset="reset" title="Clear every called result">Reset</button>
     </div>
   </div>
-  <p class="scenario-note">This adds only this slate's pool points to the banked board. It is a scenario, not a season forecast.</p>
+  <p class="scenario-note">
+    This adds only this slate's pool points to the banked board. It is a
+    scenario, not a season forecast. <strong>Who else helps me?</strong> assumes
+    your side wins whenever it faces somebody else's, then calls the remaining
+    games for your best finish.
+  </p>
   <noscript><p class="empty">Turn on JavaScript to call outcomes and recalculate this scoreboard. The rooting board above is fully readable without it.</p></noscript>
 
   <div class="scenario-layout">
@@ -148,9 +157,9 @@
       {% for g in gameday.scenario.games %}
       <fieldset class="scenario-game" data-scenario-game="{{ g.id }}">
         <legend>{{ g.away }} at {{ g.home }}</legend>
-        <button type="button" data-scenario-choice="{{ g.away }}">{{ g.away }}</button>
-        {% if g.tie %}<button type="button" data-scenario-choice="TIE">Tie</button>{% endif %}
-        <button type="button" data-scenario-choice="{{ g.home }}">{{ g.home }}</button>
+        <button type="button" data-scenario-choice="{{ g.away }}" title="Call {{ g.away }} to win">{{ g.away }}</button>
+        {% if g.tie %}<button type="button" data-scenario-choice="TIE" title="Call this game a tie">Tie</button>{% endif %}
+        <button type="button" data-scenario-choice="{{ g.home }}" title="Call {{ g.home }} to win">{{ g.home }}</button>
         <details class="scenario-drilldown" data-scenario-drilldown>
           <summary>Matchup details</summary>
           <p>
@@ -188,7 +197,8 @@
 </section>
 {% endif %}
 
-<details class="live-lab" data-live-harness data-espn-season="{{ season.year }}">
+<details class="live-lab" data-live-harness data-espn-season="{{ season.year }}"
+         data-team-base="{{ '/team/'|url }}">
   <summary>
     <span><b>Live-feed test bench</b> · {{ season.year }} preseason</span>
     <span data-live-feed-state>Open to load ESPN</span>
@@ -196,10 +206,18 @@
   <div class="live-lab-body">
     <p class="scenario-note">These games do not score pool points. They are here so the browser-only score, clock, down, possession, red-zone, and last-play feed can be exercised on the deployed static site before Week 1.</p>
     <div class="live-lab-weeks" aria-label="Preseason week">
-      <button type="button" data-espn-week="1">HOF</button>
-      <button type="button" data-espn-week="2">Week 1</button>
-      <button type="button" data-espn-week="3">Week 2</button>
-      <button type="button" data-espn-week="4" aria-pressed="true">Week 3</button>
+      <button type="button" data-espn-week="1">Hall of Fame</button>
+      <button type="button" data-espn-week="2">Preseason Week 1</button>
+      <button type="button" data-espn-week="3">Preseason Week 2</button>
+      <button type="button" data-espn-week="4" aria-pressed="true">Preseason Week 3</button>
+    </div>
+    {# The feed arrives in the browser; these server-rendered originals give
+       its team codes the exact same logo, colours and pool-relative links as
+       every team named elsewhere on the site. #}
+    <div data-live-team-chips hidden>
+      {% for team in season.teams %}
+      <span data-live-team="{{ team }}">{{ team_chip(team, 'scored', large=true) }}</span>
+      {% endfor %}
     </div>
     <div class="live-lab-games" data-live-harness-games aria-live="polite"></div>
     <noscript><p class="empty">This test bench reads the live feed in your browser, so it needs JavaScript.</p></noscript>

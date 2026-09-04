@@ -1359,6 +1359,10 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
                 {
                     "slug": e.slug,
                     "name": e.name,
+                    # The browser needs the picks for the "who else helps me?"
+                    # preset: it forces this entrant's own side first, then
+                    # optimises only the results elsewhere in the slate.
+                    "teams": list(e.teams),
                     "banked": float(banked.get(e.name, 0.0)),
                 }
                 for e in season.entrants

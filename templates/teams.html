@@ -39,7 +39,7 @@
             {% if not state.week %}aria-sort="descending"{% endif %}>{{ term('lf', 'LF') }}</th>
         <th scope="col" data-sort>Record</th>
         <th scope="col" class="num" data-sort
-            {% if state.week %}aria-sort="descending"{% endif %}>Points</th>
+            {% if state.week %}aria-sort="descending"{% endif %}>{{ term('team_points', 'Points') }}</th>
         <th scope="col" data-sort>Seed</th>
         <th scope="col" data-sort>Owned by</th>
       </tr>

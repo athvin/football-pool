@@ -20,7 +20,7 @@
   <div class="game-when">
     {% if show_week %}<span class="game-week">{{ g.kind if g.kind != 'REG' else 'Week ' ~ g.week }}</span>{% endif %}
     <time datetime="{{ g.kickoff }}" data-ts="kickoff">{{ g.kickoff_text }}</time>
-    {% if g.played %}<span class="game-status">Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
+    {% if g.played %}<span class="game-status"{% if g.overtime %} title="Overtime"{% endif %}>Final{% if g.overtime %} · OT{% endif %}</span>{% endif %}
     {% if g.neutral %}<span class="badge">neutral</span>{% endif %}
   </div>
 
@@ -32,7 +32,9 @@
     {% else %}
       <span class="stake">{{ side.stake|points }}</span>
       {% if side.p_win is not none %}
-      <span class="p-win model">{{ '%.0f%%'|format(side.p_win * 100) }}</span>
+      <span class="p-win model"
+            aria-label="{{ '%.0f%%'|format(side.p_win * 100) }} modelled chance that {{ side.team }} wins"
+            title="Modelled chance that {{ side.team }} wins this game">{{ '%.0f%%'|format(side.p_win * 100) }}</span>
       {% endif %}
     {% endif %}
     {# The people holding this side, each a link to their own page. A name on
@@ -53,7 +55,8 @@
      it again — see the `data-js` flag in base.html. With scripting off you get
      every one of these expanded, which is the honest failure mode. #}
   <button class="game-open" type="button" data-game-open
-          aria-expanded="false" aria-controls="more-{{ g.game_id }}">
+          aria-expanded="false" aria-controls="more-{{ g.game_id }}"
+          title="Show what {{ g.away.team }} at {{ g.home.team }} is worth">
     <span class="visually-hidden">What this game is worth</span>
     <span class="game-open-mark" aria-hidden="true"></span>
   </button>

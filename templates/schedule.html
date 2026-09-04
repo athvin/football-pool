@@ -31,9 +31,10 @@
 {# Plain anchors, so the switcher works with scripting off and every week is a
    real URL you can send someone. #}
 <nav class="week-switch" aria-label="Jump to a week">
-  <a class="preseason-switch" href="#preseason" data-week-link="preseason">PRE</a>
+  <a class="preseason-switch" href="#preseason" data-week-link="preseason" title="Preseason">PRE</a>
   {% for w in schedule.weeks %}
   <a href="#week-{{ w.week }}" data-week-link="{{ w.week }}"
+     {% if not w.label.startswith('Week') %}title="{{ w.label }}"{% endif %}
      {% if w.week == schedule.default_week %}class="is-now"{% endif %}>
     {% if w.label.startswith('Week') %}{{ w.week }}{% else %}{{ w.label|replace('Super Bowl', 'SB')|replace('Wild Card', 'WC')|replace('Divisional', 'DIV')|replace('Conference', 'CON') }}{% endif %}
   </a>
@@ -64,10 +65,10 @@
     </p>
     <div class="preseason-controls" aria-label="Choose a preseason week">
       <button type="button" data-preseason-week="all">All</button>
-      <button type="button" data-preseason-week="1">HOF</button>
-      <button type="button" data-preseason-week="2">Week 1</button>
-      <button type="button" data-preseason-week="3">Week 2</button>
-      <button type="button" data-preseason-week="4" aria-pressed="true">Week 3</button>
+      <button type="button" data-preseason-week="1">Hall of Fame</button>
+      <button type="button" data-preseason-week="2">Preseason Week 1</button>
+      <button type="button" data-preseason-week="3">Preseason Week 2</button>
+      <button type="button" data-preseason-week="4" aria-pressed="true">Preseason Week 3</button>
     </div>
     <p class="preseason-summary" data-preseason-summary aria-live="polite"></p>
     {# ESPN rows arrive after the build, but their team links should be the

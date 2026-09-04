@@ -3172,6 +3172,11 @@ html[data-me] .rooting-anon { display: none; }
   border-color: var(--live);
   background: color-mix(in srgb, var(--live) 12%, var(--surface));
 }
+.scenario-game button.is-outside-help[aria-pressed='true'] {
+  color: var(--model);
+  border-color: var(--model);
+  background: color-mix(in srgb, var(--model) 12%, var(--surface));
+}
 .scenario-note { margin: 0.45rem 0 0.9rem; max-width: 70ch; }
 .scenario-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(260px, 0.75fr); gap: 1rem; align-items: start; }
 .scenario-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
@@ -3234,6 +3239,11 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
 .live-lab-weeks button[aria-pressed='true'] { border-color: var(--model); color: var(--model); }
 .live-lab-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
 .live-lab-game { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 0.6rem; padding: 0.55rem 0.65rem; border: 1px solid var(--rule); border-radius: 6px; font-family: var(--mono); font-size: 0.62rem; }
+.live-lab-matchup { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
+.live-lab-side { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; }
+.live-lab-side > strong { color: var(--chalk-dim); font-variant-numeric: tabular-nums; }
+.live-lab-side.is-winner > strong { color: var(--live); }
+.live-lab-at { color: var(--chalk-dim); }
 .live-lab-game > span { color: var(--chalk-dim); text-align: right; }
 .live-lab-game > span + span, .live-lab-game small { grid-column: 1 / -1; text-align: left; }
 .live-lab-game small { color: var(--chalk-dim); }

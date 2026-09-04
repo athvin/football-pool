@@ -43,6 +43,8 @@ import {
   markerNumber,
   nextTheme,
   normalizeEspnTeam,
+  outsideHelpScenario,
+  outsideHelpTeams,
   parseEspnScoreboard,
   parseScenarioHash,
   preseasonScoreboardUrl,
@@ -273,9 +275,9 @@ describe('safeStorage', () => {
 describe('Gameday scenario helpers', () => {
   const data = {
     entrants: [
-      { slug: 'a', name: 'Alex', banked: 10 },
-      { slug: 'b', name: 'Blair', banked: 12 },
-      { slug: 'c', name: 'Casey', banked: 12 },
+      { slug: 'a', name: 'Alex', teams: ['SEA', 'BUF'], banked: 10 },
+      { slug: 'b', name: 'Blair', teams: ['KC', 'MIA'], banked: 12 },
+      { slug: 'c', name: 'Casey', teams: [], banked: 12 },
     ],
     games: [
       {
@@ -322,6 +324,9 @@ describe('Gameday scenario helpers', () => {
     expect(scenarioPreset(data, 'dream', 'a')).toEqual({
       '2026_01_KC_SEA': 'SEA', '2026_02_BUF_MIA': 'BUF',
     });
+    expect(scenarioPreset(data, 'help', 'a')).toEqual({
+      '2026_01_KC_SEA': 'SEA', '2026_02_BUF_MIA': 'BUF',
+    });
     expect(scenarioPreset(data, 'dream')).toEqual({});
     expect(scenarioPreset(data, 'reset')).toEqual({});
   });
@@ -349,6 +354,34 @@ describe('Gameday scenario helpers', () => {
     expect(scenarioStandings(trap, scenarioPreset(trap, 'dream', 'brian'))
       .find((entrant) => entrant.slug === 'brian').rank).toBe(1);
     expect(dreamScenario(trap, '')).toEqual({});
+  });
+
+  test('outside help forces my side, then names only consequential other winners', () => {
+    const help = {
+      entrants: [
+        { slug: 'me', name: 'Me', teams: ['MINE'], banked: 10 },
+        { slug: 'rival', name: 'Rival', teams: ['FOE', 'THREAT'], banked: 10 },
+      ],
+      games: [
+        {
+          id: 'mine', away: 'MINE', home: 'FOE', favorite: 'FOE',
+          points: { me: { MINE: 2, FOE: 0 }, rival: { MINE: 0, FOE: 8 } },
+        },
+        {
+          id: 'help', away: 'HELPER', home: 'THREAT', favorite: 'THREAT',
+          points: { me: { HELPER: 0, THREAT: 0 }, rival: { HELPER: 0, THREAT: 4 } },
+        },
+        {
+          id: 'noise', away: 'A', home: 'B', favorite: 'A',
+          points: { me: { A: 0, B: 0 }, rival: { A: 0, B: 0 } },
+        },
+      ],
+    };
+
+    const selections = outsideHelpScenario(help, 'me');
+    expect(selections).toEqual({ mine: 'MINE', help: 'HELPER', noise: 'A' });
+    expect(outsideHelpTeams(help, selections, 'me')).toEqual(['HELPER']);
+    expect(outsideHelpScenario(help, '')).toEqual({});
   });
 
   test('oversized malformed slates fail calm instead of locking the browser', () => {
@@ -481,10 +514,14 @@ describe('Gameday DOM wiring', () => {
 
   test('the deployed preseason bench loads a chosen week on demand', async () => {
     document.body.innerHTML = `
-      <details data-live-harness data-espn-season="2026">
+      <details data-live-harness data-espn-season="2026" data-team-base="/football-pool/team/">
         <summary><span data-live-feed-state></span></summary>
-        <button data-espn-week="3">Week 2</button>
-        <button data-espn-week="4" aria-pressed="true">Week 3</button>
+        <button data-espn-week="3">Preseason Week 2</button>
+        <button data-espn-week="4" aria-pressed="true">Preseason Week 3</button>
+        <div data-live-team-chips hidden>
+          <span data-live-team="KC"><a class="team-chip is-large scored" href="/football-pool/team/KC/" style="--team-bg:#e31837"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/KC.png" alt="">KC</a></span>
+          <span data-live-team="SEA"><a class="team-chip is-large scored" href="/football-pool/team/SEA/" style="--team-bg:#002244"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/SEA.png" alt="">SEA</a></span>
+        </div>
         <div data-live-harness-games></div>
       </details>`;
     const win = fakeWindow();
@@ -497,20 +534,37 @@ describe('Gameday DOM wiring', () => {
 
     expect(win.fetch.mock.calls[0][0]).toContain('seasontype=1&week=4&dates=2026');
     expect(document.querySelector('.live-lab-game').textContent).toContain('KC 24');
-    expect(document.querySelector('[data-live-feed-state]').textContent).toBe('1 games loaded');
+    expect(document.querySelector('[data-live-feed-state]').textContent)
+      .toBe('Preseason Week 3 · 1 game loaded');
+    const chips = Array.from(document.querySelectorAll('.live-lab-matchup .team-chip'));
+    expect(chips.map((chip) => chip.getAttribute('href'))).toEqual([
+      '/football-pool/team/KC/', '/football-pool/team/SEA/',
+    ]);
+    expect(chips.every((chip) => chip.querySelector('.chip-logo'))).toBe(true);
 
     document.querySelector('[data-espn-week="3"]').click();
     await settle();
     expect(win.fetch.mock.calls[1][0]).toContain('week=3');
+    expect(document.querySelector('[data-live-feed-state]').textContent)
+      .toBe('Preseason Week 2 · 1 game loaded');
   });
 
   test('scenario controls repaint totals, share exact picks, and build identity-aware dream calls', async () => {
     const data = {
-      entrants: [{ slug: 'a', name: 'Alex', banked: 10 }, { slug: 'b', name: 'Blair', banked: 12 }],
-      games: [{
-        id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
-        points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
-      }],
+      entrants: [
+        { slug: 'a', name: 'Alex', teams: ['SEA'], banked: 10 },
+        { slug: 'b', name: 'Blair', teams: ['KC', 'MIA'], banked: 12 },
+      ],
+      games: [
+        {
+          id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
+          points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
+        },
+        {
+          id: 'h', away: 'BUF', home: 'MIA', tie: false, favorite: 'MIA', chaos: 'BUF',
+          points: { a: { BUF: 0, MIA: 0 }, b: { BUF: 0, MIA: 4 } },
+        },
+      ],
     };
     document.body.innerHTML = `
       <select data-me-select><option value=""></option><option value="a">Alex</option><option value="b">Blair</option></select>
@@ -518,6 +572,7 @@ describe('Gameday DOM wiring', () => {
         <button data-scenario-preset="likely">Likely</button>
         <button data-scenario-preset="chaos">Chaos</button>
         <button data-scenario-preset="dream">Dream</button>
+        <button data-scenario-preset="help">Help</button>
         <button data-scenario-preset="reset">Reset</button>
         <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button>
           <details data-scenario-drilldown><summary>Matchup details</summary>
@@ -525,6 +580,9 @@ describe('Gameday DOM wiring', () => {
             <a data-scenario-team="KC" href="/team/KC/#game-g">KC</a>
             <a data-scenario-team="SEA" href="/team/SEA/#game-g">SEA</a>
           </details>
+        </fieldset>
+        <fieldset data-scenario-game="h"><button data-scenario-choice="BUF">BUF</button>
+          <button data-scenario-choice="MIA">MIA</button>
         </fieldset>
         <ol data-scenario-board>
           <li data-slug="a"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
@@ -578,6 +636,19 @@ describe('Gameday DOM wiring', () => {
       .toBe('true');
     document.querySelector('[data-scenario-preset="chaos"]').click();
     expect(document.querySelector('[data-scenario-preset="chaos"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    document.querySelector('[data-scenario-preset="help"]').click();
+    expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(document.querySelector('[data-scenario-choice="BUF"]').getAttribute('aria-pressed'))
+      .toBe('true');
+    expect(document.querySelector('[data-scenario-choice="BUF"]').classList.contains('is-outside-help'))
+      .toBe(true);
+    expect(document.querySelector('[data-scenario-choice="SEA"]').classList.contains('is-outside-help'))
+      .toBe(false);
+    expect(document.querySelector('[data-scenario-status]').textContent)
+      .toContain('root for BUF in the other games');
+    expect(document.querySelector('[data-scenario-preset="help"]').getAttribute('aria-pressed'))
       .toBe('true');
     document.querySelector('[data-scenario-preset="reset"]').click();
     document.querySelector('[data-scenario-share]').click();
@@ -753,13 +824,20 @@ describe('init', () => {
   test('the toggle switches the theme and remembers it', () => {
     const win = fakeWindow({ prefersDark: true });
     init(document, win);
+    const button = document.querySelector('[data-theme-toggle]');
 
-    document.querySelector('[data-theme-toggle]').click();
+    expect(button.title).toBe('Switch to light theme');
+    expect(button.getAttribute('aria-label')).toBe('Switch to light theme');
+
+    button.click();
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(win._store.get(THEME_KEY)).toBe('light');
+    expect(button.title).toBe('Switch to dark theme');
+    expect(button.getAttribute('aria-label')).toBe('Switch to dark theme');
 
-    document.querySelector('[data-theme-toggle]').click();
+    button.click();
     expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(button.title).toBe('Switch to light theme');
   });
 
   test('timestamps localise to Eastern by default', () => {
@@ -1185,10 +1263,12 @@ describe('sortable table headers', () => {
   test('clicking a heading sorts by it and marks the direction', () => {
     init(document, fakeWindow());
     const th = document.querySelectorAll('th[data-sort]')[1];
+    expect(th.title).toBe('Sort by Points, ascending');
     th.click();
 
     expect(column(1)).toEqual(['4.00', '12.00', '30.00']);
     expect(th.getAttribute('aria-sort')).toBe('ascending');
+    expect(th.title).toBe('Sort by Points, descending');
   });
 
   test('clicking the same heading again reverses it', () => {
@@ -1238,6 +1318,14 @@ describe('sortable table headers', () => {
 
     th.dispatchEvent(new window.KeyboardEvent('keydown', { key: ' ', bubbles: true }));
     expect(column(1)).toEqual(['30.00', '12.00', '4.00']);
+  });
+
+  test('an explicit expansion supplies the tooltip label', () => {
+    const th = document.querySelectorAll('th[data-sort]')[1];
+    th.title = 'Points generated';
+    init(document, fakeWindow());
+
+    expect(th.title).toBe('Sort by Points generated, ascending');
   });
 
   test('other keys are ignored', () => {
@@ -1328,14 +1416,18 @@ describe('opening a game up', () => {
 
   test('the button opens the panel and says so', () => {
     const [row] = rows();
-    click(row.querySelector('[data-game-open]'));
+    const button = row.querySelector('[data-game-open]');
+    expect(button.title).toBe('Show what this game is worth');
+    click(button);
 
     expect(row.classList.contains('is-open')).toBe(true);
-    expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('true');
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.title).toBe('Hide what this game is worth');
 
-    click(row.querySelector('[data-game-open]'));
+    click(button);
     expect(row.classList.contains('is-open')).toBe(false);
-    expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('false');
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(button.title).toBe('Show what this game is worth');
   });
 
   test('an exact matchup link arrives with the head-to-head facts open', () => {
@@ -1347,6 +1439,7 @@ describe('opening a game up', () => {
     expect(row.matches(':target')).toBe(true);
     expect(row.classList.contains('is-open')).toBe(true);
     expect(row.querySelector('[data-game-open]').getAttribute('aria-expanded')).toBe('true');
+    expect(row.querySelector('[data-game-open]').title).toBe('Hide what this game is worth');
     window.location.hash = '';
   });
 
@@ -2876,6 +2969,11 @@ describe('a definition button inside a sortable heading', () => {
 
   const names = () =>
     Array.from(document.querySelectorAll('tbody tr th')).map((el) => el.textContent);
+
+  test('the sort tooltip omits the definition hidden inside the heading', () => {
+    expect(document.querySelectorAll('th')[1].title)
+      .toBe('Sort by Expected payout, descending');
+  });
 
   test('asking what a column means does not reorder the table underneath', () => {
     const before = names();
