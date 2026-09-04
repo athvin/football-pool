@@ -109,18 +109,21 @@ def season(make_season):
     return make_season()
 
 
-@pytest.fixture
-def two_pools(tmp_path):
+def build_two_pools(root: Path):
     """One 2025 season, two pools — the shape the real site now has.
 
     Deliberately different in every way a pool is allowed to differ: name,
     entry fee, payout ladder and field size. A test that only passes because
     the two pools happen to be identical fails against this.
+
+    A plain function rather than only a fixture so test_render.py's
+    module-scoped built-site fixtures can construct the same pair without
+    going through the function-scoped ``tmp_path``.
     """
     from football_pool.season import load_pools
 
     write_season(
-        tmp_path,
+        root,
         2025,
         [
             {"name": "Aunt Carol", "teams": ["SEA", "NE", "PHI", "LAR"]},
@@ -139,7 +142,12 @@ def two_pools(tmp_path):
             }
         },
     )
-    return load_pools(2025, root=tmp_path)
+    return load_pools(2025, root=root)
+
+
+@pytest.fixture
+def two_pools(tmp_path):
+    return build_two_pools(tmp_path)
 
 
 @pytest.fixture(scope="session")

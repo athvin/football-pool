@@ -54,12 +54,13 @@ jobs:
       # pyproject sets --cov-fail-under=95, so this fails on a coverage drop as
       # well as on a broken test.
       #
-      # `-n auto` is the whole reason this job is minutes rather than tens of
-      # minutes: most of the wall clock is test_render.py, whose tests each
-      # render a complete site — CPU-bound work xdist fans out across the
-      # runner's four vCPUs. `--dist worksteal` over the default `load` because
-      # per-test cost ranges from milliseconds to seconds and the observed
-      # straggler tail means an idle worker should steal from a loaded one.
+      # `-n auto` is the whole reason this job is seconds rather than minutes:
+      # the render tests are CPU-bound work xdist fans out across the runner's
+      # four vCPUs. Most of them read from shared module-scoped site builds
+      # now, which instantiate once per worker — still cheaper than once per
+      # test by an order of magnitude. `--dist worksteal` over the default
+      # `load` because per-test cost ranges from milliseconds to seconds and
+      # an idle worker should steal from a loaded one.
       #
       # `--no-sync` because sync already ran two steps up — re-verifying the
       # lock inside `uv run` measured 2.3 seconds of nothing.

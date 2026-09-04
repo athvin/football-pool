@@ -17,12 +17,14 @@ import shutil
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Sequence
+from typing import NamedTuple, Sequence
 
 import pytest
+from conftest import build_two_pools, write_season
 
 from football_pool.history import weekly_frame
-from football_pool.nflverse import GameData, parse_games
+from football_pool.season import load_season
+from football_pool.nflverse import GameData
 from football_pool.render import (
     ASSET_DIR,
     MODEL_URL,
@@ -39,8 +41,6 @@ from football_pool.render import (
     render_site,
 )
 
-FIXTURES = Path(__file__).parent / "fixtures"
-
 # A fixed instant, so nothing in here depends on when the suite is run.
 NOW = datetime(2026, 2, 10, 12, 0, tzinfo=timezone.utc)
 
@@ -50,7 +50,11 @@ NOW = datetime(2026, 2, 10, 12, 0, tzinfo=timezone.utc)
 SIMS = 50
 
 
-@pytest.fixture
+# The data and pool fixtures are module-scoped: Season is a frozen dataclass,
+# nothing in this file writes into a GameData frame in place (checked), and
+# module scope is what lets the built-site fixtures further down render each
+# distinct site once per worker instead of once per test.
+@pytest.fixture(scope="module")
 def game_data(games_2025):
     return GameData(
         games_2025,
@@ -61,7 +65,7 @@ def game_data(games_2025):
     )
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def preseason_data(games_2025):
     """August: a regular-season slate, nothing played.
 
@@ -73,7 +77,7 @@ def preseason_data(games_2025):
     return GameData(g, 2025, NOW, None, "cache")
 
 
-@pytest.fixture
+@pytest.fixture(scope="module")
 def mid_season(games_2025):
     """Week 11 of 18 — the state the site spends most of its life in."""
     g = games_2025.copy()
@@ -83,16 +87,108 @@ def mid_season(games_2025):
 
 
 # NB: this `pool` is a Season, and predates there being a PoolInfo of that
-# name. It is the three-way field most tests in here render.
-@pytest.fixture
-def pool(make_season):
-    return make_season(
+# name. It is the three-way field most tests in here render. Built through
+# write_season directly because the function-scoped make_season/tmp_path pair
+# cannot serve a module-scoped fixture.
+@pytest.fixture(scope="module")
+def pool(tmp_path_factory):
+    root = tmp_path_factory.mktemp("pool-cfg")
+    write_season(
+        root,
+        2025,
         [
             {"name": "Aunt Carol", "teams": ["SEA", "NE", "PHI", "LAR"]},
             {"name": "Cousin Mike", "teams": ["KC", "CIN", "DAL", "NO"]},
             {"name": "Brandon", "teams": ["ARI", "NYJ", "TEN", "CLE"]},
         ],
-        year=2025,
+    )
+    return load_season(2025, root=root)
+
+
+# =============================================================================
+# BUILT SITES, RENDERED ONCE
+# =============================================================================
+# Most tests in this file render a site and then only *read* the output — and
+# most of them render the identical site. Each fixture below is one distinct
+# (season, games, options) signature, rendered once per module per worker and
+# handed to every test that wants it. Tests treat the returned tree as
+# READ-ONLY: a test that mutates its inputs, rebuilds, or writes into the
+# output directory must keep calling render_site itself with its own tmp_path
+# (see test_rebuilding_is_deterministic and friends, which do exactly that).
+#
+# `written` is the list render_site returned, for the tests that assert on it.
+
+
+class BuiltSite(NamedTuple):
+    path: Path
+    written: list[Path]
+
+
+def _built(tmp_path_factory, name: str, builder) -> BuiltSite:
+    out = tmp_path_factory.mktemp(name)
+    return BuiltSite(out, builder(out))
+
+
+@pytest.fixture(scope="module")
+def site_final(pool, game_data, tmp_path_factory):
+    """The three-entrant pool, season complete — the build most tests share."""
+    return _built(tmp_path_factory, "site-final", lambda out: render_site(pool, game_data, out))
+
+
+@pytest.fixture(scope="module")
+def site_final_based(pool, game_data, tmp_path_factory):
+    """The same complete season, deployed under a project prefix."""
+    return _built(
+        tmp_path_factory,
+        "site-final-based",
+        lambda out: render_site(pool, game_data, out, base="/football-pool"),
+    )
+
+
+@pytest.fixture(scope="module")
+def site_solo(game_data, tmp_path_factory):
+    """The one-entrant season the markup/theme tests render."""
+    root = tmp_path_factory.mktemp("solo-cfg")
+    write_season(root, 2026, [{"name": "Solo", "teams": ["KC", "SEA", "DAL", "NE"]}])
+    solo = load_season(2026, root=root)
+    return _built(tmp_path_factory, "site-solo", lambda out: render_site(solo, game_data, out))
+
+
+@pytest.fixture(scope="module")
+def site_mid(pool, mid_season, tmp_path_factory):
+    """Week 11, projections at the capped count write_season provides."""
+    return _built(tmp_path_factory, "site-mid", lambda out: render_site(pool, mid_season, out))
+
+
+@pytest.fixture(scope="module")
+def site_mid_forecast(pool, mid_season, tmp_path_factory):
+    """Week 11 with enough simulations for a stable forecast page."""
+    return _built(
+        tmp_path_factory,
+        "site-mid-forecast",
+        lambda out: render_site(pool, mid_season, out, simulations=200),
+    )
+
+
+@pytest.fixture(scope="module")
+def pair_site(game_data, tmp_path_factory):
+    """Both pools of the two-pool season, rendered as one site."""
+    pools = build_two_pools(tmp_path_factory.mktemp("pair-cfg"))
+    return _built(
+        tmp_path_factory,
+        "pair-site",
+        lambda out: render_pools(pools, game_data, out, simulations=SIMS),
+    )
+
+
+@pytest.fixture(scope="module")
+def pair_site_based(game_data, tmp_path_factory):
+    """The two-pool site again, deployed under a project prefix."""
+    pools = build_two_pools(tmp_path_factory.mktemp("pair-based-cfg"))
+    return _built(
+        tmp_path_factory,
+        "pair-site-based",
+        lambda out: render_pools(pools, game_data, out, base="/football-pool", simulations=SIMS),
     )
 
 
@@ -203,11 +299,10 @@ def test_an_unchanged_asset_keeps_its_url():
     assert first == second
 
 
-def test_no_root_absolute_urls_survive_a_based_build(pool, game_data, tmp_path):
+def test_no_root_absolute_urls_survive_a_based_build(site_final_based):
     """The failure that only ever shows up in production."""
-    render_site(pool, game_data, tmp_path, base="/football-pool")
 
-    for page in tmp_path.rglob("*.html"):
+    for page in site_final_based.path.rglob("*.html"):
         html = page.read_text()
         for attr, value in re.findall(r'(href|src)="(/[^"]*)"', html):
             assert value.startswith("/football-pool/"), (
@@ -216,15 +311,13 @@ def test_no_root_absolute_urls_survive_a_based_build(pool, game_data, tmp_path):
             )
 
 
-def test_base_tag_is_never_used(pool, game_data, tmp_path):
+def test_base_tag_is_never_used(site_final_based):
     """`<base href>` would silently break every in-page anchor."""
-    render_site(pool, game_data, tmp_path, base="/football-pool")
-    assert "<base " not in (tmp_path / "index.html").read_text()
+    assert "<base " not in (site_final_based.path / "index.html").read_text()
 
 
 # -- pages -------------------------------------------------------------------
-def test_builds_every_expected_page(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
+def test_builds_every_expected_page(site_final):
 
     for rel in (
         "index.html",
@@ -240,16 +333,15 @@ def test_builds_every_expected_page(pool, game_data, tmp_path):
         "entrant/brandon/index.html",
         "data/standings.json",
     ):
-        assert (tmp_path / rel).exists(), rel
+        assert (site_final.path / rel).exists(), rel
 
 
-def test_assets_are_copied(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    assert (tmp_path / "assets" / "site.css").exists()
-    assert (tmp_path / "assets" / "site.js").exists()
+def test_assets_are_copied(site_final):
+    assert (site_final.path / "assets" / "site.css").exists()
+    assert (site_final.path / "assets" / "site.js").exists()
 
 
-def test_leaderboard_is_ordered_and_linked(pool, game_data, tmp_path):
+def test_leaderboard_is_ordered_and_linked(site_final):
     """Scoped to the board's own rows.
 
     Counting every entrant link on the page used to work because a row was the
@@ -257,37 +349,34 @@ def test_leaderboard_is_ordered_and_linked(pool, game_data, tmp_path):
     week's best and the forecast rows all name people too, and all of them are
     links now. `.row-link` is the row's own, one per entry, in board order.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_final.path / "index.html").read_text()
 
     order = re.findall(r'class="row-link" href="/entrant/([a-z-]+)/"', html)
     assert order[0] == "aunt-carol"  # highest scorer in 2025
     assert len(order) == 3
 
 
-def test_every_entrant_page_is_reachable_and_names_its_teams(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    page = (tmp_path / "entrant" / "brandon" / "index.html").read_text()
+def test_every_entrant_page_is_reachable_and_names_its_teams(site_final):
+    page = (site_final.path / "entrant" / "brandon" / "index.html").read_text()
     assert "Brandon" in page
     for team in ("ARI", "NYJ", "TEN", "CLE"):
         assert team in page
 
 
-def test_an_entrants_team_cards_are_links_to_the_team_pages(pool, game_data, tmp_path):
+def test_an_entrants_team_cards_are_links_to_the_team_pages(site_final):
     """The four cards under "where the points come from", not just the chips.
 
     The hero chips were already links; the cards are the bigger, more obvious
     target and used to be dead ends. The whole card is the anchor — it holds
     no other links, so nothing nests.
     """
-    render_site(pool, game_data, tmp_path)
-    page = (tmp_path / "entrant" / "cousin-mike" / "index.html").read_text()
+    page = (site_final.path / "entrant" / "cousin-mike" / "index.html").read_text()
 
     cards = re.findall(r'<a class="card team-card" href="/team/([A-Z]+)/"', page)
     assert sorted(cards) == sorted(["KC", "CIN", "DAL", "NO"])
 
 
-def test_every_page_carries_the_two_links_off_the_site(pool, game_data, tmp_path):
+def test_every_page_carries_the_two_links_off_the_site(site_final):
     """The model the forecast runs on, and the source that builds the page.
 
     On every page rather than tucked in a footer somewhere: "where did this
@@ -295,34 +384,31 @@ def test_every_page_carries_the_two_links_off_the_site(pool, game_data, tmp_path
     number is on. Both open in a new tab — unlike the Venmo link, which is an
     errand you go and run — and `rel="noopener"` goes with `target="_blank"`.
     """
-    render_site(pool, game_data, tmp_path)
 
     for name in ("index.html", "forecast/index.html", "rules/index.html"):
-        html = (tmp_path / name).read_text()
+        html = (site_final.path / name).read_text()
         assert f'href="{MODEL_URL}" target="_blank" rel="noopener"' in html, name
         assert f'href="{REPO_URL}" target="_blank" rel="noopener"' in html, name
         assert ">Model</a>" in html, name
 
 
-def test_rules_page_renders_from_the_rules_file(pool, game_data, tmp_path):
+def test_rules_page_renders_from_the_rules_file(site_final):
     """Posted rules and scoring maths come from one source, so they can't drift."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "rules" / "index.html").read_text()
+    html = (site_final.path / "rules" / "index.html").read_text()
     assert "+3.0" in html  # division winner
     assert "+1.5" in html  # wild card
     assert "0.5 × LF" in html  # the tie policy from rules.yaml
     assert "2.60" in html  # ARI's leveling factor
 
 
-def test_rules_page_posts_the_deadlines_from_the_schedule(pool, game_data, tmp_path):
+def test_rules_page_posts_the_deadlines_from_the_schedule(site_final):
     """Picks due before the first kickoff, money due by the end of week 1.
 
     Both dates are read off the games file rather than typed into a template,
     so they are right for whichever season is being built. The 2025 fixture
     opens Thursday Sep 4 and closes its first week on Monday Sep 8.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "rules" / "index.html").read_text()
+    html = (site_final.path / "rules" / "index.html").read_text()
 
     assert "Picks are due before kickoff" in html
     # An instant, machine-readable, so the client can show the visitor's zone —
@@ -333,11 +419,10 @@ def test_rules_page_posts_the_deadlines_from_the_schedule(pool, game_data, tmp_p
     assert "Monday, September 8" in html
 
 
-def test_rules_page_shows_venmo_as_a_qr_and_a_link(pool, game_data, tmp_path):
+def test_rules_page_shows_venmo_as_a_qr_and_a_link(site_final):
     """How to pay is on the rules page twice: a scannable code and a tappable
     link, both straight to the commissioner's Venmo profile."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "rules" / "index.html").read_text()
+    html = (site_final.path / "rules" / "index.html").read_text()
 
     assert 'href="https://venmo.com/u/Brian-Moore-4"' in html
     assert ">https://venmo.com/u/Brian-Moore-4</a>" in html  # the URL is visible text
@@ -346,19 +431,17 @@ def test_rules_page_shows_venmo_as_a_qr_and_a_link(pool, game_data, tmp_path):
     assert re.search(r'src="/assets/venmo-qr\.svg\?v=[0-9a-f]{8}"', html)
 
 
-def test_a_pool_without_venmo_still_posts_its_deadlines(two_pools, game_data, tmp_path):
+def test_a_pool_without_venmo_still_posts_its_deadlines(pair_site):
     """The friends fixture has no venmo key: deadlines render, the QR doesn't."""
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
-    html = (tmp_path / "friends" / "rules" / "index.html").read_text()
+    html = (pair_site.path / "friends" / "rules" / "index.html").read_text()
 
     assert "Picks are due before kickoff" in html
     assert "venmo" not in html.lower()
 
 
-def test_freshness_stamps_are_machine_readable(pool, game_data, tmp_path):
+def test_freshness_stamps_are_machine_readable(site_final):
     """Rendered as UTC in a datetime attribute so JS can localise them."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_final.path / "index.html").read_text()
     # `data-ts` may be followed by `data-age` on the data-through stamp, which
     # is what asks the client for the "2h ago" badge beside it.
     stamps = re.findall(r'<time datetime="([^"]+)" data-ts[ >]', html)
@@ -367,14 +450,13 @@ def test_freshness_stamps_are_machine_readable(pool, game_data, tmp_path):
         datetime.fromisoformat(iso)
 
 
-def test_freshness_is_above_the_fold(pool, game_data, tmp_path):
+def test_freshness_is_above_the_fold(site_final):
     """Both stamps sit at the top of the page, not buried in the footer.
 
     A scoreboard that is quietly two days stale is worse than one that says so,
     and nobody scrolls to the bottom of a leaderboard to check.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_final.path / "index.html").read_text()
 
     assert html.index("Data through") < html.index('<main')
     assert html.index("Site built") < html.index('<main')
@@ -400,16 +482,14 @@ def test_the_source_is_written_in_words(pool, games_2025, tmp_path, source, expe
     assert expected in (tmp_path / "index.html").read_text()
 
 
-def test_timezone_picker_defaults_to_eastern(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+def test_timezone_picker_defaults_to_eastern(site_final):
+    html = (site_final.path / "index.html").read_text()
     first_option = re.search(r"<select data-tz-select>\s*<option value=\"([^\"]+)\"", html)
     assert first_option.group(1) == "America/New_York"
 
 
-def test_theme_toggle_is_present(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    assert "data-theme-toggle" in (tmp_path / "index.html").read_text()
+def test_theme_toggle_is_present(site_final):
+    assert "data-theme-toggle" in (site_final.path / "index.html").read_text()
 
 
 # -- preseason, the state the site launches in ------------------------------
@@ -425,11 +505,10 @@ def test_preseason_builds_with_no_games_played(pool, games_2025, tmp_path):
     assert "Nothing has been played yet" in (tmp_path / "season" / "index.html").read_text()
 
 
-def test_weeks_and_trends_forward_to_season(pool, game_data, tmp_path):
+def test_weeks_and_trends_forward_to_season(site_final):
     """A year of group-chat links points at the old pages; they must forward."""
-    render_site(pool, game_data, tmp_path)
     for rel in ("weeks", "trends"):
-        html = (tmp_path / rel / "index.html").read_text()
+        html = (site_final.path / rel / "index.html").read_text()
         assert 'url=/season/' in html
 
 
@@ -440,14 +519,12 @@ def test_a_pool_with_a_single_entrant_builds(make_season, game_data, tmp_path):
 
 
 # -- mid-season -------------------------------------------------------------
-def test_mid_season_shows_the_current_week(pool, mid_season, tmp_path):
-    render_site(pool, mid_season, tmp_path)
-    assert "Week 11" in (tmp_path / "index.html").read_text()
+def test_mid_season_shows_the_current_week(site_mid):
+    assert "Week 11" in (site_mid.path / "index.html").read_text()
 
 
-def test_weeks_page_has_a_column_per_played_week(pool, mid_season, tmp_path):
-    render_site(pool, mid_season, tmp_path)
-    html = (tmp_path / "season" / "index.html").read_text()
+def test_weeks_page_has_a_column_per_played_week(site_mid):
+    html = (site_mid.path / "season" / "index.html").read_text()
     header = re.search(r"<thead>.*?</thead>", html, re.S).group(0)
     # Matched on the heading's text rather than on its attributes, which now
     # also carry the sort direction the column opens in.
@@ -455,9 +532,8 @@ def test_weeks_page_has_a_column_per_played_week(pool, mid_season, tmp_path):
 
 
 # -- the json sidecar -------------------------------------------------------
-def test_standings_json_is_valid_and_complete(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    payload = json.loads((tmp_path / "data" / "standings.json").read_text())
+def test_standings_json_is_valid_and_complete(site_final):
+    payload = json.loads((site_final.path / "data" / "standings.json").read_text())
 
     assert payload["season"] == 2025
     assert len(payload["entrants"]) == 3
@@ -466,10 +542,9 @@ def test_standings_json_is_valid_and_complete(pool, game_data, tmp_path):
     assert "spark" not in payload["entrants"][0]
 
 
-def test_context_totals_agree_with_the_rendered_page(pool, game_data, tmp_path):
+def test_context_totals_agree_with_the_rendered_page(pool, game_data, site_final):
     ctx = build_context(pool, game_data)
-    render_site(pool, game_data, tmp_path)
-    payload = json.loads((tmp_path / "data" / "standings.json").read_text())
+    payload = json.loads((site_final.path / "data" / "standings.json").read_text())
 
     for row in payload["entrants"]:
         expected = float(ctx.outlook.loc[ctx.outlook["name"] == row["name"], "banked"].iloc[0])
@@ -500,9 +575,8 @@ def test_playoff_phase_is_labelled(pool, games_2025, tmp_path):
     assert "Playoffs" in (tmp_path / "index.html").read_text()
 
 
-def test_final_phase_is_labelled(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    assert "Final" in (tmp_path / "index.html").read_text()
+def test_final_phase_is_labelled(site_final):
+    assert "Final" in (site_final.path / "index.html").read_text()
 
 
 def test_money_filter_hides_zero_and_missing():
@@ -562,28 +636,26 @@ def test_a_broken_model_does_not_take_the_site_down(pool, mid_season, tmp_path, 
     assert "Projected finish" not in html
 
 
-def test_projections_appear_when_available(pool, mid_season, tmp_path):
+def test_projections_appear_when_available(site_mid_forecast):
     """A summary on the standings page, the full table on /forecast/.
 
     The standings page is a scoreboard — what has happened — so it carries the
     headline only, and the distributional detail lives on its own page.
     """
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    index = (tmp_path / "index.html").read_text()
+    index = (site_mid_forecast.path / "index.html").read_text()
     # The teaser says which of the two questions its percentage answers, which
     # a bare "projected finish" never did.
     assert "Most likely to win" in index
     assert "modelled" in index
 
-    forecast = (tmp_path / "forecast" / "index.html").read_text()
+    forecast = (site_mid_forecast.path / "forecast" / "index.html").read_text()
     assert "Chance of winning" in forecast
     assert "Chance of cashing" in forecast
 
 
-def test_projections_are_absent_once_the_season_ends(pool, game_data, tmp_path):
+def test_projections_are_absent_once_the_season_ends(site_final):
     """Nothing left to simulate, so the panels are dropped rather than faked."""
-    render_site(pool, game_data, tmp_path)
-    assert "Most likely to win" not in (tmp_path / "index.html").read_text()
+    assert "Most likely to win" not in (site_final.path / "index.html").read_text()
 
 
 def test_an_entrant_missing_from_the_model_is_tolerated(pool, mid_season, monkeypatch):
@@ -601,37 +673,40 @@ def test_history_and_render_agree_on_week_count(pool, mid_season):
 
 
 # -- theme, identity and the morph -------------------------------------------
-def test_the_markup_itself_is_dark(season, game_data, tmp_path):
+def test_the_markup_itself_is_dark(site_solo):
     """Dark is the default in the document, not merely in the stylesheet.
 
     Anything that reads the page before CSS lands — or with scripting off —
     must already be on the dark theme rather than flashing light first.
     """
-    render_site(season, game_data, tmp_path)
-    assert 'data-theme="dark"' in (tmp_path / "index.html").read_text()
+    assert 'data-theme="dark"' in (site_solo.path / "index.html").read_text()
 
 
-def test_the_row_and_the_hero_share_a_transition_name(season, game_data, tmp_path):
+def test_the_row_and_the_hero_share_a_transition_name(site_solo):
     """This pairing is what makes clicking a row morph instead of cross-fade.
 
     The names live in two separate templates, so nothing but a test notices
     when one of them is renamed and the effect silently degrades.
-    """
-    render_site(season, game_data, tmp_path)
-    index = (tmp_path / "index.html").read_text()
 
-    for entrant in season.entrants:
-        slug = _slug_of(tmp_path, entrant.name)
-        page = (tmp_path / "entrant" / slug / "index.html").read_text()
+    The entrant list comes from the site's own standings feed, not from a
+    fixture: the loop has to cover whoever the rendered site actually holds,
+    or a fixture that grows an entrant leaves the new pages unchecked.
+    """
+    index = (site_solo.path / "index.html").read_text()
+    standings = json.loads((site_solo.path / "data" / "standings.json").read_text())
+
+    assert standings["entrants"], "no entrants in the feed means the loop below tests nothing"
+    for entrant in standings["entrants"]:
+        slug = _slug_of(site_solo.path, entrant["name"])
+        page = (site_solo.path / "entrant" / slug / "index.html").read_text()
         for name in (f"name-{slug}", f"total-{slug}"):
             assert f"view-transition-name: {name}" in index, f"{name} missing from the board"
             assert f"view-transition-name: {name}" in page, f"{name} missing from the hero"
 
 
-def test_transition_names_are_unique_within_a_page(season, game_data, tmp_path):
+def test_transition_names_are_unique_within_a_page(site_solo):
     """A duplicate name makes the browser drop the transition for both elements."""
-    render_site(season, game_data, tmp_path)
-    names = re.findall(r"view-transition-name: ([\w-]+)", (tmp_path / "index.html").read_text())
+    names = re.findall(r"view-transition-name: ([\w-]+)", (site_solo.path / "index.html").read_text())
     assert len(names) == len(set(names))
 
 
@@ -646,16 +721,15 @@ def _real_pages(written):
         yield page, text
 
 
-def test_every_page_offers_the_identity_picker(season, game_data, tmp_path):
-    written = render_site(season, game_data, tmp_path)
+def test_every_page_offers_the_identity_picker(site_solo):
+    written = site_solo.written
     for page, text in _real_pages(written):
         assert "data-me-select" in text, page
 
 
-def test_rows_carry_the_slug_the_picker_matches_on(season, game_data, tmp_path):
+def test_rows_carry_the_slug_the_picker_matches_on(site_solo):
     """The picker's option values and the rows' data-slug must be the same set."""
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_solo.path / "index.html").read_text()
 
     row_slugs = set(re.findall(r'class="row[^"]*"\s+style="[^"]*"\s+data-slug="([\w-]+)"', html))
     # Scope to the identity picker: the time zone control is a <select> too, and
@@ -667,16 +741,14 @@ def test_rows_carry_the_slug_the_picker_matches_on(season, game_data, tmp_path):
 
 
 # -- team colours -------------------------------------------------------------
-def test_team_chips_wear_their_club_colours(season, game_data, tmp_path):
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+def test_team_chips_wear_their_club_colours(site_solo):
+    html = (site_solo.path / "index.html").read_text()
     assert "--team-bg:" in html and "--team-fg:" in html and "--team-edge:" in html
 
 
-def test_every_chip_that_names_a_team_is_coloured(season, game_data, tmp_path):
+def test_every_chip_that_names_a_team_is_coloured(site_solo):
     """A chip with no colour block would render as an unexplained grey outlier."""
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "teams" / "index.html").read_text()
+    html = (site_solo.path / "teams" / "index.html").read_text()
 
     # The chips on this page became links when teams got pages of their own,
     # so the href sits between the class and the style.
@@ -691,14 +763,13 @@ def test_every_chip_that_names_a_team_is_coloured(season, game_data, tmp_path):
 
 
 # -- sortable tables ----------------------------------------------------------
-def test_the_teams_table_is_sortable_with_real_sort_keys(season, game_data, tmp_path):
+def test_the_teams_table_is_sortable_with_real_sort_keys(site_solo):
     """Every sortable column needs a key that sorts correctly as a number.
 
     Displayed text would sort "10-2" before "3-1" and put unseeded teams above
     the top seed, so the sort keys are emitted separately.
     """
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "teams" / "index.html").read_text()
+    html = (site_solo.path / "teams" / "index.html").read_text()
 
     assert html.count("data-sort") == 6
     assert 'class="table-scroll is-tall"' in html
@@ -706,19 +777,17 @@ def test_the_teams_table_is_sortable_with_real_sort_keys(season, game_data, tmp_
     assert 'data-value="99"' in html
 
 
-def test_the_seed_sort_key_orders_playoff_teams_first(season, game_data, tmp_path):
+def test_the_seed_sort_key_orders_playoff_teams_first(site_solo):
     """Seeds 1..7 must come before the 99 that stands in for "did not qualify"."""
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "teams" / "index.html").read_text()
+    html = (site_solo.path / "teams" / "index.html").read_text()
     seeds = [int(v) for v in re.findall(r'<td data-value="(\d+)">\s*\n?\s*(?:<span class="badge money">|—)', html)]
     assert sorted(s for s in seeds if s != 99)[:1] == [1]
     assert 99 in seeds
 
 
 # -- the comparison chart -----------------------------------------------------
-def test_the_compare_chart_offers_every_entrant(season, game_data, tmp_path):
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "season" / "index.html").read_text()
+def test_the_compare_chart_offers_every_entrant(site_solo):
+    html = (site_solo.path / "season" / "index.html").read_text()
 
     picks = set(re.findall(r'data-pick="([\w-]+)"', html))
     lines = set(re.findall(r'<polyline class="cmp-line" data-entrant="([\w-]+)"', html))
@@ -726,10 +795,9 @@ def test_the_compare_chart_offers_every_entrant(season, game_data, tmp_path):
     assert picks == lines, "a name you can pick must have a line to light up"
 
 
-def test_the_compare_chart_ships_unpicked(season, game_data, tmp_path):
+def test_the_compare_chart_ships_unpicked(site_solo):
     """The server does not choose for the viewer; the browser does."""
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "season" / "index.html").read_text()
+    html = (site_solo.path / "season" / "index.html").read_text()
     assert "is-picked" not in html
     assert html.count("data-compare>") == 2  # points and rank
 
@@ -810,29 +878,27 @@ def test_every_asset_url_on_every_page_is_fingerprinted(season, game_data, tmp_p
     assert seen >= 3, "expected at least the stylesheet, the script and the favicon"
 
 
-def test_the_fingerprint_matches_the_bytes_that_shipped(season, game_data, tmp_path):
+def test_the_fingerprint_matches_the_bytes_that_shipped(site_solo):
     """The URL the browser asks for must name the file that was published.
 
     This is the real invariant. It is also what would catch a minifier being
     slipped in between hashing the source and copying it to the output.
     """
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_solo.path / "index.html").read_text()
 
     checked = 0
     for url in ASSET_URL_RE.findall(html):
         path, _, stamp = url.partition("?v=")
-        shipped = tmp_path / path.lstrip("/")
+        shipped = site_solo.path / path.lstrip("/")
         assert shipped.is_file(), f"{url} does not exist in the output"
         assert stamp == hashlib.sha256(shipped.read_bytes()).hexdigest()[:8]
         checked += 1
     assert checked >= 3
 
 
-def test_page_links_are_never_fingerprinted(season, game_data, tmp_path):
+def test_page_links_are_never_fingerprinted(site_solo):
     """A stamp on /entrant/x/ would break every in-page link regex, and look daft."""
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_solo.path / "index.html").read_text()
 
     links = [u for u in re.findall(r'href="(/[^"]*)"', html) if "/assets/" not in u]
     assert links, "expected at least the nav links"
@@ -840,18 +906,17 @@ def test_page_links_are_never_fingerprinted(season, game_data, tmp_path):
         assert "?v=" not in url, url
 
 
-def test_the_stylesheet_still_finds_its_fonts(season, game_data, tmp_path):
+def test_the_stylesheet_still_finds_its_fonts(site_solo):
     """A relative url() inside the CSS resolves against the path, not the query.
 
     RFC 3986 §5.3: a non-empty relative reference does not inherit the base's
     query, so `fonts/x.woff2` resolves correctly under `site.css?v=...`. This is
     also the regression guard against anyone rewriting the CSS to rename files.
     """
-    render_site(season, game_data, tmp_path)
-    css = (tmp_path / "assets" / "site.css").read_text()
+    css = (site_solo.path / "assets" / "site.css").read_text()
 
     assert "url('fonts/big-shoulders.woff2')" in css
-    assert sorted(p.name for p in (tmp_path / "assets" / "fonts").glob("*.woff2"))
+    assert sorted(p.name for p in (site_solo.path / "assets" / "fonts").glob("*.woff2"))
 
 
 def test_the_ci_contract_holds(two_pools, game_data, tmp_path):
@@ -894,14 +959,14 @@ def test_the_ci_contract_holds(two_pools, game_data, tmp_path):
 
 
 # -- viewer preferences sit at the top ----------------------------------------
-def test_the_viewer_controls_come_before_the_content(season, game_data, tmp_path):
+def test_the_viewer_controls_come_before_the_content(site_solo):
     """Both settings change what you are looking at, so they precede it.
 
     They used to live in the footer, where nobody scrolled to find them. This
     pins the position rather than merely their existence — the previous test
     passed perfectly well while they were invisible at the bottom of the page.
     """
-    written = render_site(season, game_data, tmp_path)
+    written = site_solo.written
 
     for page, html in _real_pages(written):
         main_at = html.index("<main")
@@ -910,21 +975,20 @@ def test_the_viewer_controls_come_before_the_content(season, game_data, tmp_path
         assert html.index('class="viewer-bar"') < main_at, page
 
 
-def test_the_controls_appear_exactly_once(season, game_data, tmp_path):
+def test_the_controls_appear_exactly_once(site_solo):
     """A duplicate would silently break the wiring.
 
     initMe and initTimeZone both use querySelector, so a second copy left
     behind in the footer would never be wired up and would sit there showing
     a stale value.
     """
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_solo.path / "index.html").read_text()
 
     assert html.count("data-me-select") == 1
     assert html.count("data-tz-select") == 1
 
 
-def test_the_stamps_are_at_the_top_and_only_at_the_top(season, game_data, tmp_path):
+def test_the_stamps_are_at_the_top_and_only_at_the_top(site_solo):
     """They used to sit in the footer, behind a full page of leaderboard.
 
     How old the numbers are is the one caveat that changes how you read
@@ -932,8 +996,7 @@ def test_the_stamps_are_at_the_top_and_only_at_the_top(season, game_data, tmp_pa
     them — and printed once, because two copies of a timestamp is an invitation
     to have them disagree.
     """
-    render_site(season, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_solo.path / "index.html").read_text()
     head, footer = html.split("<footer")
 
     assert "Data through" in head.split("<main")[0]
@@ -942,23 +1005,21 @@ def test_the_stamps_are_at_the_top_and_only_at_the_top(season, game_data, tmp_pa
     assert len(re.findall(r"<time datetime=", html)) == 2
 
 
-def test_the_footer_says_how_the_results_were_fetched(season, game_data, tmp_path):
+def test_the_footer_says_how_the_results_were_fetched(site_solo):
     """What is left down there is provenance, which is reference, not caveat."""
-    render_site(season, game_data, tmp_path)
-    footer = (tmp_path / "index.html").read_text().split("<footer")[1]
+    footer = (site_solo.path / "index.html").read_text().split("<footer")[1]
     assert "live from nflverse" in footer
 
 
 # -- the forecast page --------------------------------------------------------
-def test_the_bracket_is_a_week_of_the_schedule(pool, game_data, tmp_path):
+def test_the_bracket_is_a_week_of_the_schedule(site_final):
     """So the switcher, `:target` and the back button all work on it for free.
 
     A separate page would need its own nav entry, its own URL scheme and its
     own answer to "which week am I on". It is a section like every other week,
     and the only new markup is one more link on the end of the switcher.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert 'id="bracket"' in html
     assert 'href="#bracket"' in html
@@ -985,10 +1046,9 @@ def test_a_bracket_before_kickoff_says_what_each_slot_is_waiting_for(
     assert html.count('class="tie is-open"') == 13
 
 
-def test_a_finished_bracket_carries_its_results(pool, game_data, tmp_path):
+def test_a_finished_bracket_carries_its_results(site_final):
     """Scores, and which side won — the same colours a played game gets."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert "Seeded and settled" in html
     assert html.count('class="tie is-final"') == 13
@@ -1023,33 +1083,31 @@ def test_every_bracket_side_says_what_winning_it_pays(pool, preseason_data, game
             assert game["away"]["stake"] > 0.0
 
 
-def test_the_bracket_names_only_this_pool(two_pools, game_data, tmp_path):
+def test_the_bracket_names_only_this_pool(pair_site):
     """The teams are the league's; the people beside them are the pool's."""
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
 
-    friends = (tmp_path / "friends" / "schedule" / "index.html").read_text()
-    root = (tmp_path / "schedule" / "index.html").read_text()
+    friends = (pair_site.path / "friends" / "schedule" / "index.html").read_text()
+    root = (pair_site.path / "schedule" / "index.html").read_text()
 
     assert 'id="bracket"' in friends
     assert "Cousin Mike" not in friends
     assert "Priya" not in root
 
 
-def test_the_switcher_calls_january_playoffs(pool, game_data, tmp_path):
+def test_the_switcher_calls_january_playoffs(site_final):
     """The word on the switcher is the one people actually say.
 
     The id stays `bracket` — a season of sent links points at it — but nothing
     a reader sees calls it that.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert re.search(r'class="to-bracket"[^>]*>Playoffs</a>', html)
     assert 'href="#bracket"' in html
     assert ">Bracket</a>" not in html
 
 
-def test_the_bracket_converges_on_the_super_bowl(pool, game_data, tmp_path):
+def test_the_bracket_converges_on_the_super_bowl(pool, game_data, site_final):
     """Two conference wings of six games each, and the one game in the middle.
 
     The tournament shape, not four lists: the drawing only reads as a bracket
@@ -1071,8 +1129,7 @@ def test_the_bracket_converges_on_the_super_bowl(pool, game_data, tmp_path):
 
     # And the page draws that shape: a wing per conference, the Super Bowl
     # between them, thirteen ties among the three.
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
     assert 'data-conf="AFC"' in html
     assert 'data-conf="NFC"' in html
     assert html.count('class="bracket-center"') == 1
@@ -1097,9 +1154,8 @@ def test_a_played_super_bowl_crowns_a_champion(pool, game_data, preseason_data, 
     assert 'class="champ"' not in html
 
 
-def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+def test_the_forecast_page_carries_all_three_charts(site_mid_forecast):
+    html = (site_mid_forecast.path / "forecast" / "index.html").read_text()
 
     assert 'class="finish"' in html  # finishing-place bars
     assert 'class="ridge"' in html  # score distributions
@@ -1107,15 +1163,14 @@ def test_the_forecast_page_carries_all_three_charts(pool, mid_season, tmp_path):
     assert "modelled" in html
 
 
-def test_the_forecast_ships_both_head_to_head_grids(pool, mid_season, tmp_path):
+def test_the_forecast_ships_both_head_to_head_grids(site_mid_forecast):
     """Drawn at build time, both of them, and the picker only chooses one.
 
     Neither grid is computed on the client: the numbers are the model's in
     either view, there is no arithmetic to get wrong twice, and with scripting
     off the page still shows the finishing one.
     """
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+    html = (site_mid_forecast.path / "forecast" / "index.html").read_text()
 
     assert html.count('class="heat"') == 2
     assert 'data-heat-grid="order"' in html
@@ -1178,20 +1233,18 @@ def test_the_forecast_counts_the_places_that_actually_pay(make_season, mid_seaso
     assert "pays 2 places" in (tmp_path / "forecast" / "index.html").read_text()
 
 
-def test_the_forecast_page_has_a_row_per_entrant(pool, mid_season, tmp_path):
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+def test_the_forecast_page_has_a_row_per_entrant(pool, site_mid_forecast):
+    html = (site_mid_forecast.path / "forecast" / "index.html").read_text()
 
     slugs = re.findall(r'class="forecast-row"[^>]*data-slug="([\w-]+)"', html)
     assert len(slugs) == len(pool.entrants)
     assert len(set(slugs)) == len(slugs)
 
 
-def test_the_forecast_is_ordered_by_chance_of_winning(pool, mid_season, tmp_path):
+def test_the_forecast_is_ordered_by_chance_of_winning(pool, mid_season, site_mid_forecast):
     """The model's own ranking, not the current standings — they differ."""
     ctx = build_context(pool, mid_season, simulations=200)
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+    html = (site_mid_forecast.path / "forecast" / "index.html").read_text()
 
     shown = re.findall(r'class="forecast-row"[^>]*data-slug="([\w-]+)"', html)
     expected = (
@@ -1223,38 +1276,33 @@ def test_the_forecast_page_names_what_the_ratings_came_from(pool, mid_season, tm
     assert "preseason win totals" not in with_lines
 
 
-def test_the_forecast_tab_is_in_the_nav_on_every_page(pool, mid_season, tmp_path):
-    written = render_site(pool, mid_season, tmp_path, simulations=200)
+def test_the_forecast_tab_is_in_the_nav_on_every_page(site_mid_forecast):
+    written = site_mid_forecast.written
     for page, text in _real_pages(written):
         assert "/forecast/" in text, page
 
 
-def test_the_forecast_page_explains_itself_when_there_is_nothing_to_say(
-    pool, game_data, tmp_path
-):
+def test_the_forecast_page_explains_itself_when_there_is_nothing_to_say(site_final):
     """Once the bracket starts there is nothing left to simulate."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+    html = (site_final.path / "forecast" / "index.html").read_text()
 
     assert 'class="finish"' not in html
     assert "The season is over" in html
 
 
-def test_the_standings_page_links_to_the_full_forecast(pool, mid_season, tmp_path):
+def test_the_standings_page_links_to_the_full_forecast(site_mid_forecast):
     """The scoreboard keeps a headline; the distributions live on their own page."""
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    index = (tmp_path / "index.html").read_text()
+    index = (site_mid_forecast.path / "index.html").read_text()
 
     assert 'class="finish"' in index  # the summary bars
     assert 'class="ridge"' not in index  # but not the full picture
     assert 'href="/forecast/"' in index
 
 
-def test_every_game_carries_what_it_is_worth_to_everybody(pool, game_data, tmp_path):
+def test_every_game_carries_what_it_is_worth_to_everybody(game_data, site_final):
     """The collapsed row shows the reader their own number. The argument in the
     group chat is about everyone else's, so the panel names all of them."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert html.count('class="game-more"') == len(game_data.games)
     # The team named in the fact is a link to that team, like every other place
@@ -1270,9 +1318,7 @@ def test_every_game_carries_what_it_is_worth_to_everybody(pool, game_data, tmp_p
     )
 
 
-def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(
-    pool, game_data, tmp_path
-):
+def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(site_final):
     """The one rule this site has about hidden things.
 
     Nothing is ever invisible without JavaScript, so the panel ships open and
@@ -1280,8 +1326,7 @@ def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(
     that can open it again. Set before first paint, or the panels would render
     open and then snap shut.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert "dataset.js = 'on'" in html
     assert not re.search(r'class="game-more"[^>]*hidden', html)
@@ -1289,10 +1334,9 @@ def test_a_game_panel_is_open_in_the_markup_and_folded_by_the_client(
     assert re.search(r'aria-controls="more-[^"]+"', html)
 
 
-def test_the_schedule_can_be_cut_to_the_games_the_pool_is_in(pool, game_data, tmp_path):
+def test_the_schedule_can_be_cut_to_the_games_the_pool_is_in(site_final):
     """A third of any week is games nobody here holds."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert "data-slate-toggle" in html
     assert "Pool games only" in html
@@ -1324,16 +1368,15 @@ def test_a_week_the_pool_has_no_side_in_says_so_rather_than_going_blank(
     assert "Nobody here holds a side in" in html
 
 
-def test_every_team_gets_a_page(pool, game_data, tmp_path):
+def test_every_team_gets_a_page(pool, site_final):
     """All 32, not only the ones somebody picked.
 
     A team nobody holds is exactly the team you want to read about when you are
     deciding whether to be annoyed that nobody has it.
     """
-    render_site(pool, game_data, tmp_path)
 
     for team in pool.teams:
-        page = tmp_path / "team" / team / "index.html"
+        page = site_final.path / "team" / team / "index.html"
         assert page.exists(), team
         assert team in page.read_text()
 
@@ -1354,7 +1397,7 @@ def test_a_team_page_lists_that_team_and_nobody_else(pool, game_data):
     assert weeks == sorted(weeks)
 
 
-def test_a_team_page_names_the_bye_where_it_falls(pool, game_data, tmp_path):
+def test_a_team_page_names_the_bye_where_it_falls(pool, game_data, site_final):
     """A list that jumps from week 5 to week 7 has said nothing about week 6."""
     ctx = build_context(pool, game_data)
     page = _team_page(ctx, "KC")
@@ -1370,8 +1413,7 @@ def test_a_team_page_names_the_bye_where_it_falls(pool, game_data, tmp_path):
     order = [r["week"] for r in page["season"]]
     assert order == sorted(order)
 
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "team" / "KC" / "index.html").read_text()
+    html = (site_final.path / "team" / "KC" / "index.html").read_text()
     assert "game-bye" in html
 
 
@@ -1392,7 +1434,7 @@ def test_a_team_page_says_what_it_was_worth_to_each_owner(pool, game_data):
     assert 0.0 < owner["share"] <= 1.0
 
 
-def test_a_team_nobody_holds_still_has_a_page(pool, game_data, tmp_path):
+def test_a_team_nobody_holds_still_has_a_page(pool, game_data, site_final):
     """And says so, rather than rendering an empty block."""
     ctx = build_context(pool, game_data)
     held = {t for e in pool.entrants for t in e.teams}
@@ -1400,22 +1442,20 @@ def test_a_team_nobody_holds_still_has_a_page(pool, game_data, tmp_path):
 
     assert _team_page(ctx, spare)["owners"] == []
 
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "team" / spare / "index.html").read_text()
+    html = (site_final.path / "team" / spare / "index.html").read_text()
     assert "Nobody in this pool holds" in html
 
 
-def test_team_pages_are_scoped_to_their_own_pool(two_pools, game_data, tmp_path):
+def test_team_pages_are_scoped_to_their_own_pool(pair_site):
     """Same football, different people — and the people are the pool's own.
 
     The football on a team page is identical in both pools, so the owners block
     is the entire difference and the entire risk: one family name on a friends
     page is a hole straight through the wall between them.
     """
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
 
-    root = (tmp_path / "team" / "KC" / "index.html").read_text()
-    friends = (tmp_path / "friends" / "team" / "KC" / "index.html").read_text()
+    root = (pair_site.path / "team" / "KC" / "index.html").read_text()
+    friends = (pair_site.path / "friends" / "team" / "KC" / "index.html").read_text()
 
     assert "Cousin Mike" in root and "Priya" not in root
     assert "Priya" in friends and "Cousin Mike" not in friends
@@ -1433,7 +1473,7 @@ def test_a_removed_team_page_does_not_survive_a_rebuild(pool, game_data, tmp_pat
     assert not stale.exists()
 
 
-def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(pool, game_data, tmp_path):
+def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(site_final):
     """A team is one object on this site, and it goes to one place.
 
     The board used to be the exception, because its rows were themselves links
@@ -1442,7 +1482,6 @@ def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(pool, game_data, tmp
     the link, and the chips are links of their own. `index.html` is in this
     list to keep it that way.
     """
-    render_site(pool, game_data, tmp_path)
 
     for name in (
         "index.html",
@@ -1453,20 +1492,19 @@ def test_a_chip_is_a_link_to_that_team_everywhere_it_can_be(pool, game_data, tmp
         "rules/index.html",
         "team/KC/index.html",
     ):
-        html = (tmp_path / name).read_text()
+        html = (site_final.path / name).read_text()
         assert re.search(r'<a class="team-chip[^>]*href="/team/\w+/"', html), name
 
 
-def test_no_page_ever_nests_one_link_inside_another(pool, game_data, tmp_path):
+def test_no_page_ever_nests_one_link_inside_another(site_final):
     """Which is what making chips and names clickable could most easily break.
 
     An anchor inside an anchor is invalid, and browsers recover from it by
     closing the outer one early — so the rest of the row silently stops being
     a link and nobody notices until somebody taps it.
     """
-    render_site(pool, game_data, tmp_path)
 
-    for page in tmp_path.rglob("*.html"):
+    for page in site_final.path.rglob("*.html"):
         depth = 0
         for token in re.findall(r"<a\b|</a>", page.read_text()):
             depth += 1 if token == "<a" else -1
@@ -1511,7 +1549,7 @@ def _loose_names(html: str, names: Sequence[str]) -> list[str]:
     return [n for n in names if n in re.sub(r'="[^"]*"', "", stripped)]
 
 
-def test_a_name_is_a_link_wherever_the_page_says_it(pool, mid_season, tmp_path):
+def test_a_name_is_a_link_wherever_the_page_says_it(pool, site_mid_forecast):
     """The whole point, asserted structurally rather than page by page.
 
     Every place this site prints somebody's name it is naming the same object,
@@ -1521,11 +1559,10 @@ def test_a_name_is_a_link_wherever_the_page_says_it(pool, mid_season, tmp_path):
     left to be rediscovered. Anything outside them is a name that has become a
     dead end, which is exactly the drift this test exists to catch.
     """
-    render_site(pool, mid_season, tmp_path, simulations=200)
     names = [e.name for e in pool.entrants]
 
     pages = [
-        (tmp_path / p, names)
+        (site_mid_forecast.path / p, names)
         for p in (
             "index.html",
             "season/index.html",
@@ -1539,7 +1576,7 @@ def test_a_name_is_a_link_wherever_the_page_says_it(pool, mid_season, tmp_path):
     # it is the page you are already on — so theirs comes out of the list and
     # everybody else's stays in it.
     pages += [
-        (tmp_path / "entrant" / e.slug / "index.html",
+        (site_mid_forecast.path / "entrant" / e.slug / "index.html",
          [n for n in names if n != e.name])
         for e in pool.entrants
     ]
@@ -1601,18 +1638,15 @@ def test_a_link_drawn_inside_a_chart_still_carries_the_deployment_prefix(
     assert found, "no chart drew a link"
 
 
-def test_a_chart_that_carries_links_is_not_sealed_off_from_a_screen_reader(
-    pool, mid_season, tmp_path
-):
+def test_a_chart_that_carries_links_is_not_sealed_off_from_a_screen_reader(site_mid_forecast):
     """`role="img"` makes a subtree opaque, links and all.
 
     Which is right for a picture and wrong the moment the picture contains
     somewhere to go — so a chart that gained links has to have given up that
     role, or it has handed a screen reader a chart with nothing in it.
     """
-    render_site(pool, mid_season, tmp_path, simulations=200)
 
-    for page in tmp_path.rglob("*.html"):
+    for page in site_mid_forecast.path.rglob("*.html"):
         for chart in re.findall(r"<svg\b[^>]*>.*?</svg>", page.read_text(), re.S):
             if "<a href=" not in chart:
                 continue
@@ -1620,9 +1654,8 @@ def test_a_chart_that_carries_links_is_not_sealed_off_from_a_screen_reader(
             assert 'role="group"' in chart, page.name
 
 
-def test_an_entrant_page_shows_their_own_odds(pool, mid_season, tmp_path):
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    html = (tmp_path / "entrant" / "brandon" / "index.html").read_text()
+def test_an_entrant_page_shows_their_own_odds(site_mid_forecast):
+    html = (site_mid_forecast.path / "entrant" / "brandon" / "index.html").read_text()
 
     assert 'class="finish"' in html
     assert "Favoured against" in html
@@ -1644,14 +1677,13 @@ def test_short_names_fall_back_when_first_names_collide():
     assert clash == {"Sarah Jones": "Sarah Jones", "Sarah Smith": "Sarah Smith"}
 
 
-def test_the_data_feed_carries_data_not_markup(pool, mid_season, tmp_path):
+def test_the_data_feed_carries_data_not_markup(site_mid_forecast):
     """standings.json is a machine-readable interface, so no SVG in it.
 
     Every chart is a string of markup. One leaking into the feed tripled its
     size, and anyone parsing it wants the numbers.
     """
-    render_site(pool, mid_season, tmp_path, simulations=200)
-    raw = (tmp_path / "data" / "standings.json").read_text()
+    raw = (site_mid_forecast.path / "data" / "standings.json").read_text()
 
     assert "<svg" not in raw
     data = json.loads(raw)
@@ -1661,26 +1693,23 @@ def test_the_data_feed_carries_data_not_markup(pool, mid_season, tmp_path):
 
 
 # -- the schedule -------------------------------------------------------------
-def test_the_schedule_has_a_section_for_every_week(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+def test_the_schedule_has_a_section_for_every_week(site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     # A complete season: 18 regular weeks plus the four playoff rounds.
     ids = re.findall(r'<section class="week[^"]*"\s+id="week-(\d+)"', html)
     assert [int(i) for i in ids] == list(range(1, 23))
 
 
-def test_the_schedule_lists_every_game_exactly_once(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+def test_the_schedule_lists_every_game_exactly_once(game_data, site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     listed = re.findall(r'data-game="([^"]+)"', html)
     assert sorted(listed) == sorted(game_data.games["game_id"])
 
 
-def test_exactly_one_week_opens_by_default(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+def test_exactly_one_week_opens_by_default(site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert html.count("is-default") == 1
 
@@ -1716,9 +1745,8 @@ def test_the_preseason_schedule_opens_on_week_one(pool, games_2025, tmp_path):
     assert re.search(r'class="week is-default"\s+id="week-1"', html)
 
 
-def test_every_kickoff_carries_a_machine_readable_instant(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+def test_every_kickoff_carries_a_machine_readable_instant(game_data, site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     stamps = re.findall(r'<time datetime="([^"]+)" data-ts="kickoff">', html)
     # One per game, plus one per week header.
@@ -1727,25 +1755,23 @@ def test_every_kickoff_carries_a_machine_readable_instant(pool, game_data, tmp_p
         assert datetime.fromisoformat(iso).tzinfo is not None
 
 
-def test_a_kickoff_reads_as_a_time_before_any_javascript_runs(pool, game_data, tmp_path):
+def test_a_kickoff_reads_as_a_time_before_any_javascript_runs(site_final):
     """No-JS visitors get Eastern words, not an ISO string."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     texts = re.findall(r'data-ts="kickoff">([^<]+)</time>', html)
     assert texts, "no kickoff stamps rendered"
     assert all(re.match(r"^[A-Z][a-z]{2}, [A-Z][a-z]{2} \d+, \d+:\d\d [AP]M E[SD]T$", t) for t in texts)
 
 
-def test_changing_week_needs_no_javascript(pool, game_data, tmp_path):
+def test_changing_week_needs_no_javascript(site_final):
     """Every week is a plain anchor to a real id, and none of them is `hidden`.
 
     Which week shows is decided by `:target` in CSS. The script only ever moves
     the default when the visitor's clock disagrees with the build's, so the page
     is fully usable with scripting off.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     ids = set(re.findall(r'<section class="week[^"]*"\s+id="(week-\d+)"', html))
     links = set(re.findall(r'<a href="(#week-\d+)"', html))
@@ -1771,9 +1797,8 @@ def test_the_schedule_prices_both_sides_of_a_game(pool, games_2025, tmp_path):
     assert len(set(stakes)) > 1
 
 
-def test_the_schedule_dims_games_nobody_in_the_pool_owns(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+def test_the_schedule_dims_games_nobody_in_the_pool_owns(game_data, site_final):
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     # Twelve teams out of thirty-two are held, so a good share of the slate has
     # no pool interest at all — and it should recede rather than compete.
@@ -1781,11 +1806,10 @@ def test_the_schedule_dims_games_nobody_in_the_pool_owns(pool, game_data, tmp_pa
     assert 0 < idle < len(game_data.games)
 
 
-def test_a_played_game_shows_its_score_and_who_won(pool, game_data, tmp_path):
-    render_site(pool, game_data, tmp_path)
+def test_a_played_game_shows_its_score_and_who_won(game_data, site_final):
     # The weeks only: the bracket is on the same page and scores its own games
     # again, which is the point of it and not a second copy of this assertion.
-    html = (tmp_path / "schedule" / "index.html").read_text().split('id="bracket"')[0]
+    html = (site_final.path / "schedule" / "index.html").read_text().split('id="bracket"')[0]
 
     assert html.count('class="game-score"') == 2 * len(game_data.games)
     assert "game-side away won" in html or "game-side home won" in html
@@ -1794,25 +1818,23 @@ def test_a_played_game_shows_its_score_and_who_won(pool, game_data, tmp_path):
     assert 'class="stake"' not in html
 
 
-def test_the_schedule_offers_every_entrant_their_own_stake(pool, game_data, tmp_path):
+def test_the_schedule_offers_every_entrant_their_own_stake(site_final):
     """`initMe` reveals one of these per row; the rest stay in the markup."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     for slug in ("aunt-carol", "cousin-mike", "brandon"):
         assert f'<span class="mine" data-slug="{slug}">' in html
 
 
-def test_the_schedule_tab_is_in_the_nav_on_every_page(pool, game_data, tmp_path):
-    written = render_site(pool, game_data, tmp_path)
+def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):
+    written = site_final.written
     for page, text in _real_pages(written):
         assert 'href="/schedule/"' in text, page
 
 
-def test_the_season_tab_replaces_the_two_it_merged(pool, game_data, tmp_path):
+def test_the_season_tab_replaces_the_two_it_merged(site_final):
     """Weeks and Trends told one story between them; Season tells it in one tab."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "index.html").read_text()
+    html = (site_final.path / "index.html").read_text()
 
     assert ">Season</a>" in html
     assert 'href="/season/"' in html
@@ -1840,10 +1862,9 @@ def test_the_schedule_shows_no_model_numbers_when_the_model_is_off(
 
 
 # -- byes -------------------------------------------------------------------
-def test_the_schedule_names_who_is_on_a_bye(pool, game_data, tmp_path):
+def test_the_schedule_names_who_is_on_a_bye(site_final):
     """A bye has no game to render, so subtracting is the only way to show it."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert "On bye" in html
     assert "team-chip bye" in html
@@ -1906,10 +1927,9 @@ def test_a_finished_season_has_no_next_week_to_report(pool, game_data):
 
 
 # -- the forecast says which question it is answering ------------------------
-def test_the_forecast_separates_winning_from_making_money(pool, mid_season, tmp_path):
+def test_the_forecast_separates_winning_from_making_money(site_mid):
     """Two questions with two answers, both named rather than left to guess."""
-    render_site(pool, mid_season, tmp_path)
-    html = (tmp_path / "forecast" / "index.html").read_text()
+    html = (site_mid.path / "forecast" / "index.html").read_text()
 
     assert "Chance of winning" in html
     assert "Expected payout" in html
@@ -1966,31 +1986,28 @@ def test_the_teams_table_order_is_stable_across_rebuilds(pool, games_2025):
     assert first == second
 
 
-def test_a_sorted_table_says_so_in_aria_sort(pool, game_data, tmp_path):
+def test_a_sorted_table_says_so_in_aria_sort(site_final):
     """The heading has to agree with the rows underneath it.
 
     Otherwise the first click on that column "sorts" it to the order it is
     already in, and looks broken.
     """
-    render_site(pool, game_data, tmp_path)
 
     for page in ("season/index.html", "teams/index.html"):
-        html = (tmp_path / page).read_text()
+        html = (site_final.path / page).read_text()
         assert 'aria-sort=' in html
 
 
-def test_rank_columns_open_first_place_first(pool, game_data, tmp_path):
+def test_rank_columns_open_first_place_first(site_final):
     """The one kind of number where biggest-first is exactly wrong."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "season" / "index.html").read_text()
+    html = (site_final.path / "season" / "index.html").read_text()
     assert 'data-sort="ascending"' in html
 
 
 # -- definitions on the page -------------------------------------------------
-def test_the_jargon_carries_its_definition_where_it_is_used(pool, game_data, tmp_path):
+def test_the_jargon_carries_its_definition_where_it_is_used(site_final):
     """An info button next to a word, with the whole definition behind it."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
 
     assert 'class="info"' in html
     assert 'class="def"' in html
@@ -1998,35 +2015,32 @@ def test_the_jargon_carries_its_definition_where_it_is_used(pool, game_data, tmp
     assert "The most the whole pool could bank in this week" in html
 
 
-def test_the_definition_is_the_button_s_accessible_name(pool, game_data, tmp_path):
+def test_the_definition_is_the_button_s_accessible_name(site_final):
     """So a screen reader reads it outright and has nothing to open.
 
     The popover is placed by the client; the accessible name is not, which
     makes it the version that always works.
     """
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "schedule" / "index.html").read_text()
+    html = (site_final.path / "schedule" / "index.html").read_text()
     assert re.search(r'class="visually-hidden">On the table: ', html)
 
 
-def test_no_definition_button_sits_inside_a_link(pool, game_data, tmp_path):
+def test_no_definition_button_sits_inside_a_link(site_final):
     """A button inside an anchor is invalid, and taps land on the wrong one.
 
     The leaderboard rows and the forecast rows are both whole-row links, so
     this is a real trap rather than a theoretical one.
     """
-    render_site(pool, game_data, tmp_path)
 
-    for page in tmp_path.rglob("*.html"):
+    for page in site_final.path.rglob("*.html"):
         html = page.read_text()
         for link in re.findall(r"<a\b[^>]*>(.*?)</a>", html, re.S):
             assert 'class="info"' not in link, page.name
 
 
-def test_the_rules_page_carries_the_whole_glossary(pool, game_data, tmp_path):
+def test_the_rules_page_carries_the_whole_glossary(site_final):
     """Where the definitions still are when the popovers cannot open."""
-    render_site(pool, game_data, tmp_path)
-    html = (tmp_path / "rules" / "index.html").read_text()
+    html = (site_final.path / "rules" / "index.html").read_text()
 
     assert "What the words mean" in html
     for term in ("Leveling factor", "On the table", "Expected payout", "Bye"):
@@ -2060,39 +2074,33 @@ def test_omitting_pool_base_leaves_the_filter_exactly_as_it_was():
         assert both(path) == explicit(path)
 
 
-def test_render_pools_puts_the_root_pool_at_the_root(two_pools, game_data, tmp_path):
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+def test_render_pools_puts_the_root_pool_at_the_root(pair_site):
 
-    assert (tmp_path / "index.html").exists()
-    assert (tmp_path / "friends" / "index.html").exists()
+    assert (pair_site.path / "index.html").exists()
+    assert (pair_site.path / "friends" / "index.html").exists()
     # Not at /family/ — the root pool has no segment at all.
-    assert not (tmp_path / "family").exists()
+    assert not (pair_site.path / "family").exists()
 
 
-def test_the_assets_are_copied_once_for_the_whole_site(two_pools, game_data, tmp_path):
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+def test_the_assets_are_copied_once_for_the_whole_site(pair_site):
 
-    assert (tmp_path / "assets" / "site.css").exists()
-    assert not (tmp_path / "friends" / "assets").exists()
+    assert (pair_site.path / "assets" / "site.css").exists()
+    assert not (pair_site.path / "friends" / "assets").exists()
 
 
-def test_no_root_absolute_url_escapes_the_prefix_on_a_nested_pool(
-    two_pools, game_data, tmp_path
-):
+def test_no_root_absolute_url_escapes_the_prefix_on_a_nested_pool(pair_site_based):
     """The root-pool version of this exists above; the nested pool is where a
     bad prefix actually hides."""
-    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
 
-    for page in (tmp_path / "friends").rglob("*.html"):
+    for page in (pair_site_based.path / "friends").rglob("*.html"):
         for match in re.findall(r'(?:href|src)="(/[^"]*)"', page.read_text()):
             assert match.startswith("/football-pool/"), f"{page.name}: {match}"
 
 
-def test_each_pool_keeps_its_own_money_and_field(two_pools, game_data, tmp_path):
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
+def test_each_pool_keeps_its_own_money_and_field(pair_site):
 
-    family = json.loads((tmp_path / "data" / "standings.json").read_text())
-    friends = json.loads((tmp_path / "friends" / "data" / "standings.json").read_text())
+    family = json.loads((pair_site.path / "data" / "standings.json").read_text())
+    friends = json.loads((pair_site.path / "friends" / "data" / "standings.json").read_text())
 
     assert family["pool"] == {
         "slug": "family", "name": "Family Pool", "path": "",
@@ -2110,7 +2118,7 @@ def test_each_pool_keeps_its_own_money_and_field(two_pools, game_data, tmp_path)
     }
 
 
-def test_no_pool_ever_links_to_another_pool(two_pools, game_data, tmp_path):
+def test_no_pool_ever_links_to_another_pool(pair_site_based):
     """The pools share a domain, not an experience.
 
     Each group gets exactly one URL. A visitor to the family pool must never
@@ -2119,10 +2127,9 @@ def test_no_pool_ever_links_to_another_pool(two_pools, game_data, tmp_path):
     their name went. Every page of both builds is checked, because a stray link
     in a footer is exactly as confusing as one in the masthead.
     """
-    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
 
-    friends_dir = tmp_path / "friends"
-    for page in tmp_path.rglob("*.html"):
+    friends_dir = pair_site_based.path / "friends"
+    for page in pair_site_based.path.rglob("*.html"):
         html = page.read_text()
         if friends_dir in page.parents:
             # Inside the friends pool, no URL reaches back up to the root pool.
@@ -2134,21 +2141,17 @@ def test_no_pool_ever_links_to_another_pool(two_pools, game_data, tmp_path):
             assert "Friends Pool" not in html, page
 
 
-def test_every_page_of_a_nested_pool_carries_its_own_prefix(
-    two_pools, game_data, tmp_path
-):
+def test_every_page_of_a_nested_pool_carries_its_own_prefix(pair_site_based):
     """Not just the front page — the nav on every page has to stay in the pool."""
-    render_pools(two_pools, game_data, tmp_path, base="/football-pool", simulations=SIMS)
 
     for name in ("index.html", "rules/index.html", "season/index.html"):
-        html = (tmp_path / "friends" / name).read_text()
+        html = (pair_site_based.path / "friends" / name).read_text()
         assert 'href="/football-pool/friends/rules/"' in html
         assert 'href="/football-pool/friends/schedule/"' in html
 
 
-def test_each_pool_scopes_its_identity_storage(two_pools, game_data, tmp_path):
+def test_each_pool_scopes_its_identity_storage(pair_site):
     """data-pool is what site.js reads to namespace `pool-me`."""
-    render_pools(two_pools, game_data, tmp_path, simulations=SIMS)
 
-    assert 'data-pool=""' in (tmp_path / "index.html").read_text()
-    assert 'data-pool="friends"' in (tmp_path / "friends" / "index.html").read_text()
+    assert 'data-pool=""' in (pair_site.path / "index.html").read_text()
+    assert 'data-pool="friends"' in (pair_site.path / "friends" / "index.html").read_text()
