@@ -758,8 +758,8 @@ export function outsideHelpScenario(data, meSlug = '') {
   return optimizedScenario(data, meSlug, forced);
 }
 
-/** Non-owned winners in the help slate whose result changes somebody's points. */
-export function outsideHelpTeams(data, selections, meSlug = '') {
+/** Non-owned winning calls whose result changes somebody's pool points. */
+export function outsideHelpGames(data, selections, meSlug = '') {
   const entrants = data?.entrants || [];
   const entrant = entrants.find((candidate) => candidate.slug === meSlug);
   if (!entrant) return [];
@@ -774,7 +774,16 @@ export function outsideHelpTeams(data, selections, meSlug = '') {
       Number(game.points?.[candidate.slug]?.[game.away] || 0)
       !== Number(game.points?.[candidate.slug]?.[game.home] || 0)
     ));
-    if (matters && !helpers.includes(chosen)) helpers.push(chosen);
+    if (matters) helpers.push({ id: String(game.id), team: chosen });
+  }
+  return helpers;
+}
+
+/** Unique team codes from the consequential outside-help calls. */
+export function outsideHelpTeams(data, selections, meSlug = '') {
+  const helpers = [];
+  for (const game of outsideHelpGames(data, selections, meSlug)) {
+    if (!helpers.includes(game.team)) helpers.push(game.team);
   }
   return helpers;
 }
@@ -822,6 +831,90 @@ function paintGamedayOrder(doc, win, animate = false) {
       { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
     );
   }
+}
+
+/** Keep the high-level rooting board focused on consequential outside help. */
+function initRootingHelp(doc) {
+  const button = doc.querySelector('[data-rooting-help]');
+  const grid = doc.querySelector('[data-gameday-cards]');
+  const script = doc.querySelector('#gameday-data');
+  if (!button || !grid || !script) return;
+
+  let data;
+  try {
+    data = JSON.parse(script.textContent);
+  } catch {
+    return;
+  }
+
+  const status = doc.querySelector('[data-rooting-help-status]');
+  const empty = doc.querySelector('[data-rooting-help-empty]');
+  const label = button.querySelector('[data-rooting-help-label]');
+  let active = false;
+
+  const clearCards = () => {
+    grid.classList.remove('is-help-filtered');
+    for (const card of grid.querySelectorAll('[data-gameday-card]')) {
+      card.classList.remove('is-help-game');
+      for (const side of card.querySelectorAll('.gameday-side')) {
+        side.classList.remove('is-needed');
+      }
+    }
+    if (empty) empty.hidden = true;
+  };
+
+  const paint = () => {
+    clearCards();
+    button.setAttribute('aria-pressed', String(active));
+    if (label) label.textContent = active ? 'Show all games' : 'Outside help only';
+    if (!active) {
+      if (status) status.textContent = '';
+      return;
+    }
+
+    const slug = doc.documentElement.dataset.me || '';
+    const entrant = data.entrants.find((candidate) => candidate.slug === slug);
+    if (!entrant) {
+      active = false;
+      button.setAttribute('aria-pressed', 'false');
+      if (label) label.textContent = 'Outside help only';
+      if (status) status.textContent = 'Choose who you are at the top of the page first.';
+      return;
+    }
+
+    const calls = outsideHelpScenario(data, slug);
+    const helpers = outsideHelpGames(data, calls, slug);
+    const byGame = new Map(helpers.map((game) => [game.id, game.team]));
+    const shown = [];
+    grid.classList.add('is-help-filtered');
+    for (const card of grid.querySelectorAll('[data-gameday-card]')) {
+      const needed = byGame.get(card.dataset.gamedayCard);
+      card.classList.toggle('is-help-game', Boolean(needed));
+      if (needed) shown.push(needed);
+      for (const side of card.querySelectorAll('.gameday-side')) {
+        side.classList.toggle('is-needed', side.dataset.team === needed);
+      }
+    }
+    if (empty) empty.hidden = shown.length > 0;
+    if (status) {
+      status.textContent = shown.length
+        ? `Assuming ${entrant.name}'s teams win, root for ${shown.join(', ')} in the games below.`
+        : `Assuming ${entrant.name}'s teams win, no other result changes their best finish.`;
+    }
+  };
+
+  button.addEventListener('click', () => {
+    if (!active && !doc.documentElement.dataset.me) {
+      if (status) status.textContent = 'Choose who you are at the top of the page first.';
+      return;
+    }
+    active = !active;
+    paint();
+  });
+  doc.querySelector('[data-me-select]')?.addEventListener('change', () => {
+    if (active) paint();
+    else if (status) status.textContent = '';
+  });
 }
 
 function paintScenarioDrilldown(doc, root, data, game, chosen) {
@@ -2508,6 +2601,7 @@ export function init(doc = document, win = window) {
   doc.querySelector('[data-me-select]')?.addEventListener(
     'change', () => paintGamedayOrder(doc, win, true),
   );
+  initRootingHelp(doc);
   // The clock comes in through `win` so a test can stand anywhere in the season
   // without touching global time — the same discipline the Python side follows
   // by passing the fetch instant around rather than calling now().

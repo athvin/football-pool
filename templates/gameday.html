@@ -30,8 +30,20 @@
       <p class="eyebrow">Signal, not noise</p>
       <h2 class="section-title" id="rooting-title">Rooting board</h2>
     </div>
-    <p class="section-note">{{ term('drama', 'Drama') }} = pool swing × outcome uncertainty</p>
+    <div class="rooting-tools">
+      {% if gameday.scenario %}
+      <button class="rooting-filter" type="button" data-rooting-help
+              aria-pressed="false"
+              title="Assume your teams win, then show only the other teams you need to win">
+        <span data-rooting-help-label>Outside help only</span>
+      </button>
+      {% endif %}
+      <p class="section-note">{{ term('drama', 'Drama') }} = pool swing × outcome uncertainty</p>
+    </div>
   </div>
+  {% if gameday.scenario %}
+  <p class="rooting-filter-status" data-rooting-help-status aria-live="polite"></p>
+  {% endif %}
 
   <div class="gameday-grid{% if gameday.rewind %} is-rewind{% endif %}" data-gameday-cards>
     {% for g in gameday.cards %}
@@ -59,7 +71,8 @@
 
       <div class="gameday-matchup">
         {% for side in [g.away, g.home] %}
-        <div class="gameday-side{% if side.outcome %} {{ side.outcome }}{% endif %}">
+        <div class="gameday-side{% if side.outcome %} {{ side.outcome }}{% endif %}"
+             data-team="{{ side.team }}">
           {{ team_chip(side.team, side.chip, large=true) }}
           {% if g.played %}
             <strong class="gameday-score">{{ side.score }}</strong>
@@ -122,6 +135,9 @@
     </article>
     {% endfor %}
   </div>
+  {% if gameday.scenario %}
+  <p class="empty" data-rooting-help-empty hidden>No outside result changes your best finish once your teams win.</p>
+  {% endif %}
 
   {% if gameday.weather_attribution %}
   <p class="attribution"><a href="{{ gameday.weather_attribution_url }}" target="_blank" rel="noopener">{{ gameday.weather_attribution_text }}</a> · kickoff-hour forecast, optional and not used in projections.</p>

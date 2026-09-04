@@ -1983,6 +1983,10 @@ def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     assert "Rooting board" in html
     assert "What-if scoreboard" in html
     assert 'id="gameday-data"' in html
+    assert 'data-rooting-help' in html
+    assert "Outside help only" in html
+    assert html.index("Outside help only") < html.index("data-gameday-cards")
+    assert re.search(r'data-team="[A-Z]+"', html)
     assert 'data-scenario-preset="help"' in html
     assert "Who else helps me?" in html
     assert "Preseason Week 1" in html and "Preseason Week 3" in html

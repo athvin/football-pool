@@ -43,6 +43,7 @@ import {
   markerNumber,
   nextTheme,
   normalizeEspnTeam,
+  outsideHelpGames,
   outsideHelpScenario,
   outsideHelpTeams,
   parseEspnScoreboard,
@@ -380,6 +381,7 @@ describe('Gameday scenario helpers', () => {
 
     const selections = outsideHelpScenario(help, 'me');
     expect(selections).toEqual({ mine: 'MINE', help: 'HELPER', noise: 'A' });
+    expect(outsideHelpGames(help, selections, 'me')).toEqual([{ id: 'help', team: 'HELPER' }]);
     expect(outsideHelpTeams(help, selections, 'me')).toEqual(['HELPER']);
     expect(outsideHelpScenario(help, '')).toEqual({});
   });
@@ -657,6 +659,72 @@ describe('Gameday DOM wiring', () => {
       .toHaveBeenCalledWith('https://example.test/football-pool/gameday/#scenario=SEA');
     expect(document.querySelector('[data-scenario-status]').textContent)
       .toContain('paste it into a text or group chat');
+  });
+
+  test('the rooting-board button shows only consequential teams outside my picks', () => {
+    const data = {
+      entrants: [
+        { slug: 'me', name: 'Alex', teams: ['MINE'], banked: 10 },
+        { slug: 'rival', name: 'Blair', teams: ['FOE', 'THREAT'], banked: 10 },
+      ],
+      games: [
+        {
+          id: 'mine', away: 'MINE', home: 'FOE', favorite: 'FOE',
+          points: { me: { MINE: 2, FOE: 0 }, rival: { MINE: 0, FOE: 8 } },
+        },
+        {
+          id: 'help', away: 'HELPER', home: 'THREAT', favorite: 'THREAT',
+          points: { me: { HELPER: 0, THREAT: 0 }, rival: { HELPER: 0, THREAT: 4 } },
+        },
+        {
+          id: 'noise', away: 'A', home: 'B', favorite: 'A',
+          points: { me: { A: 0, B: 0 }, rival: { A: 0, B: 0 } },
+        },
+      ],
+    };
+    const card = (id, away, home) => `
+      <article data-gameday-card="${id}" data-away="${away}" data-home="${home}">
+        <div class="gameday-side" data-team="${away}"></div>
+        <div class="gameday-side" data-team="${home}"></div>
+      </article>`;
+    document.body.innerHTML = `
+      <select data-me-select><option value=""></option><option value="me">Alex</option></select>
+      <button data-rooting-help aria-pressed="false"><span data-rooting-help-label>Outside help only</span></button>
+      <p data-rooting-help-status></p>
+      <div data-gameday-cards>
+        ${card('mine', 'MINE', 'FOE')}
+        ${card('help', 'HELPER', 'THREAT')}
+        ${card('noise', 'A', 'B')}
+      </div>
+      <p data-rooting-help-empty hidden></p>
+      <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
+    const win = fakeWindow();
+    init(document, win);
+    const button = document.querySelector('[data-rooting-help]');
+
+    button.click();
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(document.querySelector('[data-rooting-help-status]').textContent).toContain('Choose who');
+
+    const select = document.querySelector('[data-me-select]');
+    select.value = 'me';
+    select.dispatchEvent(new Event('change'));
+    button.click();
+
+    expect(button.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-rooting-help-label]').textContent).toBe('Show all games');
+    expect(document.querySelector('[data-gameday-cards]').classList.contains('is-help-filtered')).toBe(true);
+    expect(document.querySelector('[data-gameday-card="help"]').classList.contains('is-help-game')).toBe(true);
+    expect(document.querySelector('[data-gameday-card="mine"]').classList.contains('is-help-game')).toBe(false);
+    expect(document.querySelector('[data-gameday-card="noise"]').classList.contains('is-help-game')).toBe(false);
+    expect(document.querySelector('[data-team="HELPER"]').classList.contains('is-needed')).toBe(true);
+    expect(document.querySelector('[data-rooting-help-status]').textContent)
+      .toBe("Assuming Alex's teams win, root for HELPER in the games below.");
+
+    button.click();
+    expect(button.getAttribute('aria-pressed')).toBe('false');
+    expect(document.querySelector('[data-rooting-help-label]').textContent).toBe('Outside help only');
+    expect(document.querySelectorAll('.is-help-game, .is-needed')).toHaveLength(0);
   });
 
   test('the Schedule PRE tab lazily renders scores, venue, network, and team links', async () => {
