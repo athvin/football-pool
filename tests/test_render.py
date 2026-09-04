@@ -2002,7 +2002,28 @@ def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     )
     assert all(entrant["teams"] for entrant in scenario["entrants"])
     for output, text in _real_pages(site_mid_forecast.written):
-        assert 'href="/gameday/"' in text, output
+        assert re.search(
+            r'href="/gameday/(?:\?me=[\w-]+&amp;preset=dream)?"', text
+        ), output
+
+
+def test_entrant_pages_link_to_their_selected_best_gameday(site_mid_forecast):
+    html = (site_mid_forecast.path / "entrant" / "brandon" / "index.html").read_text()
+    href = 'href="/gameday/?me=brandon&amp;preset=dream"'
+
+    # Once in the masthead for the habitual route, once as the explicit CTA
+    # that can be copied and sent to Brandon.
+    assert html.count(href) == 2
+    assert "Open Brandon’s best Gameday" in html
+    assert "Brandon selected · best slate preloaded" in html
+    assert "Open Gameday as Brandon with the best slate preselected" in html
+
+
+def test_completed_entrant_pages_do_not_promise_a_scenario(site_final):
+    html = (site_final.path / "entrant" / "brandon" / "index.html").read_text()
+    assert 'href="/gameday/"' in html
+    assert "best Gameday" not in html
+    assert "preset=dream" not in html
 
 
 def test_gameday_becomes_a_season_rewind_after_the_super_bowl(site_final):
