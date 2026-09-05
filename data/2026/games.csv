@@ -8,10 +8,10 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_01_CHI_CAR,2026,REG,1,2026-09-13,13:00,CHI,,CAR,,,,Home,-2.5,47.5,-148.0,124.0,Ben Johnson,Dave Canales,7,7,outdoors,grass,,,,,,CAR00,Bank of America Stadium
 2026_01_CLE_JAX,2026,REG,1,2026-09-13,13:00,CLE,,JAX,,,,Home,7.5,40.5,320.0,-410.0,Todd Monken,Liam Coen,7,7,outdoors,grass,,,,,,JAX00,EverBank Stadium
 2026_01_DAL_NYG,2026,REG,1,2026-09-13,20:20,DAL,,NYG,,,,Home,-2.5,48.5,-148.0,124.0,Brian Schottenheimer,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
-2026_01_GB_MIN,2026,REG,1,2026-09-13,16:25,GB,,MIN,,,,Home,1.5,45.5,102.0,-122.0,Matt LaFleur,Kevin O'Connell,7,7,dome,sportturf,,,,,,MIN01,U.S. Bank Stadium
+2026_01_GB_MIN,2026,REG,1,2026-09-13,16:25,GB,,MIN,,,,Home,1.5,46.5,102.0,-122.0,Matt LaFleur,Kevin O'Connell,7,7,dome,sportturf,,,,,,MIN01,U.S. Bank Stadium
 2026_01_MIA_LV,2026,REG,1,2026-09-13,16:25,MIA,,LV,,,,Home,3.5,40.5,164.0,-198.0,Jeff Hafley,Klint Kubliak,7,7,dome,grass,,,,,,VEG00,Allegiant Stadium
 2026_01_NO_DET,2026,REG,1,2026-09-13,13:00,NO,,DET,,,,Home,7.0,49.5,250.0,-310.0,Kellen Moore,Dan Campbell,7,7,dome,fieldturf,,,,,,DET00,Ford Field
-2026_01_NYJ_TEN,2026,REG,1,2026-09-13,13:00,NYJ,,TEN,,,,Home,1.5,38.5,110.0,-130.0,Aaron Glenn,Robert Saleh,7,7,outdoors,grass,,,,,,NAS00,Nissan Stadium
+2026_01_NYJ_TEN,2026,REG,1,2026-09-13,13:00,NYJ,,TEN,,,,Home,1.5,39.5,110.0,-130.0,Aaron Glenn,Robert Saleh,7,7,outdoors,grass,,,,,,NAS00,Nissan Stadium
 2026_01_TB_CIN,2026,REG,1,2026-09-13,13:00,TB,,CIN,,,,Home,3.5,50.5,170.0,-205.0,Todd Bowles,Zac Taylor,7,7,outdoors,fieldturf,,,,,,CIN00,Paycor Stadium
 2026_01_WAS_PHI,2026,REG,1,2026-09-13,16:25,WAS,,PHI,,,,Home,5.5,44.5,180.0,-218.0,Dan Quinn,Nick Sirianni,7,7,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
 2026_01_DEN_KC,2026,REG,1,2026-09-14,20:15,DEN,,KC,,,,Home,3.0,42.5,124.0,-148.0,Sean Payton,Andy Reid,7,7,outdoors,grass,,,,,,KAN00,GEHA Field at Arrowhead Stadium
