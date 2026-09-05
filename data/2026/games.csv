@@ -1,19 +1,19 @@
 game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,home_score,result,overtime,location,spread_line,total_line,away_moneyline,home_moneyline,away_coach,home_coach,away_rest,home_rest,roof,surface,temp,wind,away_qb_name,home_qb_name,referee,stadium_id,stadium
 2026_01_NE_SEA,2026,REG,1,2026-09-09,20:20,NE,,SEA,,,,Home,3.5,44.5,154.0,-185.0,Mike Vrabel,Mike Macdonald,7,7,outdoors,fieldturf,,,,,,SEA00,Lumen Field
 2026_01_SF_LA,2026,REG,1,2026-09-10,20:35,SF,,LAR,,,,Neutral,3.5,48.5,160.0,-192.0,Kyle Shanahan,Sean McVay,7,7,dome,matrixturf,,,,,,MEL00,Melbourne Cricket Ground
-2026_01_ARI_LAC,2026,REG,1,2026-09-13,16:25,ARI,,LAC,,,,Home,10.5,46.5,455.0,-625.0,Jonathan Gannon,Jim Harbaugh,7,7,dome,matrixturf,,,,,,LAX01,SoFi Stadium
-2026_01_ATL_PIT,2026,REG,1,2026-09-13,13:00,ATL,,PIT,,,,Home,3.5,41.5,154.0,-185.0,Raheem Morris,Mike McCarthy,7,7,outdoors,grass,,,,,,PIT00,Acrisure Stadium
+2026_01_ARI_LAC,2026,REG,1,2026-09-13,16:25,ARI,,LAC,,,,Home,10.5,46.5,425.0,-575.0,Jonathan Gannon,Jim Harbaugh,7,7,dome,matrixturf,,,,,,LAX01,SoFi Stadium
+2026_01_ATL_PIT,2026,REG,1,2026-09-13,13:00,ATL,,PIT,,,,Home,3.5,42.5,154.0,-185.0,Raheem Morris,Mike McCarthy,7,7,outdoors,grass,,,,,,PIT00,Acrisure Stadium
 2026_01_BAL_IND,2026,REG,1,2026-09-13,13:00,BAL,,IND,,,,Home,-3.5,48.5,-175.0,145.0,Jesse Minter,Shane Steichen,7,7,,fieldturf,,,,,,IND00,Lucas Oil Stadium
 2026_01_BUF_HOU,2026,REG,1,2026-09-13,13:00,BUF,,HOU,,,,Home,-1.5,44.5,-118.0,-102.0,Sean McDermott,DeMeco Ryans,7,7,,astroturf,,,,,,HOU00,Reliant Stadium
 2026_01_CHI_CAR,2026,REG,1,2026-09-13,13:00,CHI,,CAR,,,,Home,-2.5,47.5,-148.0,124.0,Ben Johnson,Dave Canales,7,7,outdoors,grass,,,,,,CAR00,Bank of America Stadium
-2026_01_CLE_JAX,2026,REG,1,2026-09-13,13:00,CLE,,JAX,,,,Home,7.5,40.5,310.0,-395.0,Todd Monken,Liam Coen,7,7,outdoors,grass,,,,,,JAX00,EverBank Stadium
+2026_01_CLE_JAX,2026,REG,1,2026-09-13,13:00,CLE,,JAX,,,,Home,7.5,40.5,320.0,-410.0,Todd Monken,Liam Coen,7,7,outdoors,grass,,,,,,JAX00,EverBank Stadium
 2026_01_DAL_NYG,2026,REG,1,2026-09-13,20:20,DAL,,NYG,,,,Home,-2.5,48.5,-148.0,124.0,Brian Schottenheimer,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
-2026_01_GB_MIN,2026,REG,1,2026-09-13,16:25,GB,,MIN,,,,Home,1.5,45.5,-102.0,-118.0,Matt LaFleur,Kevin O'Connell,7,7,dome,sportturf,,,,,,MIN01,U.S. Bank Stadium
+2026_01_GB_MIN,2026,REG,1,2026-09-13,16:25,GB,,MIN,,,,Home,1.5,45.5,102.0,-122.0,Matt LaFleur,Kevin O'Connell,7,7,dome,sportturf,,,,,,MIN01,U.S. Bank Stadium
 2026_01_MIA_LV,2026,REG,1,2026-09-13,16:25,MIA,,LV,,,,Home,3.5,40.5,164.0,-198.0,Jeff Hafley,Klint Kubliak,7,7,dome,grass,,,,,,VEG00,Allegiant Stadium
-2026_01_NO_DET,2026,REG,1,2026-09-13,13:00,NO,,DET,,,,Home,7.0,49.5,245.0,-305.0,Kellen Moore,Dan Campbell,7,7,dome,fieldturf,,,,,,DET00,Ford Field
+2026_01_NO_DET,2026,REG,1,2026-09-13,13:00,NO,,DET,,,,Home,7.0,49.5,250.0,-310.0,Kellen Moore,Dan Campbell,7,7,dome,fieldturf,,,,,,DET00,Ford Field
 2026_01_NYJ_TEN,2026,REG,1,2026-09-13,13:00,NYJ,,TEN,,,,Home,1.5,38.5,110.0,-130.0,Aaron Glenn,Robert Saleh,7,7,outdoors,grass,,,,,,NAS00,Nissan Stadium
-2026_01_TB_CIN,2026,REG,1,2026-09-13,13:00,TB,,CIN,,,,Home,3.5,51.5,170.0,-205.0,Todd Bowles,Zac Taylor,7,7,outdoors,fieldturf,,,,,,CIN00,Paycor Stadium
-2026_01_WAS_PHI,2026,REG,1,2026-09-13,16:25,WAS,,PHI,,,,Home,5.5,45.5,180.0,-218.0,Dan Quinn,Nick Sirianni,7,7,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
+2026_01_TB_CIN,2026,REG,1,2026-09-13,13:00,TB,,CIN,,,,Home,3.5,50.5,170.0,-205.0,Todd Bowles,Zac Taylor,7,7,outdoors,fieldturf,,,,,,CIN00,Paycor Stadium
+2026_01_WAS_PHI,2026,REG,1,2026-09-13,16:25,WAS,,PHI,,,,Home,5.5,44.5,180.0,-218.0,Dan Quinn,Nick Sirianni,7,7,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
 2026_01_DEN_KC,2026,REG,1,2026-09-14,20:15,DEN,,KC,,,,Home,3.0,42.5,124.0,-148.0,Sean Payton,Andy Reid,7,7,outdoors,grass,,,,,,KAN00,GEHA Field at Arrowhead Stadium
 2026_02_DET_BUF,2026,REG,2,2026-09-17,20:15,DET,,BUF,,,,Home,3.0,52.5,136.0,-162.0,Dan Campbell,Sean McDermott,4,4,outdoors,a_turf,,,,,,BUF00,Highmark Stadium
 2026_02_CAR_ATL,2026,REG,2,2026-09-20,13:00,CAR,,ATL,,,,Home,1.5,44.5,105.0,-125.0,Dave Canales,Raheem Morris,7,7,,fieldturf,,,,,,ATL97,Mercedes-Benz Stadium
