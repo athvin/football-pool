@@ -1,6 +1,6 @@
 game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,home_score,result,overtime,location,spread_line,total_line,away_moneyline,home_moneyline,away_coach,home_coach,away_rest,home_rest,roof,surface,temp,wind,away_qb_name,home_qb_name,referee,stadium_id,stadium
-2026_01_NE_SEA,2026,REG,1,2026-09-09,20:20,NE,,SEA,,,,Home,3.5,44.5,154.0,-185.0,Mike Vrabel,Mike Macdonald,7,7,outdoors,fieldturf,,,,,,SEA00,Lumen Field
-2026_01_SF_LA,2026,REG,1,2026-09-10,20:35,SF,,LAR,,,,Neutral,3.5,48.5,160.0,-192.0,Kyle Shanahan,Sean McVay,7,7,dome,matrixturf,,,,,,MEL00,Melbourne Cricket Ground
+2026_01_NE_SEA,2026,REG,1,2026-09-09,20:20,NE,,SEA,,,,Home,3.5,44.5,150.0,-180.0,Mike Vrabel,Mike Macdonald,7,7,outdoors,fieldturf,,,,,,SEA00,Lumen Field
+2026_01_SF_LA,2026,REG,1,2026-09-10,20:35,SF,,LAR,,,,Neutral,3.5,48.5,164.0,-198.0,Kyle Shanahan,Sean McVay,7,7,dome,matrixturf,,,,,,MEL00,Melbourne Cricket Ground
 2026_01_ARI_LAC,2026,REG,1,2026-09-13,16:25,ARI,,LAC,,,,Home,10.5,46.5,425.0,-575.0,Jonathan Gannon,Jim Harbaugh,7,7,dome,matrixturf,,,,,,LAX01,SoFi Stadium
 2026_01_ATL_PIT,2026,REG,1,2026-09-13,13:00,ATL,,PIT,,,,Home,3.5,42.5,154.0,-185.0,Raheem Morris,Mike McCarthy,7,7,outdoors,grass,,,,,,PIT00,Acrisure Stadium
 2026_01_BAL_IND,2026,REG,1,2026-09-13,13:00,BAL,,IND,,,,Home,-3.5,48.5,-175.0,145.0,Jesse Minter,Shane Steichen,7,7,,fieldturf,,,,,,IND00,Lucas Oil Stadium
