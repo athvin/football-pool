@@ -2290,7 +2290,7 @@ def test_tooltips_cover_dynamic_values_and_icon_only_controls(site_mid_forecast)
     assert "Preseason Week 1" in schedule
     assert "Modelled chance that" in schedule
     assert "Call the model's favourite in every game" in gameday
-    assert "Call the slate that gives you the best finish" in gameday
+    assert "Call the slate that banks your most points, then widens your lead the most" in gameday
     assert "Assume your teams win, then call the other games for your best finish" in gameday
 
 
