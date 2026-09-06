@@ -1221,7 +1221,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,KC,QB,15,ACT,Patrick Mahomes,Texas Tech,MahoPa00,9
 2026,KC,RB,47,DEV,Ben VanSumeren,Michigan State; Michigan,VanSBe00,3
 2026,KC,RB,24,ACT,Brashard Smith,SMU; Miami,SmitBr09,1
-2026,KC,RB,35,RES,EJ Smith,Texas A&M; Stanford,SmitEJ00,0
+2026,KC,RB,35,RES,EJ Smith,,SmitEJ00,0
 2026,KC,RB,10,ACT,Emmett Johnson,Nebraska,JohnEm01,0
 2026,KC,RB,42,DEV,Jaydn Ott,Oklahoma; California,OttxJa01,0
 2026,KC,RB,9,ACT,Kenneth Walker III,Michigan State; Wake Forest,WalkKe00,4
@@ -1442,7 +1442,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,LV,OL,71,ACT,DJ Glaze,Maryland,,2
 2026,LV,OL,58,ACT,Jackson Powers-Johnson,Oregon,,2
 2026,LV,OL,77,RES,Justin Pickett,Duke,,0
-2026,LV,OL,62,DEV,Kamar Missouri,Texas-San Antonio; Rutgers,,0
+2026,LV,OL,62,DEV,Kamar Missouri,,,0
 2026,LV,OL,74,ACT,Kolton Miller,UCLA,,8
 2026,LV,OL,73,DEV,Niklas Henning,Queens University (Canada),,0
 2026,LV,OL,70,ACT,Spencer Burford,Texas-San Antonio,,4
@@ -1466,7 +1466,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,LV,TE,41,DEV,Chris Myarick,Temple,MyarCh00,7
 2026,LV,TE,80,ACT,Ian Thomas,Indiana; Nassau CC,ThomIa00,8
 2026,LV,TE,87,ACT,Michael Mayer,Notre Dame,MayeMi00,3
-2026,LV,WR,86,RES,Chase Roberts,BYU,RobeCh00,0
+2026,LV,WR,86,RES,Chase Roberts,,RobeCh00,0
 2026,LV,WR,82,DEV,Cody White,Michigan State,,6
 2026,LV,WR,32,RES,Corey Rucker,Arkansas State,,0
 2026,LV,WR,81,ACT,Dareke Young,Lenoir Rhyne,YounDa02,4
@@ -1588,7 +1588,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,MIN,LB,15,ACT,Dallas Turner,Alabama,TurnDa01,2
 2026,MIN,LB,55,ACT,Eric Wilson,Cincinnati; Northwestern,WilsEr00,9
 2026,MIN,LB,0,ACT,Ivan Pace Jr.,Cincinnati; Miami (Ohio),PaceIv00,3
-2026,MIN,LB,48,RES,Jacob Roberts,Wake Forest; North Carolina A&T,,0
+2026,MIN,LB,48,RES,Jacob Roberts,,,0
 2026,MIN,LB,41,ACT,Jake Golday,Cincinnati; Central Arkansas,GoldJa01,0
 2026,MIN,LB,32,RES,Jamal Adams,LSU,AdamJa00,9
 2026,MIN,LB,54,RES,Kenny Dyson,Bryant,DysoKe01,2
