@@ -117,6 +117,18 @@ entrants:
   - name: Bob Seeley
     teams: ["KC", "NYG", "TB", "CIN"]
 
+  - name: Tom Seeley
+    teams: ["KC", "LAR", "MIN", "BUF"]
+
+  - name: Lori Seeley
+    teams: ["KC", "BAL", "DET", "DAL"]
+
+  - name: Sadie
+    teams: ["LAR", "PHI", "BUF", "BAL"]
+
+  - name: Penny
+    teams: ["CHI", "DET", "KC", "CIN"]
+
   # As family members send in their picks, add them here — nothing else in the
   # project needs to change. The pot, the payouts, and every pool-relative
   # metric recompute from however many entrants are in this list.
