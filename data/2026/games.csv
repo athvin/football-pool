@@ -48,7 +48,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_03_TEN_NYG,2026,REG,3,2026-09-27,13:00,TEN,,NYG,,,,Home,3.0,44.5,140.0,-166.0,Robert Saleh,John Harbaugh,7,6,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
 2026_03_PHI_CHI,2026,REG,3,2026-09-28,20:15,PHI,,CHI,,,,Home,1.5,46.5,-102.0,-118.0,Nick Sirianni,Ben Johnson,8,8,outdoors,grass,,,,,,CHI98,Soldier Field
 2026_04_PIT_CLE,2026,REG,4,2026-10-01,20:15,PIT,,CLE,,,,Home,-2.5,40.5,-135.0,114.0,Mike McCarthy,Todd Monken,4,4,outdoors,grass,,,,,,CLE00,Huntington Bank Field
-2026_04_ARI_NYG,2026,REG,4,2026-10-04,13:00,ARI,,NYG,,,,Home,7.0,45.5,270.0,-340.0,Jonathan Gannon,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
+2026_04_ARI_NYG,2026,REG,4,2026-10-04,13:00,ARI,,NYG,,,,Home,7.0,45.5,260.0,-325.0,Jonathan Gannon,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
 2026_04_DAL_HOU,2026,REG,4,2026-10-04,13:00,DAL,,HOU,,,,Home,2.5,47.5,114.0,-135.0,Brian Schottenheimer,DeMeco Ryans,7,7,,astroturf,,,,,,HOU00,Reliant Stadium
 2026_04_DEN_SF,2026,REG,4,2026-10-04,16:25,DEN,,SF,,,,Home,2.5,46.5,120.0,-142.0,Sean Payton,Kyle Shanahan,7,7,outdoors,grass,,,,,,SFO01,Levi's Stadium
 2026_04_DET_CAR,2026,REG,4,2026-10-04,20:20,DET,,CAR,,,,Home,-3.0,47.5,-162.0,136.0,Dan Campbell,Dave Canales,7,7,outdoors,grass,,,,,,CAR00,Bank of America Stadium
@@ -74,7 +74,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_05_IND_PIT,2026,REG,5,2026-10-11,13:00,IND,,PIT,,,,Home,2.5,47.5,120.0,-142.0,Shane Steichen,Mike McCarthy,7,10,outdoors,grass,,,,,,PIT00,Acrisure Stadium
 2026_05_LV_NE,2026,REG,5,2026-10-11,13:00,LV,,NE,,,,Home,8.5,44.5,310.0,-395.0,Klint Kubliak,Mike Vrabel,7,7,outdoors,fieldturf,,,,,,BOS00,Gillette Stadium
 2026_05_MIN_NO,2026,REG,5,2026-10-11,13:00,MIN,,NO,,,,Home,-1.5,44.5,-125.0,105.0,Kevin O'Connell,Kellen Moore,7,6,dome,sportturf,,,,,,NOR00,Caesars Superdome
-2026_05_NYG_WAS,2026,REG,5,2026-10-11,13:00,NYG,,WAS,,,,Home,2.5,48.5,110.0,-130.0,John Harbaugh,Dan Quinn,7,7,outdoors,grass,,,,,,WAS00,Northwest Stadium
+2026_05_NYG_WAS,2026,REG,5,2026-10-11,13:00,NYG,,WAS,,,,Home,1.5,48.5,110.0,-130.0,John Harbaugh,Dan Quinn,7,7,outdoors,grass,,,,,,WAS00,Northwest Stadium
 2026_05_PHI_JAX,2026,REG,5,2026-10-11,09:30,PHI,,JAX,,,,Home,-1.5,45.5,-125.0,105.0,Nick Sirianni,Liam Coen,7,7,outdoors,grass,,,,,,JAX00,Tottenham Hotspur Stadium
 2026_05_SF_SEA,2026,REG,5,2026-10-11,16:25,SF,,SEA,,,,Home,3.5,48.5,170.0,-205.0,Kyle Shanahan,Mike Macdonald,7,7,outdoors,fieldturf,,,,,,SEA00,Lumen Field
 2026_05_BUF_LA,2026,REG,5,2026-10-12,20:15,BUF,,LAR,,,,Home,3.0,53.5,140.0,-166.0,Sean McDermott,Sean McVay,8,8,dome,matrixturf,,,,,,LAX01,SoFi Stadium
@@ -87,7 +87,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_06_DAL_GB,2026,REG,6,2026-10-18,20:20,DAL,,GB,,,,Home,3.0,51.5,140.0,-166.0,Brian Schottenheimer,Matt LaFleur,10,7,outdoors,grass,,,,,,GNB00,Lambeau Field
 2026_06_HOU_JAX,2026,REG,6,2026-10-18,09:30,HOU,,JAX,,,,Neutral,1.5,42.5,-108.0,-112.0,DeMeco Ryans,Liam Coen,7,7,outdoors,grass,,,,,,LON00,Wembley Stadium
 2026_06_LAC_KC,2026,REG,6,2026-10-18,16:25,LAC,,KC,,,,Home,2.5,46.5,120.0,-142.0,Jim Harbaugh,Andy Reid,7,14,outdoors,grass,,,,,,KAN00,GEHA Field at Arrowhead Stadium
-2026_06_NO_NYG,2026,REG,6,2026-10-18,13:00,NO,,NYG,,,,Home,2.5,44.5,120.0,-142.0,Kellen Moore,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
+2026_06_NO_NYG,2026,REG,6,2026-10-18,13:00,NO,,NYG,,,,Home,2.5,44.5,114.0,-135.0,Kellen Moore,John Harbaugh,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
 2026_06_NYJ_NE,2026,REG,6,2026-10-18,13:00,NYJ,,NE,,,,Home,9.5,42.5,340.0,-440.0,Aaron Glenn,Mike Vrabel,7,7,outdoors,fieldturf,,,,,,BOS00,Gillette Stadium
 2026_06_PIT_TB,2026,REG,6,2026-10-18,13:00,PIT,,TB,,,,Home,1.5,45.5,105.0,-125.0,Mike McCarthy,Todd Bowles,7,10,outdoors,grass,,,,,,TAM00,Raymond James Stadium
 2026_06_TEN_IND,2026,REG,6,2026-10-18,13:00,TEN,,IND,,,,Home,3.5,47.5,160.0,-192.0,Robert Saleh,Shane Steichen,7,7,,fieldturf,,,,,,IND00,Lucas Oil Stadium
