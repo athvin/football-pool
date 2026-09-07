@@ -1338,9 +1338,10 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
                     "favorite": favorite,
                     "chaos": raw.away_team if favorite == raw.home_team else raw.home_team,
                     # The client optimizes the *whole* slate for the selected
-                    # entrant. A per-game "best" outcome is not composable: it
-                    # can hand one particular rival even more points and turn
-                    # a first-place likely slate into a second-place dream.
+                    # entrant: their most points first, then the widest lead
+                    # over the entrant directly beneath them. A per-game
+                    # "best" outcome is not composable, so full per-outcome
+                    # gains ship for every game.
                     "points": gains,
                 }
             )

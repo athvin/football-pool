@@ -366,7 +366,7 @@ describe('Gameday scenario helpers', () => {
     expect(scenarioPreset(data, 'reset')).toEqual({});
   });
 
-  test('a dream optimizes the whole board and can never demote a chalk leader', () => {
+  test('a dream banks my most points before anything else on the board', () => {
     const trap = {
       entrants: [
         { slug: 'brian', name: 'Brian', banked: 10 },
@@ -383,12 +383,35 @@ describe('Gameday scenario helpers', () => {
       }],
     };
 
-    // SHINY gives Brian the larger isolated gain, but gives the rival even
-    // more and costs first. Whole-board optimization keeps the safe call.
-    expect(dreamScenario(trap, 'brian')).toEqual({ trap: 'SAFE' });
+    // SHINY hands the rival even more, but it is Brian's biggest possible
+    // haul. Points-first means the dream never leaves his own points behind.
+    expect(dreamScenario(trap, 'brian')).toEqual({ trap: 'SHINY' });
     expect(scenarioStandings(trap, scenarioPreset(trap, 'dream', 'brian'))
-      .find((entrant) => entrant.slug === 'brian').rank).toBe(1);
+      .find((entrant) => entrant.slug === 'brian').total).toBe(15);
     expect(dreamScenario(trap, '')).toEqual({});
+  });
+
+  test('equal-point slates widen the lead over the person directly under me', () => {
+    const pool = {
+      entrants: [
+        { slug: 'me', name: 'Me', banked: 20 },
+        { slug: 'second', name: 'Second', banked: 15 },
+        { slug: 'third', name: 'Third', banked: 1 },
+      ],
+      games: [{
+        id: 'g', away: 'AAA', home: 'BBB', favorite: 'AAA', chaos: 'BBB',
+        points: {
+          me: { AAA: 0, BBB: 0 },
+          second: { AAA: 3, BBB: 0 },
+          third: { AAA: 0, BBB: 9 },
+        },
+      }],
+    };
+
+    // My own points are level either way, so the dream holds Second — the
+    // entrant right under me — at 15 instead of 18, stretching the lead from
+    // 2 to 5 even though the call lifts distant Third.
+    expect(dreamScenario(pool, 'me')).toEqual({ g: 'BBB' });
   });
 
   test('outside help forces my side, then names only consequential other winners', () => {

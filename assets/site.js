@@ -692,13 +692,15 @@ export function scenarioStandings(data, selections) {
 /**
  * The selected entrant's genuinely best winner-only slate.
  *
- * "Best" is deliberately board-first: lowest finishing rank, then the widest
- * cushion over their closest rival, then their own points. Every away/home
- * combination is visited, so the likeliest slate is one of the candidates and
- * a dream slate can never rank the entrant worse than chalk did. Manual ties
- * remain available, but a preset called "dream" should call winners rather
- * than manufacture sixteen fantastically convenient NFL ties. Callers can
- * force a subset of those winners before the remaining slate is optimised.
+ * "Best" is deliberately points-first: the entrant's own highest possible
+ * total, then the best finish that total allows, then the widest lead over
+ * whoever sits directly beneath them on the board. Every away/home
+ * combination is visited, so no slate banking more of their own points
+ * exists, and among equal-point slates the gap to the entrant right under
+ * them is stretched as far as the schedule allows. Manual ties remain
+ * available, but a preset called "dream" should call winners rather than
+ * manufacture sixteen fantastically convenient NFL ties. Callers can force
+ * a subset of those winners before the remaining slate is optimised.
  */
 function optimizedScenario(data, meSlug = '', forced = {}) {
   const entrants = data?.entrants || [];
@@ -721,25 +723,28 @@ function optimizedScenario(data, meSlug = '', forced = {}) {
 
   const score = (chalk) => {
     const mine = totals[me];
-    const margins = totals.filter((_total, index) => index !== me).map((total) => mine - total);
+    const others = totals.filter((_total, index) => index !== me);
+    // "Lead" is the gap to whoever sits directly beneath the entrant — the
+    // closest rival at or below their total. With nobody underneath there is
+    // no lead to widen.
+    const beneath = others.filter((total) => total <= mine + 1e-9);
     return {
-      rank: 1 + margins.filter((margin) => margin < -1e-9).length,
-      margin: margins.length ? Math.min(...margins) : 0,
       total: mine,
+      rank: 1 + others.filter((total) => total > mine + 1e-9).length,
+      lead: beneath.length ? mine - Math.max(...beneath) : 0,
       chalk,
     };
   };
   const better = (candidate, incumbent) => (
     !incumbent
-    || candidate.rank < incumbent.rank
-    || (candidate.rank === incumbent.rank && candidate.margin > incumbent.margin + 1e-9)
-    || (candidate.rank === incumbent.rank
-      && Math.abs(candidate.margin - incumbent.margin) <= 1e-9
-      && candidate.total > incumbent.total + 1e-9)
-    || (candidate.rank === incumbent.rank
-      && Math.abs(candidate.margin - incumbent.margin) <= 1e-9
-      && Math.abs(candidate.total - incumbent.total) <= 1e-9
-      && candidate.chalk > incumbent.chalk)
+    || candidate.total > incumbent.total + 1e-9
+    || (Math.abs(candidate.total - incumbent.total) <= 1e-9 && (
+      candidate.rank < incumbent.rank
+      || (candidate.rank === incumbent.rank && candidate.lead > incumbent.lead + 1e-9)
+      || (candidate.rank === incumbent.rank
+        && Math.abs(candidate.lead - incumbent.lead) <= 1e-9
+        && candidate.chalk > incumbent.chalk)
+    ))
   );
 
   const visit = (index, chalk) => {
@@ -1056,12 +1061,19 @@ function initScenario(doc, win, launchPreset = '') {
 
   const describeDream = (standings, me) => {
     const mine = standings.find((entrant) => entrant.slug === me);
-    const next = standings.find((entrant) => entrant.slug !== me);
-    const margin = mine && next ? mine.total - next.total : 0;
-    const finish = mine?.rank === 1
-      ? (margin > 0.005 ? ` · ${margin.toFixed(2)} pts clear` : ' · tied for first')
+    if (!mine) return '';
+    // Standings are sorted, so the first non-me entrant at or below my total
+    // is the person directly under me — the lead this slate just widened.
+    const beneath = standings.find(
+      (entrant) => entrant.slug !== me && entrant.total <= mine.total + 1e-9,
+    );
+    const lead = beneath ? mine.total - beneath.total : 0;
+    const cushion = beneath
+      ? (lead > 0.005
+        ? ` · ${lead.toFixed(2)} pts clear of ${beneath.name}`
+        : ` · level with ${beneath.name}`)
       : '';
-    return mine ? `${mine.name}'s best slate lands at #${mine.rank}${finish}.` : '';
+    return `${mine.name}'s best slate lands at #${mine.rank} with ${mine.total.toFixed(2)} pts${cushion}.`;
   };
 
   const describeHelp = (standings, me) => {
