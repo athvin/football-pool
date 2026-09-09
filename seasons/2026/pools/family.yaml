@@ -67,11 +67,11 @@ entrants:
   - name: "Asher O'Hara"
     teams: ["BAL", "CIN", "KC", "BUF"]
 
-  # Two entries, not a typo — one household, two sets of picks, two entry fees.
-  - name: "Zac + Sammy #1"
-    teams: ["KC", "CIN", "BAL", "DAL"]
+  # One household, two entries, two entry fees — one apiece.
+  - name: Zac
+    teams: ["KC", "CIN", "BAL", "BUF"]
 
-  - name: "Zac + Sammy #2"
+  - name: Sammy
     teams: ["DET", "NYG", "WAS", "BUF"]
 
   - name: Eli
@@ -86,7 +86,7 @@ entrants:
   - name: Dave Moore
     teams: ["KC", "BAL", "DAL", "NYG"]
 
-  # One entry for the grandparents, like the Zac + Sammy entries above.
+  # One entry, shared, for the grandparents.
   - name: JuJu Grands
     teams: ["BAL", "TB", "CHI", "MIN"]
 
