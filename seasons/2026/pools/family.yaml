@@ -132,6 +132,9 @@ entrants:
   - name: Caroline Seeley
     teams: ["PIT", "GB", "HOU", "NO"]
 
+  - name: Devin
+    teams: ["KC", "DET", "DAL", "BAL"]
+
   # As family members send in their picks, add them here — nothing else in the
   # project needs to change. The pot, the payouts, and every pool-relative
   # metric recompute from however many entrants are in this list.
