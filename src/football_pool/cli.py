@@ -58,7 +58,14 @@ def _load(args) -> tuple:
         offline=getattr(args, "offline", False),
     )
     validate_teams(gd.games, season.teams)
+    gd = _supplement_results(gd, getattr(args, "offline", False))
     return season, gd
+
+
+def _supplement_results(data, offline: bool):
+    from .espn import supplement_results
+
+    return supplement_results(data, data_dir(data.season) / "espn-finals.json", offline=offline)
 
 
 def cmd_fetch(args) -> int:
@@ -66,6 +73,7 @@ def cmd_fetch(args) -> int:
 
     year = args.season if args.season is not None else active_season()
     gd = fetch_games(year, cache_path=games_cache(year), offline=args.offline)
+    gd = _supplement_results(gd, args.offline)
     played = int(gd.games["played"].sum())
     print(f"season {year}: {len(gd.games)} games, {played} played  [{gd.source}]")
     if gd.upstream_modified:

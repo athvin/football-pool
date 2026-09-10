@@ -140,6 +140,8 @@ class GameData:
     #              choice and the other is a degraded state, and only the
     #              degraded one should be able to stop a publish.
     source: str
+    # Supplemental confirmed finals, kept separate from the nflverse CSV.
+    espn_finals: tuple[str, ...] = ()
 
     @property
     def played(self) -> pd.DataFrame:

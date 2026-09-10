@@ -11,6 +11,8 @@
 {%- if state.leader -%}
 {{ state.phase }} — {{ state.leader.name }} leads with {{ state.leader.banked|points }} points
 {%- if state.week_leaders %}, {{ state.week_leaders[0].name }} scored {{ '%.2f'|format(state.week_leaders[0].points) }} this week{% endif -%}.
+{%- elif state.leaders -%}
+{{ state.phase }} — {{ state.leaders|length }} entries tied at {{ state.leaders[0].points|points }} points.
 {%- else -%}
 {{ season.year }} {{ season.pool.name }} NFL standings.
 {%- endif -%}
@@ -25,6 +27,7 @@
   <div class="state-cell">
     <p class="state-label">Where we are</p>
     <p class="state-value">{{ state.phase }}</p>
+    {% if state.progress and state.progress.started %}<p class="state-note">{{ state.progress.played }} of {{ state.progress.total }} games final</p>{% endif %}
   </div>
   <div class="state-cell">
     <p class="state-label">In the pot{{ info('pot') }}</p>
@@ -35,8 +38,11 @@
     {# Bare anchor, no class: `a { color: inherit }` means the name keeps the
        weight and colour the tile gives it and simply becomes reachable. #}
     <p class="state-value sm">
-      {%- if state.leader %}{{ entrant_link(state.leader.slug, state.leader.name, cls='') }}{% else %}—{% endif -%}
+      {%- if state.all_tied %}All entries tied
+      {% elif state.leader %}{{ entrant_link(state.leader.slug, state.leader.name, cls='') }}
+      {% elif state.leaders %}{{ state.leaders|length }} tied for the lead{% else %}—{% endif -%}
     </p>
+    {% if state.leaders %}<p class="state-note">{{ state.leaders[0].points|points }} points</p>{% endif %}
   </div>
 </section>
 
@@ -46,8 +52,8 @@
     Details
   </button>
   <p class="page-sub">
-    {% if state.week %}
-      Through week {{ state.week }}.
+    {% if state.progress and state.progress.started %}
+      {{ state.progress.label }} {{ state.progress.status }}. Standings include completed games only.
     {% else %}
       Nothing has kicked off yet — every entry is level until week 1.
     {% endif %}
@@ -63,6 +69,35 @@
   </div>
 </div>
 
+{% if state.progress and state.progress.started %}
+<section class="week-snapshot" aria-label="Results included in these standings">
+  <div class="section-head">
+    <h2 class="section-title">{{ state.progress.label }} {{ state.progress.status }}</h2>
+    <a href="{{ ('/schedule/#week-' ~ state.progress.number)|url }}">Full schedule ↗</a>
+  </div>
+  <p><strong>{{ state.progress.played }} of {{ state.progress.total }} games final</strong>{% if state.progress.remaining %} · {{ state.progress.remaining }} awaiting results{% endif %}.</p>
+  {% if state.leaders and not state.all_tied %}
+  <p>{% if state.leaders|length > 1 %}Tied for the lead{% else %}Leading{% endif %} at {{ state.leaders[0].points|points }} points:
+    {% for leader in state.leaders %}{{ entrant_link(leader.slug, leader.name, cls='') }}{{ ', ' if not loop.last else '.' }}{% endfor %}
+  </p>
+  {% endif %}
+  {% if state.progress.finals %}
+  <p class="week-results-label">Latest finals included</p>
+  <ul class="week-results">
+    {% for game in state.progress.finals %}
+    <li>
+      <span class="week-result-status">Final{% if game.source == 'ESPN' %} · ESPN{% endif %}</span>
+      <div>{{ team_chip(game.away, 'scored' if game.away_won else 'dim') }}<strong>{{ game.away_score }}</strong></div>
+      <div>{{ team_chip(game.home, 'scored' if game.home_won else 'dim') }}<strong>{{ game.home_score }}</strong></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="week-snapshot-note">Every rebuild counts new confirmed finals{% if state.progress.remaining %}; the remaining games can change the standings{% endif %}.
+    <a href="{{ '/live/'|url }}">Follow scores between rebuilds ↗</a></p>
+</section>
+{% endif %}
+
 {# Filled client-side with the viewer's own row once "who are you?" is set.
    Server-rendered pages can't know the viewer, and the strip must never build
    an entrant URL of its own — it borrows the one on that row's name. #}
@@ -71,7 +106,7 @@
 {# Before a single kickoff every actual total is 0.00, so the model is the only
    thing worth reading first: lead with it, then the picks. In season the board
    comes first — what has happened beats what might. #}
-{% if not state.week and forecast %}
+{% if (not state.progress or not state.progress.started) and forecast %}
   {% include '_forecast_summary.html' %}
   <h2 class="section-title">The field</h2>
 {% endif %}
@@ -91,7 +126,7 @@
      view-transition-name pairs this row with the hero on the entrant page, so
      clicking morphs the name and score into place instead of cross-fading the
      whole document. The names must be unique per document; a slug is. #}
-  <div class="row {% if loop.first and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
+  <div class="row {% if r.rank == 1 and r.banked > 0 and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
      style="--i: {{ r.index }}"
      data-slug="{{ r.slug }}">
 
@@ -113,6 +148,9 @@
         {% if r.eliminated %}<span class="badge out" title="{{ glossary['eliminated'].definition }}">eliminated</span>{% endif %}
         {% if r.money %}<span class="badge money" title="Payout if the season ended today">{{ r.money|money }}</span>{% endif %}
       </span>
+      {% if state.progress and state.progress.started %}
+      <span class="row-week">{{ state.progress.label }}: +{{ r.week_points|points }}{% if state.progress.remaining %} · {{ r.week_games_left }} {{ 'game' if r.week_games_left == 1 else 'games' }} left{% endif %}</span>
+      {% endif %}
     </span>
 
     <span class="row-score">
@@ -144,16 +182,16 @@
 </div>
 {% endif %}
 
-{% if state.week and forecast %}
+{% if state.progress and state.progress.started and forecast %}
   {% include '_forecast_summary.html' %}
 {% endif %}
 
 {% if state.week_leaders %}
-<h2 class="section-title">Best of week {{ state.scored_week }}</h2>
+<h2 class="section-title">Week {{ state.scored_week }} highlights{% if state.progress.remaining %} so far{% endif %}</h2>
 <div class="stat-grid">
   {% for m in state.week_leaders %}
   <div class="stat">
-    <p class="stat-label">{{ loop.index|ordinal }} this week</p>
+    <p class="stat-label">Scored this week</p>
     <p class="stat-value live">{{ '%.2f'|format(m.points) }}</p>
     <p class="stat-note">{{ entrant_link(m.slug, m.name, cls='') }}</p>
   </div>

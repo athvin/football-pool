@@ -99,7 +99,7 @@ def movers(history: pd.DataFrame, top: int = 3) -> dict[str, list[tuple[str, flo
 
 
 def week_leaders(season: Season, history: pd.DataFrame, top: int = 3) -> list[tuple[str, float]]:
-    """Who scored the most points in the most recent completed week."""
+    """Who scored the most points in the latest week with any finals."""
     deltas = weekly_deltas(history)
     weeks = deltas.attrs.get("weeks", [])
     if not weeks:

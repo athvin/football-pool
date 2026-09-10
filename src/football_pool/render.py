@@ -543,6 +543,9 @@ def _entrant_rows(ctx: SiteContext, url: UrlFor = _root_url) -> list[dict[str, A
     """Leaderboard rows, already sorted, with their graphics rendered."""
     scale_max = float(ctx.outlook["ceiling"].max()) if not ctx.outlook.empty else 1.0
     bye_week, on_bye = _next_week_byes(ctx)
+    week = _standings_week(ctx)
+    deltas = history_mod.weekly_deltas(ctx.history)
+    pending = ctx.games[(ctx.games["week"] == week["number"]) & ~ctx.games["played"]] if week else ctx.games.iloc[0:0]
     rows = []
 
     for i, row in enumerate(ctx.outlook.itertuples()):
@@ -569,6 +572,9 @@ def _entrant_rows(ctx: SiteContext, url: UrlFor = _root_url) -> list[dict[str, A
                 "eliminated": bool(row.eliminated),
                 "cash_eliminated": bool(row.cash_eliminated),
                 "rank_delta": int(delta),
+                "week_points": float(deltas.loc[row.name, f"w{week['number']}"])
+                if week and f"w{week['number']}" in deltas else 0.0,
+                "week_games_left": int((pending["home_team"].isin(row.teams) | pending["away_team"].isin(row.teams)).sum()),
                 # Which of this entry's four teams are off next week, and which
                 # week that is. A bye is the usual reason a "next week" number
                 # looks disappointing, and it is the one thing the schedule
@@ -611,6 +617,29 @@ def _named(
     return [{"name": n, "slug": slugs[n], key: v} for n, v in pairs if n in slugs]
 
 
+def _standings_week(ctx: SiteContext) -> dict[str, Any] | None:
+    """Progress in the latest week with results, or the opening week."""
+    windows = schedule_mod.week_windows(ctx.games)
+    if not windows:
+        return None
+    weeks = ctx.history.attrs.get("weeks", [])
+    window = next(w for w in windows if w.week == weeks[-1]) if weeks else windows[0]
+    slate = ctx.games[(ctx.games["week"] == window.week) & (ctx.games["game_type"] == window.game_type)]
+    finals = slate[slate["played"]].sort_values(["gameday", "gametime", "game_id"], ascending=False)
+    played, total = len(finals), len(slate)
+    started = bool(played) or ctx.data.fetched_at >= window.opens
+    status = "complete" if played == total else "in progress" if played else "awaiting results" if started else "upcoming"
+    return {
+        "number": window.week, "label": window.label, "played": played, "total": total,
+        "remaining": total - played, "started": started, "status": status,
+        "finals": [{"id": str(r.game_id), "away": r.away_team, "home": r.home_team,
+                    "away_score": int(r.away_score), "home_score": int(r.home_score),
+                    "away_won": bool(r.away_won), "home_won": bool(r.home_won),
+                    "source": "ESPN" if r.game_id in ctx.data.espn_finals else "nflverse"}
+                   for r in finals.head(4).itertuples()],
+    }
+
+
 def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
     """The headline strip: where the season is and who is on top."""
     games = ctx.games
@@ -619,6 +648,8 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
     movers = history_mod.movers(ctx.history)
     leaders = history_mod.week_leaders(ctx.season, ctx.history)
     weeks = ctx.history.attrs.get("weeks", [])
+    week = _standings_week(ctx)
+    leading = [r for r in rows if r["rank"] == 1]
 
     # "Final" means a played Super Bowl, nothing weaker. In the window between
     # the last week-18 game and nflverse publishing the bracket rows, the file
@@ -627,7 +658,7 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
     sb_done = bool(((games["game_type"] == "SB") & games["played"]).any())
 
     if ctx.data.current_week is None:
-        phase = "Preseason"
+        phase = week["label"] if week and week["started"] else "Preseason"
     elif not ctx.seeds_final:
         phase = f"Week {ctx.data.current_week}"
     elif sb_done:
@@ -637,6 +668,7 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     return {
         "phase": phase,
+        "progress": week,
         "week": ctx.data.current_week,
         # The most recent week anyone scored in — 19-22 during the playoffs,
         # where ``week`` (max REG week) sticks at 18. This is the number the
@@ -654,7 +686,9 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
         "games_remaining": remaining,
         "pot": ctx.season.pot,
         "entrants": len(ctx.season.entrants),
-        "leader": rows[0] if rows else None,
+        "leader": leading[0] if len(leading) == 1 else None,
+        "leaders": [{"name": r["name"], "slug": r["slug"], "points": r["banked"]} for r in leading],
+        "all_tied": len(rows) > 1 and len(leading) == len(rows),
         "risers": _named(ctx.season, movers["risers"], "change"),
         "fallers": _named(ctx.season, movers["fallers"], "change"),
         "week_leaders": _named(ctx.season, leaders, "points"),
@@ -1483,7 +1517,9 @@ def _freshness(ctx: SiteContext) -> dict[str, Any]:
             else None
         ),
         "source": ctx.data.source,
-        "source_text": SOURCE_TEXT.get(ctx.data.source, ctx.data.source),
+        "source_text": SOURCE_TEXT.get(ctx.data.source, ctx.data.source)
+        + (f" + {len(ctx.data.espn_finals)} ESPN-confirmed final{'s' if len(ctx.data.espn_finals) != 1 else ''}" if ctx.data.espn_finals else ""),
+        "espn_finals": list(ctx.data.espn_finals),
     }
 
 
