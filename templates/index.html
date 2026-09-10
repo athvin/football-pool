@@ -149,7 +149,7 @@
         {% if r.money %}<span class="badge money" title="Payout if the season ended today">{{ r.money|money }}</span>{% endif %}
       </span>
       {% if state.progress and state.progress.started %}
-      <span class="row-week">{{ state.progress.label }}: +{{ r.week_points|points }}{% if state.progress.remaining %} · {{ r.week_games_left }} {{ 'game' if r.week_games_left == 1 else 'games' }} left{% endif %}</span>
+      <span class="row-week">{{ state.progress.label }}: +{{ r.week_points|points }}{% if state.progress.remaining %} · {{ r.week_games_left }} {{ 'game' if r.week_games_left == 1 else 'games' }} left{% if r.week_internal_matchups %} ({{ r.week_internal_matchups }} internal {{ 'matchup' if r.week_internal_matchups == 1 else 'matchups' }}){% endif %}{% endif %}</span>
       {% endif %}
     </span>
 

@@ -2270,6 +2270,29 @@ def test_a_finished_season_has_no_next_week_to_report(pool, game_data):
     assert all(r["bye_week"] is None and r["byes"] == [] for r in rows)
 
 
+def test_games_left_counts_games_and_names_internal_matchups(make_season, games_2025):
+    """Two of your teams meeting is one game left, flagged rather than hidden.
+
+    Four teams in three games is the truth about the slate, but on its own it
+    reads like a missing team. The internal-matchup count is the explanation
+    riding along with the number.
+    """
+    g = games_2025[games_2025["game_type"] == "REG"].copy()
+    g[["played", "home_won", "away_won", "is_tie"]] = False
+    a, b, c, d = g[g["week"] == 1].iloc[:4].itertuples()
+    pool = make_season([
+        {"name": "Pair", "teams": [a.home_team, a.away_team, b.home_team, c.home_team]},
+        {"name": "Spread", "teams": [a.home_team, b.away_team, c.away_team, d.home_team]},
+    ], year=2025, forecast=False)
+    ctx = build_context(pool, GameData(g, 2025, NOW, None, "cache"))
+    rows = {r["name"]: r for r in _entrant_rows(ctx)}
+
+    assert rows["Pair"]["week_games_left"] == 3
+    assert rows["Pair"]["week_internal_matchups"] == 1
+    assert rows["Spread"]["week_games_left"] == 4
+    assert rows["Spread"]["week_internal_matchups"] == 0
+
+
 # -- the forecast says which question it is answering ------------------------
 def test_the_forecast_separates_winning_from_making_money(site_mid):
     """Two questions with two answers, both named rather than left to guess."""

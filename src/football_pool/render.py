@@ -553,6 +553,8 @@ def _entrant_rows(ctx: SiteContext, url: UrlFor = _root_url) -> list[dict[str, A
         ranks = history_mod.rank_series_for(ctx.history, row.name)
         delta = (ranks[-2] - ranks[-1]) if len(ranks) >= 2 else 0
         contributions = row.contributions or {}
+        home_in = pending["home_team"].isin(row.teams)
+        away_in = pending["away_team"].isin(row.teams)
 
         rows.append(
             {
@@ -574,7 +576,12 @@ def _entrant_rows(ctx: SiteContext, url: UrlFor = _root_url) -> list[dict[str, A
                 "rank_delta": int(delta),
                 "week_points": float(deltas.loc[row.name, f"w{week['number']}"])
                 if week and f"w{week['number']}" in deltas else 0.0,
-                "week_games_left": int((pending["home_team"].isin(row.teams) | pending["away_team"].isin(row.teams)).sum()),
+                "week_games_left": int((home_in | away_in).sum()),
+                # Distinct games, so two of your teams meeting count as one —
+                # which makes the number look short by exactly the games where
+                # you own both sides. Naming those matchups is what keeps
+                # "3 games left" from reading like a missing team.
+                "week_internal_matchups": int((home_in & away_in).sum()),
                 # Which of this entry's four teams are off next week, and which
                 # week that is. A bye is the usual reason a "next week" number
                 # looks disappointing, and it is the one thing the schedule
