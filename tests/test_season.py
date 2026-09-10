@@ -432,6 +432,7 @@ def test_a_pool_may_set_its_own_pick_count(tmp_path, season_writer):
         # these failures that destroys files rather than just looking wrong.
         ({"teams": _pool()}, "already writes"),
         ({"gameday": _pool()}, "already writes"),
+        ({"live": _pool()}, "already writes"),
         ({"entrant": _pool()}, "already writes"),
         ({"Friends": _pool()}, "not a usable slug"),
         ({"-friends": _pool()}, "not a usable slug"),

@@ -1384,6 +1384,53 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
     }
 
 
+def _live_data(ctx: SiteContext) -> dict[str, Any]:
+    """An immutable scoring baseline; ESPN updates happen only in the browser."""
+    banked = ctx.outlook.set_index("name")["banked"].to_dict()
+    games = []
+    for row in ctx.games.itertuples():
+        event_id = _optional(row, "espn")
+        games.append({
+            "id": str(row.game_id),
+            "espnId": str(int(event_id)) if event_id is not None else "",
+            "week": int(row.week),
+            "kind": row.game_type,
+            "date": str(row.gameday),
+            "kickoff": schedule_mod.kickoff(row.gameday, row.gametime).isoformat(),
+            "away": row.away_team,
+            "home": row.home_team,
+            "awayScore": int(row.away_score) if row.played else None,
+            "homeScore": int(row.home_score) if row.played else None,
+            "scored": bool(row.played),
+            "points": _scenario_gains(ctx.season, row) if not row.played else {},
+        })
+    windows = []
+    for window in schedule_mod.week_windows(ctx.games):
+        dates = [g["date"] for g in games
+                 if g["week"] == window.week and g["kind"] == window.game_type]
+        windows.append({
+            "key": f"{window.game_type}-{window.week}",
+            "label": window.label,
+            "week": window.week,
+            "kind": window.game_type,
+            "start": min(dates).replace("-", ""),
+            "end": max(dates).replace("-", ""),
+            "closes": window.closes.isoformat(),
+        })
+    return {
+        "version": 1,
+        "season": ctx.season.year,
+        "pool": ctx.season.pool.path,
+        "generated": ctx.data.fetched_at.isoformat(),
+        "entrants": [{
+            "slug": e.slug, "name": e.name, "teams": list(e.teams),
+            "banked": float(banked.get(e.name, 0.0)),
+        } for e in ctx.season.entrants],
+        "games": games,
+        "windows": windows,
+    }
+
+
 def _deadlines(ctx: SiteContext) -> dict[str, Any] | None:
     """When picks and money are due, read off the schedule itself.
 
@@ -1537,6 +1584,12 @@ def render_site(
         gameday=_gameday(ctx),
     )
     write("forecast/index.html", "forecast.html", page="forecast")
+    live = _live_data(ctx)
+    write("live/index.html", "live.html", page="live", live=live)
+    live_path = out_dir / "data" / "live.json"
+    live_path.parent.mkdir(parents=True, exist_ok=True)
+    live_path.write_text(json.dumps(live, separators=(",", ":")))
+    written.append(live_path)
     write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
     write("teams/index.html", "teams.html", page="teams")
     # Weeks and Trends merged into one Season page: what happened and how it

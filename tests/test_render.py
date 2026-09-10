@@ -1976,6 +1976,73 @@ def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):
         assert 'href="/schedule/"' in text, page
 
 
+def test_live_page_and_baseline_stay_inside_each_pool(pair_site_based):
+    root = pair_site_based.path
+    baselines = []
+    for subpath, prefix in [("", "/football-pool"), ("friends", "/football-pool/friends")]:
+        page = root / subpath / "live" / "index.html"
+        html = page.read_text()
+        data = json.loads((root / subpath / "data" / "live.json").read_text())
+        baselines.append(data)
+        assert f'href="{prefix}/live/" aria-current="page"' in html
+        assert f'data-baseline-url="{prefix}/data/live.json"' in html
+        assert f'data-entrant-base="{prefix}/entrant/"' in html
+        assert re.search(r"/football-pool/assets/live\.js\?v=[0-9a-f]{8}", html)
+        assert 'data-live-view="plays"' in html
+        assert 'data-live-view="stats"' in html
+        assert 'aria-controls="live-panel-plays"' in html
+        embedded = json.loads(re.search(r'<script type="application/json" id="live-data">(.*?)</script>', html).group(1))
+        assert embedded == data
+        assert data["pool"] == subpath
+        assert all(g["scored"] for g in data["games"])
+        assert all(g["points"] == {} for g in data["games"])
+        assert 'Game Center' in (root / subpath / "schedule" / "index.html").read_text()
+    assert baselines[0]["entrants"] != baselines[1]["entrants"]
+    assert baselines[0]["games"] == baselines[1]["games"]
+
+
+def test_live_baseline_carries_exact_official_totals_and_unbanked_outcomes(site_mid, pool):
+    data = json.loads((site_mid.path / "data" / "live.json").read_text())
+    official = json.loads((site_mid.path / "data" / "standings.json").read_text())
+    assert {e["slug"]: e["banked"] for e in data["entrants"]} == {
+        e["slug"]: e["banked"] for e in official["entrants"]
+    }
+    assert any(g["scored"] for g in data["games"])
+    assert any(not g["scored"] for g in data["games"])
+    for game in data["games"]:
+        if game["scored"]:
+            assert game["points"] == {}
+            assert isinstance(game["awayScore"], int)
+            continue
+        assert game["awayScore"] is None and game["homeScore"] is None
+        for entrant in pool.entrants:
+            gains = game["points"][entrant.slug]
+            for team in [game["away"], game["home"]]:
+                if team not in entrant.teams:
+                    assert gains[team] == 0
+                elif game["kind"] == "REG":
+                    assert gains[team] == round(pool.win_multiplier * pool.lf_of(team), 2)
+            if game["kind"] == "REG":
+                assert gains["TIE"] == round(pool.tie_multiplier * sum(
+                    pool.lf_of(t) for t in (game["away"], game["home"]) if t in entrant.teams
+                ), 2)
+            else:
+                assert "TIE" not in gains
+    assert all(not game["espnId"] for game in data["games"])
+
+
+def test_live_baseline_preserves_optional_event_ids(pool, game_data, tmp_path):
+    import pandas as pd
+
+    games = game_data.games.copy()
+    games["espn"] = pd.Series([401772830] + [pd.NA] * (len(games) - 1), dtype="Int64")
+    data = GameData(games, 2025, NOW, None, "cache")
+    render_site(pool, data, tmp_path)
+    baseline = json.loads((tmp_path / "data" / "live.json").read_text())
+    assert baseline["games"][0]["espnId"] == "401772830"
+    assert baseline["games"][1]["espnId"] == ""
+
+
 def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     page = site_mid_forecast.path / "gameday" / "index.html"
     assert page.exists()

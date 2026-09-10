@@ -57,6 +57,20 @@ def csv_with_lines(csv_bytes):
 
 
 # -- parsing ----------------------------------------------------------------
+def test_optional_espn_ids_remain_nullable_integers(csv_bytes):
+    rows = csv_bytes.decode().splitlines()
+    raw = "\n".join([rows[0] + ",espn", rows[1] + ",401772830.0",
+                     *(r + "," for r in rows[2:])])
+    games = parse_games(raw, 2025)
+    assert games["espn"].dtype == "Int64"
+    assert games.iloc[0]["espn"] == 401772830
+    assert pd.isna(games.iloc[1]["espn"])
+    assert "espn" not in parse_games(csv_bytes, 2025).columns
+    for invalid in ["401.5", "-1", "invalid", "999999999999999999999"]:
+        broken = raw.replace("401772830.0", invalid)
+        assert pd.isna(parse_games(broken, 2025).iloc[0]["espn"])
+
+
 def test_parses_the_season_and_flags_played_games(games_2025):
     assert len(games_2025) == 285
     assert games_2025["played"].all()  # 2025 is complete

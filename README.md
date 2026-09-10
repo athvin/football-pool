@@ -2,8 +2,9 @@
 
 A static scoreboard for our leveling-factor pools. GitHub Actions refresh it
 around NFL game windows, recompute everyone's totals from real results, and
-publish the site to GitHub Pages. The Gameday tab adds a browser-only live
-overlay, so an open page can update itself between those static builds.
+publish the site to GitHub Pages. The Live tab adds a browser-only Game Center
+with scores, play-by-play, stats, and provisional pool standings. Gameday also
+shows a compact live overlay between static builds.
 
 One season can carry more than one pool — different people, different stakes,
 the same football. Today there are two:
@@ -253,6 +254,40 @@ The Gameday page has two additional, explicitly optional sources:
 
 Either optional request may fail without affecting the static schedule,
 standings, projections, or deployment.
+
+### The Live tab
+
+Every pool has its own `/live/` page. Game Center links on Gameday, the schedule,
+and team pages open that matchup. The browser reads ESPN's public
+`site.web.api.espn.com` NFL `scoreboard` and `summary?event=...` endpoints directly;
+there is no proxy, server, API key, or subscription. The older `site.api.espn.com`
+host is a fallback. Both endpoints were verified from the GitHub Pages origin
+during the September 9, 2026 Patriots–Seahawks game. These are unofficial feeds,
+so availability and latency are not guaranteed.
+
+Scores come from the scoreboard; the selected game's summary supplies plays,
+quarter scoring, and team/player stats. During live games the page polls every
+20 seconds, with a **5-second updates** toggle next to Refresh for faster scores,
+plays, stats, and provisional standings. The browser remembers this choice.
+Polling slows to three minutes before kickoff and stops for completed games.
+Hidden/offline pages pause; failures retain the last data and retry
+with backoff. A manual refresh and a direct ESPN link remain available.
+
+The build writes a pool-scoped `data/live.json`: banked entrant totals,
+the known schedule, optional ESPN event IDs, and exact per-outcome points from
+the existing scoring helpers. JavaScript recomputes provisional standings from
+that baseline plus unbanked finals and current leaders. Tied games stay pending
+until someone leads or a regular-season game finishes tied. Preseason games
+never score. Division and playoff-berth bonuses enter with the official build.
+An event without an unambiguous schedule match cannot affect pool points.
+
+The page checks for a new official baseline every five minutes, replacing it
+atomically so a result already included by cron is not added again. Choosing a
+different game does not change which results count toward live standings.
+`/live/?game=<ESPN-event-id>` shares a game; static links use
+`?matchup=<nflverse-game-id>` when the committed schedule predates ESPN IDs.
+Offline builds remain sufficient to ship the feature: live data is fetched
+only in the visitor's browser.
 
 If the fetch fails, the build falls back to the committed copy in `data/` — an
 outage degrades the site to yesterday's numbers rather than breaking it. The

@@ -1,0 +1,468 @@
+{
+  "header": {
+    "id": "401772830",
+    "season": {
+      "year": 2025,
+      "current": false,
+      "type": 2
+    },
+    "week": 1,
+    "competitions": [
+      {
+        "id": "401772830",
+        "date": "2025-09-07T17:00Z",
+        "status": {
+          "type": {
+            "id": "3",
+            "name": "STATUS_FINAL",
+            "state": "post",
+            "completed": true,
+            "description": "Final",
+            "detail": "Final",
+            "shortDetail": "Final"
+          },
+          "isTBDFlex": false
+        },
+        "competitors": [
+          {
+            "id": "1",
+            "homeAway": "home",
+            "score": "20",
+            "team": {
+              "abbreviation": "ATL"
+            },
+            "linescores": [
+              {
+                "displayValue": "7"
+              },
+              {
+                "displayValue": "3"
+              },
+              {
+                "displayValue": "3"
+              },
+              {
+                "displayValue": "7"
+              }
+            ]
+          },
+          {
+            "id": "27",
+            "homeAway": "away",
+            "score": "23",
+            "team": {
+              "abbreviation": "TB"
+            },
+            "linescores": [
+              {
+                "displayValue": "0"
+              },
+              {
+                "displayValue": "10"
+              },
+              {
+                "displayValue": "7"
+              },
+              {
+                "displayValue": "6"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "gameInfo": {
+    "venue": {
+      "fullName": "Mercedes-Benz Stadium"
+    }
+  },
+  "drives": {
+    "previous": [
+      {
+        "id": "4017728301",
+        "displayResult": "Touchdown",
+        "yards": 65,
+        "timeElapsed": {
+          "displayValue": "1:46"
+        },
+        "team": {
+          "abbreviation": "ATL"
+        },
+        "plays": [
+          {
+            "id": "40177283040",
+            "sequenceNumber": "4000",
+            "text": "C.McLaughlin kicks 59 yards from TB 35 to ATL 6. J.Agnew to ATL 35 for 29 yards (R.Miller).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "15:00"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 0
+          },
+          {
+            "id": "40177283063",
+            "sequenceNumber": "6300",
+            "text": "(Shotgun) M.Penix pass short right to B.Robinson to ATL 46 for 11 yards (Z.McCollum).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "14:54"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 0
+          },
+          {
+            "id": "40177283088",
+            "sequenceNumber": "8800",
+            "text": "(Shotgun) T.Allgeier left end to 50 for 4 yards (S.Dennis).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "14:10"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 0
+          }
+        ]
+      },
+      {
+        "id": "4017728302",
+        "displayResult": "Punt",
+        "yards": 2,
+        "timeElapsed": {
+          "displayValue": "1:03"
+        },
+        "team": {
+          "abbreviation": "TB"
+        },
+        "plays": [
+          {
+            "id": "401772830151",
+            "sequenceNumber": "15100",
+            "text": "Y.Koo kicks 44 yards from ATL 35 to TB 21, short of landing zone.PENALTY on ATL-Y.Koo, Kickoff Short of Landing Zone, placed at TB 40.",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "13:14"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 7
+          },
+          {
+            "id": "401772830188",
+            "sequenceNumber": "18800",
+            "text": "(Shotgun) B.Mayfield pass incomplete short right.",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "13:14"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 7
+          },
+          {
+            "id": "401772830211",
+            "sequenceNumber": "21100",
+            "text": "(Shotgun) B.Irving right guard to TB 42 for 2 yards (Z.Harrison; A.Ebiketie).",
+            "period": {
+              "number": 1
+            },
+            "clock": {
+              "displayValue": "13:09"
+            },
+            "scoringPlay": false,
+            "isTurnover": false,
+            "awayScore": 0,
+            "homeScore": 7
+          }
+        ]
+      }
+    ]
+  },
+  "boxscore": {
+    "teams": [
+      {
+        "team": {
+          "abbreviation": "TB"
+        },
+        "statistics": [
+          {
+            "name": "firstDowns",
+            "displayValue": "16",
+            "value": 16.0,
+            "label": "1st Downs"
+          },
+          {
+            "name": "totalYards",
+            "displayValue": "260",
+            "value": "-",
+            "label": "Total Yards"
+          },
+          {
+            "name": "turnovers",
+            "displayValue": "0",
+            "value": "-",
+            "label": "Turnovers"
+          },
+          {
+            "name": "possessionTime",
+            "displayValue": "24:48",
+            "value": 1488,
+            "label": "Possession"
+          }
+        ]
+      },
+      {
+        "team": {
+          "abbreviation": "ATL"
+        },
+        "statistics": [
+          {
+            "name": "firstDowns",
+            "displayValue": "23",
+            "value": 23.0,
+            "label": "1st Downs"
+          },
+          {
+            "name": "totalYards",
+            "displayValue": "358",
+            "value": "-",
+            "label": "Total Yards"
+          },
+          {
+            "name": "turnovers",
+            "displayValue": "0",
+            "value": "-",
+            "label": "Turnovers"
+          },
+          {
+            "name": "possessionTime",
+            "displayValue": "35:12",
+            "value": 2112,
+            "label": "Possession"
+          }
+        ]
+      }
+    ],
+    "players": [
+      {
+        "team": {
+          "abbreviation": "TB"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Baker Mayfield"
+                },
+                "stats": [
+                  "17/32",
+                  "167",
+                  "5.2",
+                  "3",
+                  "0",
+                  "1-8",
+                  "88.3",
+                  "99.3"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Baker Mayfield"
+                },
+                "stats": [
+                  "5",
+                  "39",
+                  "7.8",
+                  "0",
+                  "20"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Emeka Egbuka"
+                },
+                "stats": [
+                  "4",
+                  "67",
+                  "16.8",
+                  "2",
+                  "30",
+                  "6"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "team": {
+          "abbreviation": "ATL"
+        },
+        "statistics": [
+          {
+            "name": "passing",
+            "labels": [
+              "C/ATT",
+              "YDS",
+              "AVG",
+              "TD",
+              "INT",
+              "SACKS",
+              "QBR",
+              "RTG"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Michael Penix Jr."
+                },
+                "stats": [
+                  "27/42",
+                  "298",
+                  "7.1",
+                  "1",
+                  "0",
+                  "1-9",
+                  "83.1",
+                  "93.2"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rushing",
+            "labels": [
+              "CAR",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Tyler Allgeier"
+                },
+                "stats": [
+                  "10",
+                  "24",
+                  "2.4",
+                  "0",
+                  "5"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "receiving",
+            "labels": [
+              "REC",
+              "YDS",
+              "AVG",
+              "TD",
+              "LONG",
+              "TGTS"
+            ],
+            "athletes": [
+              {
+                "athlete": {
+                  "displayName": "Bijan Robinson"
+                },
+                "stats": [
+                  "6",
+                  "100",
+                  "16.7",
+                  "1",
+                  "50",
+                  "7"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "scoringPlays": [
+    {
+      "text": "Bijan Robinson 50 Yd pass from Michael Penix Jr. (Younghoe Koo Kick)",
+      "awayScore": 0,
+      "homeScore": 7,
+      "period": {
+        "number": 1
+      },
+      "clock": {
+        "value": 794.0,
+        "displayValue": "13:14"
+      }
+    },
+    {
+      "text": "Chase McLaughlin 48 Yd Field Goal",
+      "awayScore": 3,
+      "homeScore": 7,
+      "period": {
+        "number": 2
+      },
+      "clock": {
+        "value": 617.0,
+        "displayValue": "10:17"
+      }
+    }
+  ]
+}

@@ -6,6 +6,7 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
+import { setImmediate } from 'node:timers/promises';
 
 import {
   COMPARE_KEY,
@@ -516,9 +517,8 @@ describe('Gameday DOM wiring', () => {
     ok: status < 400, status, json: async () => payload,
   });
   const settle = async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-    await Promise.resolve();
+    // Flush the adapter's promise chain without depending on its stack depth.
+    await setImmediate();
   };
 
   test('an ESPN final updates a static matchup without a rebuild', async () => {

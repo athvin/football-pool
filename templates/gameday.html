@@ -105,6 +105,7 @@
       <div class="live-detail" data-live-detail hidden>
         <p data-live-last-play></p>
       </div>
+      <a class="game-center-link" href="{{ ('/live/?matchup=' ~ g.game_id)|url }}">Game Center <span aria-hidden="true">↗</span></a>
 
       <div class="rooting-anon">
         <strong>{{ g.swing|points }} {{ term('swing', 'swing') }}</strong>
