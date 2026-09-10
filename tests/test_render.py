@@ -1976,15 +1976,16 @@ def test_the_schedule_tab_is_in_the_nav_on_every_page(site_final):
         assert 'href="/schedule/"' in text, page
 
 
-def test_live_page_and_baseline_stay_inside_each_pool(pair_site_based):
+def test_game_center_and_baseline_stay_inside_each_pool(pair_site_based):
+    """The Game Center lives on Gameday now, still walled per pool."""
     root = pair_site_based.path
     baselines = []
     for subpath, prefix in [("", "/football-pool"), ("friends", "/football-pool/friends")]:
-        page = root / subpath / "live" / "index.html"
+        page = root / subpath / "gameday" / "index.html"
         html = page.read_text()
         data = json.loads((root / subpath / "data" / "live.json").read_text())
         baselines.append(data)
-        assert f'href="{prefix}/live/" aria-current="page"' in html
+        assert 'id="game-center"' in html
         assert f'data-baseline-url="{prefix}/data/live.json"' in html
         assert f'data-entrant-base="{prefix}/entrant/"' in html
         assert re.search(r"/football-pool/assets/live\.js\?v=[0-9a-f]{8}", html)
@@ -1999,6 +2000,18 @@ def test_live_page_and_baseline_stay_inside_each_pool(pair_site_based):
         assert 'Game Center' in (root / subpath / "schedule" / "index.html").read_text()
     assert baselines[0]["entrants"] != baselines[1]["entrants"]
     assert baselines[0]["games"] == baselines[1]["games"]
+
+
+def test_the_live_tab_forwards_to_gameday_with_its_query(pair_site_based):
+    """A year of shared /live/?matchup= links keeps landing on the Game Center."""
+    for subpath, prefix in [("", "/football-pool"), ("friends", "/football-pool/friends")]:
+        html = (pair_site_based.path / subpath / "live" / "index.html").read_text()
+        assert f'content="0; url={prefix}/gameday/"' in html
+        # The stub's script carries ?matchup=/?game= and any hash through;
+        # the meta refresh above is the scripting-off fallback.
+        assert f'location.replace("{prefix}/gameday/" + location.search + location.hash)' in html
+        assert f'href="{prefix}/gameday/">' in html
+        assert ">Live</a>" not in (pair_site_based.path / subpath / "index.html").read_text()
 
 
 def test_live_baseline_carries_exact_official_totals_and_unbanked_outcomes(site_mid, pool):
@@ -2056,9 +2069,12 @@ def test_gameday_is_a_real_tab_and_page_in_every_pool(site_mid_forecast):
     assert re.search(r'data-team="[A-Z]+"', html)
     assert 'data-scenario-preset="help"' in html
     assert "Who else helps me?" in html
-    assert "Preseason Week 1" in html and "Preseason Week 3" in html
-    assert "data-live-team-chips hidden" in html
-    assert 'data-live-team="KC"' in html
+    # The Game Center (formerly the Live tab) rides along on the same page,
+    # with the canonical chip templates its browser-drawn markup clones.
+    assert 'id="game-center"' in html
+    assert "data-live-chips hidden" in html
+    assert 'data-live-chip="KC"' in html
+    assert "Live pool standings" in html
     assert "Drama" in html and "= pool swing" in html
     assert "Pool swing multiplied by how uncertain the NFL result is" in html
     assert 'data-scenario-drilldown' in html

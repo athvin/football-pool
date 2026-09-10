@@ -554,9 +554,52 @@ export function initLivePage(doc, win, helpers) {
     }
   }
 
+  /** The rooting cards above the Game Center carry a live strip each. They are
+   * server-rendered by gameday.html; this paints them from the same events the
+   * rail uses, so the page runs one ESPN loop, not two. */
+  function renderStrips() {
+    for (const card of doc.querySelectorAll('[data-gameday-card]')) {
+      const known = baseline.games.find((g) => g.id === card.dataset.gamedayCard);
+      const event = known && observed(known);
+      if (!event || event.state === 'pre') continue;
+      const strip = card.querySelector('[data-live-game]');
+      if (!strip) continue;
+      strip.hidden = false;
+      card.querySelector('[data-live-status]').textContent = event.state === 'post' ? 'Final' : event.clock;
+      card.querySelector('[data-live-score]').textContent =
+        `${event.away} ${event.awayScore} · ${event.home} ${event.homeScore}`;
+      card.querySelector('[data-live-situation]').textContent = [
+        event.possession ? `${event.possession} ball` : '', event.down,
+        event.redZone ? 'RED ZONE' : ''].filter(Boolean).join(' · ');
+      const detail = card.querySelector('[data-live-detail]');
+      const lastPlay = card.querySelector('[data-live-last-play]');
+      if (detail && lastPlay && event.lastPlay) { detail.hidden = false; lastPlay.textContent = event.lastPlay; }
+    }
+  }
+
+  /** A game that ends while the page is open is a fact, not a scenario. The
+   * what-if scoreboard listens for these and calls those results itself. */
+  let announcedFinals = '{}';
+  function announceFinals() {
+    if (typeof win.CustomEvent !== 'function') return;
+    const outcomes = {};
+    for (const game of baseline.games) {
+      if (game.scored) continue;
+      const event = observed(game);
+      if (event?.state !== 'post' || !event.completed) continue;
+      const outcome = liveOutcome(event, game.kind);
+      if (outcome) outcomes[game.id] = outcome;
+    }
+    const serialized = JSON.stringify(outcomes);
+    if (serialized === announcedFinals) return;
+    announcedFinals = serialized;
+    doc.dispatchEvent(new win.CustomEvent('pool:live-finals', { detail: { outcomes } }));
+  }
+
   function render() {
-    renderRail(); renderBoard(); renderGame(); renderSummary();
+    renderRail(); renderBoard(); renderGame(); renderSummary(); renderStrips();
     $('[data-live-detail-status]').textContent = detailState;
+    announceFinals();
   }
 
   function scheduleDetails(event) {
@@ -678,6 +721,17 @@ export function initLivePage(doc, win, helpers) {
   listen($('[data-live-game-rail]'), 'click', (event) => {
     const button = event.target.closest('[data-key]');
     if (button) selectGame(button.dataset.event, button.dataset.matchup);
+  });
+  // A rooting card's "Game Center" link. The anchor alone lands on the
+  // section; with scripting it also selects that card's matchup.
+  listen(doc, 'click', (event) => {
+    const link = event.target.closest?.('[data-live-open]');
+    if (!link) return;
+    const known = baseline.games.find((g) => g.id === link.dataset.liveOpen);
+    if (!known) return;
+    event.preventDefault();
+    selectGame(observed(known)?.id || known.espnId || '', known.id);
+    if (typeof root.scrollIntoView === 'function') root.scrollIntoView({ block: 'start' });
   });
   function selectView(button) {
     for (const tab of root.querySelectorAll('[data-live-view]')) {

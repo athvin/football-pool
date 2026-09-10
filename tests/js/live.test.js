@@ -311,6 +311,45 @@ describe('Live page controller', () => {
     expect($('[data-live-board-status]').textContent).toContain('UTC');
   });
 
+  test('rooting-card strips paint from the Game Center loop and card links select the matchup', async () => {
+    document.body.insertAdjacentHTML('afterbegin', `
+      <article data-gameday-card="2025_01_TB_ATL" data-away="TB" data-home="ATL">
+        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
+        <div data-live-detail hidden><p data-live-last-play></p></div>
+        <a data-live-open="2025_01_TB_ATL" href="#game-center">Game Center</a>
+      </article>
+      <article data-gameday-card="2025_01_NE_SEA" data-away="NE" data-home="SEA">
+        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
+      </article>`);
+    await start();
+    const cards = document.querySelectorAll('[data-gameday-card]');
+    expect(cards[0].querySelector('[data-live-game]').hidden).toBe(false);
+    expect(cards[0].querySelector('[data-live-status]').textContent).toBe('Q3 8:12');
+    expect(cards[0].querySelector('[data-live-score]').textContent).toBe('TB 21 · ATL 17');
+    expect(cards[0].querySelector('[data-live-situation]').textContent)
+      .toBe('TB ball · 2nd & 8 at ATL 20 · RED ZONE');
+    // A card whose game the baseline does not know stays untouched.
+    expect(cards[1].querySelector('[data-live-game]').hidden).toBe(true);
+    document.querySelector('[data-live-open]').click();
+    expect(window.location.search).toBe(`?game=${ID}`);
+    expect(document.querySelector('[data-key]').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  test('a game that ends live is announced once as a fact for the what-if board', async () => {
+    details = summary('post'); board = scoreboard(details);
+    const announced = [];
+    const record = (event) => announced.push(event.detail.outcomes);
+    document.addEventListener('pool:live-finals', record);
+    try {
+      await start();
+      expect(announced).toEqual([{ '2025_01_TB_ATL': 'TB' }]);
+      await controller.refresh();
+      expect(announced).toHaveLength(1);
+    } finally {
+      document.removeEventListener('pool:live-finals', record);
+    }
+  });
+
   test('keeps end zones fixed while possession, scrimmage, and first-down markers follow the drive', async () => {
     const competition = board.events[0].competitions[0];
     const home = competition.competitors.find((c) => c.homeAway === 'home');

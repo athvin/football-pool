@@ -1015,8 +1015,13 @@ function initScenario(doc, win, launchPreset = '') {
   const sharedScenario = Object.keys(selections).length > 0;
   let activePreset = sharedScenario ? '' : 'reset';
   let previousMeRank = null;
+  // Games the live feed reported final while this page was open. A final is a
+  // fact, not a scenario: it is called by the real score, locked against every
+  // preset and click, and survives a reset.
+  const finals = {};
 
   const paint = () => {
+    for (const [id, outcome] of Object.entries(finals)) selections[id] = outcome;
     const standings = scenarioStandings(data, selections);
     const me = doc.documentElement.dataset.me || '';
     const helping = new Set(
@@ -1033,7 +1038,10 @@ function initScenario(doc, win, launchPreset = '') {
     }
     for (const fieldset of root.querySelectorAll('[data-scenario-game]')) {
       const chosen = selections[fieldset.dataset.scenarioGame];
+      const settled = Boolean(finals[fieldset.dataset.scenarioGame]);
+      fieldset.classList.toggle('is-live-final', settled);
       for (const button of fieldset.querySelectorAll('[data-scenario-choice]')) {
+        button.disabled = settled;
         button.setAttribute('aria-pressed', String(button.dataset.scenarioChoice === chosen));
         button.classList.toggle(
           'is-outside-help',
@@ -1097,10 +1105,23 @@ function initScenario(doc, win, launchPreset = '') {
     return `Assuming your teams win, ${help}. ${mine.name} lands at #${mine.rank}.`;
   };
 
+  doc.addEventListener('pool:live-finals', (event) => {
+    let changed = false;
+    for (const game of data.games) {
+      const outcome = event.detail?.outcomes?.[String(game.id)];
+      if (!outcome || finals[game.id] === outcome) continue;
+      if (![game.away, game.home, 'TIE'].includes(outcome)) continue;
+      finals[game.id] = outcome;
+      changed = true;
+    }
+    if (changed) paint();
+  });
+
   root.addEventListener('click', (event) => {
     const choice = event.target.closest?.('[data-scenario-choice]');
     if (choice) {
       const game = choice.closest('[data-scenario-game]').dataset.scenarioGame;
+      if (finals[game]) return;
       activePreset = '';
       selections[game] = selections[game] === choice.dataset.scenarioChoice
         ? undefined : choice.dataset.scenarioChoice;
@@ -1195,34 +1216,6 @@ function initScenario(doc, win, launchPreset = '') {
   paint();
 }
 
-function paintLiveGames(doc, games) {
-  for (const game of games) {
-    const card = doc.querySelector(
-      `[data-gameday-card][data-away="${game.away}"][data-home="${game.home}"]`,
-    );
-    if (!card || game.state === 'pre') continue;
-    const strip = card.querySelector('[data-live-game]');
-    if (!strip) continue;
-    strip.hidden = false;
-    card.querySelector('[data-live-status]').textContent =
-      game.state === 'post' ? 'Final' : game.clock;
-    card.querySelector('[data-live-score]').textContent =
-      `${game.away} ${game.awayScore} · ${game.home} ${game.homeScore}`;
-    const situation = [
-      game.possession ? `${game.possession} ball` : '',
-      game.down,
-      game.redZone ? 'RED ZONE' : '',
-    ].filter(Boolean).join(' · ');
-    card.querySelector('[data-live-situation]').textContent = situation;
-    const detail = card.querySelector('[data-live-detail]');
-    const lastPlay = card.querySelector('[data-live-last-play]');
-    if (detail && lastPlay && game.lastPlay) {
-      detail.hidden = false;
-      lastPlay.textContent = game.lastPlay;
-    }
-  }
-}
-
 export async function fetchEspnJson(win, url, signal) {
   const primary = 'https://site.web.api.espn.com/';
   const legacy = 'https://site.api.espn.com/';
@@ -1259,105 +1252,6 @@ function liveTeamChip(doc, root, team, templateAttribute) {
     chip.textContent = team;
   }
   return chip;
-}
-
-function renderLiveHarness(doc, root, games) {
-  const list = root.querySelector('[data-live-harness-games]');
-  if (!list) return;
-  list.textContent = '';
-  for (const game of games) {
-    const row = doc.createElement('article');
-    row.className = `live-lab-game is-${game.state}`;
-    const matchup = doc.createElement('div');
-    matchup.className = 'live-lab-matchup';
-    matchup.setAttribute(
-      'aria-label',
-      `${game.away} ${game.awayScore} at ${game.home} ${game.homeScore}`,
-    );
-    for (const [team, score, winner] of [
-      [game.away, game.awayScore, game.awayWinner],
-      [game.home, game.homeScore, game.homeWinner],
-    ]) {
-      const side = doc.createElement('span');
-      side.className = `live-lab-side${winner ? ' is-winner' : ''}`;
-      const chip = liveTeamChip(doc, root, team, 'data-live-team');
-      const points = doc.createElement('strong');
-      points.textContent = game.state === 'pre' ? '—' : score;
-      side.append(chip, ' ', points);
-      matchup.append(side);
-      if (team === game.away) {
-        const at = doc.createElement('span');
-        at.className = 'live-lab-at';
-        at.setAttribute('aria-hidden', 'true');
-        at.textContent = 'at';
-        matchup.append(at);
-      }
-    }
-    const state = doc.createElement('span');
-    state.textContent = game.state === 'post' ? 'Final' : (game.state === 'in' ? game.clock : 'Scheduled');
-    const situation = doc.createElement('span');
-    situation.textContent = [
-      game.possession ? `${game.possession} ball` : '', game.down,
-      game.redZone ? 'RED ZONE' : '',
-    ].filter(Boolean).join(' · ');
-    row.append(matchup, state, situation);
-    if (game.lastPlay) {
-      const play = doc.createElement('small');
-      play.textContent = game.lastPlay;
-      row.append(play);
-    }
-    list.append(row);
-  }
-  if (!games.length) {
-    const empty = doc.createElement('p');
-    empty.className = 'empty';
-    empty.textContent = 'ESPN returned no games for this preseason week.';
-    list.append(empty);
-  }
-}
-
-function initLiveHarness(doc, win) {
-  const root = doc.querySelector('[data-live-harness]');
-  if (!root || typeof win.fetch !== 'function') return;
-  let request = 0;
-  const load = async (week) => {
-    const mine = ++request;
-    const state = root.querySelector('[data-live-feed-state]');
-    const label = root.querySelector(`[data-espn-week="${week}"]`)?.textContent.trim()
-      || `Preseason week ${week}`;
-    if (state) state.textContent = `Loading ${label}…`;
-    try {
-      const season = root.dataset.espnSeason || new Date().getFullYear();
-      const url = `${ESPN_SCOREBOARD}?seasontype=1&week=${week}&dates=${season}`;
-      const games = await fetchEspnGames(win, url);
-      if (mine !== request) return;
-      renderLiveHarness(doc, root, games);
-      if (state) {
-        const live = games.filter((game) => game.state === 'in').length;
-        state.textContent = live
-          ? `${label} · ${live} live · refreshes automatically`
-          : `${label} · ${games.length} game${games.length === 1 ? '' : 's'} loaded`;
-      }
-      const delay = livePollDelay(games);
-      if (delay && root.open) win.setTimeout(() => load(week), delay);
-    } catch {
-      if (mine !== request) return;
-      if (state) state.textContent = `${label} feed unavailable · try again`;
-    }
-  };
-  root.addEventListener('toggle', () => {
-    if (!root.open || root.dataset.loaded) return;
-    root.dataset.loaded = 'true';
-    load(root.querySelector('[data-espn-week][aria-pressed="true"]')?.dataset.espnWeek || '4');
-  });
-  root.addEventListener('click', (event) => {
-    const button = event.target.closest?.('[data-espn-week]');
-    if (!button) return;
-    for (const other of root.querySelectorAll('[data-espn-week]')) {
-      other.setAttribute('aria-pressed', String(other === button));
-    }
-    load(button.dataset.espnWeek);
-  });
 }
 
 function renderPreseasonSchedule(doc, root, games, week) {
@@ -1485,22 +1379,6 @@ function initPreseasonSchedule(doc, win) {
     if (root.dataset.loaded) renderPreseasonSchedule(doc, root, games, selectedWeek());
   });
   if (doc.location?.hash === '#preseason') ensureLoaded();
-}
-
-function initLiveGames(doc, win) {
-  if (!doc.querySelector('[data-gameday-card]') || typeof win.fetch !== 'function') return;
-  const poll = async () => {
-    try {
-      const games = await fetchEspnGames(win);
-      paintLiveGames(doc, games);
-      const delay = livePollDelay(games);
-      if (delay) win.setTimeout(poll, delay);
-    } catch {
-      // Static nflverse state remains visible; an unofficial overlay is never
-      // important enough to turn a transient request failure into page noise.
-    }
-  };
-  poll();
 }
 
 /**
@@ -2729,8 +2607,6 @@ export function init(doc = document, win = window) {
   initSchedule(doc, nowMs);
   initPreseasonSchedule(doc, win);
   initScenario(doc, win, launch.preset);
-  initLiveGames(doc, win);
-  initLiveHarness(doc, win);
   initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));
   initSort(doc, win);
   initOdometer(doc, win);

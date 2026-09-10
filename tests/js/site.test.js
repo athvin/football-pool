@@ -33,6 +33,7 @@ import {
   driveLabel,
   dreamScenario,
   easeOutCubic,
+  fetchEspnJson,
   fieldGeometry,
   fieldPalette,
   firstSortDirection,
@@ -521,91 +522,92 @@ describe('Gameday DOM wiring', () => {
     await setImmediate();
   };
 
-  test('an ESPN final updates a static matchup without a rebuild', async () => {
-    document.body.innerHTML = `
-      <article data-gameday-card="g" data-away="KC" data-home="SEA" data-drama="10">
-        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
-        <div data-live-detail hidden><p data-live-last-play></p></div>
-      </article>`;
-    const win = fakeWindow();
-    win.fetch = vi.fn(async () => response());
-    init(document, win);
-    await settle();
-
-    expect(win.fetch).toHaveBeenCalledOnce();
-    expect(document.querySelector('[data-live-game]').hidden).toBe(false);
-    expect(document.querySelector('[data-live-status]').textContent).toBe('Final');
-    expect(document.querySelector('[data-live-score]').textContent).toContain('KC 24');
-  });
-
+  // The gameday card strips are painted by the Game Center's own loop now
+  // (live.js renderStrips); the ESPN host fallback stays here because every
+  // browser-side feed goes through this one adapter.
   test('a 403 on the browser host retries the legacy host', async () => {
-    document.body.innerHTML = `
-      <article data-gameday-card="g" data-away="KC" data-home="SEA">
-        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
-      </article>`;
     const win = fakeWindow();
     win.fetch = vi.fn()
       .mockResolvedValueOnce(response({}, 403))
       .mockResolvedValueOnce(response());
-    init(document, win);
-    await settle();
+    const payload = await fetchEspnJson(win, `${ESPN_SCOREBOARD}?dates=2026`);
 
     expect(win.fetch).toHaveBeenCalledTimes(2);
     expect(win.fetch.mock.calls[0][0]).toContain('site.web.api.espn.com');
     expect(win.fetch.mock.calls[1][0]).toContain('site.api.espn.com');
+    expect(payload.events).toHaveLength(1);
   });
 
   test('an opaque fetch rejection can still try the alternate host', async () => {
-    document.body.innerHTML = `
-      <article data-gameday-card="g" data-away="KC" data-home="SEA">
-        <div data-live-game hidden><b data-live-status></b><span data-live-score></span><span data-live-situation></span></div>
-      </article>`;
     const win = fakeWindow();
     win.fetch = vi.fn()
       .mockRejectedValueOnce(new TypeError('Failed to fetch'))
       .mockResolvedValueOnce(response());
-    init(document, win);
-    await settle();
+    const payload = await fetchEspnJson(win, `${ESPN_SCOREBOARD}?dates=2026`);
 
     expect(win.fetch).toHaveBeenCalledTimes(2);
-    expect(document.querySelector('[data-live-status]').textContent).toBe('Final');
+    expect(payload.events[0].id).toBe(900);
   });
 
-  test('the deployed preseason bench loads a chosen week on demand', async () => {
+  test('a live final calls its game by the real score and locks it', () => {
+    const data = {
+      entrants: [
+        { slug: 'a', name: 'Alex', teams: ['SEA'], banked: 10 },
+        { slug: 'b', name: 'Blair', teams: ['KC', 'MIA'], banked: 11 },
+      ],
+      games: [
+        {
+          id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
+          points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
+        },
+        {
+          id: 'h', away: 'BUF', home: 'MIA', tie: false, favorite: 'MIA', chaos: 'BUF',
+          points: { a: { BUF: 0, MIA: 0 }, b: { BUF: 0, MIA: 4 } },
+        },
+      ],
+    };
     document.body.innerHTML = `
-      <details data-live-harness data-espn-season="2026" data-team-base="/football-pool/team/">
-        <summary><span data-live-feed-state></span></summary>
-        <button data-espn-week="3">Preseason Week 2</button>
-        <button data-espn-week="4" aria-pressed="true">Preseason Week 3</button>
-        <div data-live-team-chips hidden>
-          <span data-live-team="KC"><a class="team-chip is-large scored" href="/football-pool/team/KC/" style="--team-bg:#e31837"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/KC.png" alt="">KC</a></span>
-          <span data-live-team="SEA"><a class="team-chip is-large scored" href="/football-pool/team/SEA/" style="--team-bg:#002244"><img class="chip-logo chip-logo-lg" src="/football-pool/assets/logos/SEA.png" alt="">SEA</a></span>
-        </div>
-        <div data-live-harness-games></div>
-      </details>`;
+      <section data-scenario>
+        <button data-scenario-preset="reset">Reset</button>
+        <fieldset data-scenario-game="g">
+          <button data-scenario-choice="KC">KC</button>
+          <button data-scenario-choice="SEA">SEA</button>
+        </fieldset>
+        <fieldset data-scenario-game="h">
+          <button data-scenario-choice="BUF">BUF</button>
+          <button data-scenario-choice="MIA">MIA</button>
+        </fieldset>
+        <ol data-scenario-board>
+          <li data-slug="a"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+          <li data-slug="b"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+        </ol>
+        <p data-scenario-status></p>
+      </section>
+      <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
     const win = fakeWindow();
-    win.fetch = vi.fn(async () => response());
+    win.location = { href: 'https://example.test/gameday/' };
     init(document, win);
-    const bench = document.querySelector('[data-live-harness]');
-    bench.open = true;
-    bench.dispatchEvent(new Event('toggle'));
-    await settle();
 
-    expect(win.fetch.mock.calls[0][0]).toContain('seasontype=1&week=4&dates=2026');
-    expect(document.querySelector('.live-lab-game').textContent).toContain('KC 24');
-    expect(document.querySelector('[data-live-feed-state]').textContent)
-      .toBe('Preseason Week 3 · 1 game loaded');
-    const chips = Array.from(document.querySelectorAll('.live-lab-matchup .team-chip'));
-    expect(chips.map((chip) => chip.getAttribute('href'))).toEqual([
-      '/football-pool/team/KC/', '/football-pool/team/SEA/',
-    ]);
-    expect(chips.every((chip) => chip.querySelector('.chip-logo'))).toBe(true);
+    document.dispatchEvent(new CustomEvent('pool:live-finals', {
+      detail: { outcomes: { g: 'SEA', unknown: 'KC', h: 'NOT-PLAYING' } },
+    }));
+    const fieldset = document.querySelector('[data-scenario-game="g"]');
+    expect(fieldset.classList.contains('is-live-final')).toBe(true);
+    expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-scenario-choice="SEA"]').disabled).toBe(true);
+    expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('15.00');
 
-    document.querySelector('[data-espn-week="3"]').click();
-    await settle();
-    expect(win.fetch.mock.calls[1][0]).toContain('week=3');
-    expect(document.querySelector('[data-live-feed-state]').textContent)
-      .toBe('Preseason Week 2 · 1 game loaded');
+    // A final is a fact: clicks cannot change it and a reset cannot clear it.
+    document.querySelector('[data-scenario-choice="KC"]').click();
+    expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed')).toBe('true');
+    document.querySelector('[data-scenario-preset="reset"]').click();
+    expect(document.querySelector('li[data-slug="a"] .scenario-total').textContent).toBe('15.00');
+
+    // The unfinished game stays callable, and an outcome naming a team not in
+    // the matchup never lands.
+    expect(document.querySelector('[data-scenario-game="h"]').classList.contains('is-live-final')).toBe(false);
+    document.querySelector('[data-scenario-choice="MIA"]').click();
+    expect(document.querySelector('li[data-slug="b"] .scenario-total').textContent).toBe('15.00');
   });
 
   test('scenario controls repaint totals, share exact picks, and build identity-aware dream calls', async () => {

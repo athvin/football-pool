@@ -3219,8 +3219,8 @@ html[data-me] .rooting-anon { display: none; }
 .attribution a { color: var(--model); }
 
 /* Live Game Center ----------------------------------------------------- */
+.game-center { margin-top: 2.75rem; }
 .game-center-link { display: inline-flex; gap: 0.6rem; margin-block: 0.65rem; color: var(--model); font: 600 0.75rem var(--mono); }
-.live-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; }
 .live-tools { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; justify-content: end; }
 .live-tools button, .live-copy { min-height: 44px; padding: 0.5rem 0.85rem; border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); color: var(--chalk); font: 500 0.72rem var(--mono); cursor: pointer; }
 .live-tools button[aria-pressed='true'] { border-color: var(--model); color: var(--model); }
@@ -3338,7 +3338,7 @@ html[data-me] .rooting-anon { display: none; }
 .live-attribution { color: var(--chalk-dim); font: 0.62rem/1.8 var(--mono); padding-top: 1rem; }
 @media (max-width: 900px) { .live-layout { grid-template-columns: minmax(0, 1fr); } .live-pool-board { position: static; } }
 @media (max-width: 600px) {
-  .live-heading { display: block; } .live-tools { justify-content: start; margin-top: 0.8rem; }
+  .live-tools { justify-content: start; }
   .live-match-header { padding: 1rem; } .live-game-center [role='tabpanel'] { padding: 0 1rem 1rem; }
   .live-scoreboard { gap: 0.65rem; } .live-score-side:last-child { padding-left: 0.65rem; }
   .live-score-side .team-chip { font-size: 0.85rem; gap: 0.3rem; } .live-score-side .team-chip img { width: 24px; height: 24px; }
@@ -3449,32 +3449,15 @@ html[data-me] .rooting-anon { display: none; }
   text-align: center;
 }
 .scenario-status { min-height: 1.4em; margin-top: 0.35rem; color: var(--chalk-dim); font-size: 0.65rem; text-align: center; }
+/* A game the live feed reported final: called by the real score, locked. */
+.scenario-game.is-live-final button[data-scenario-choice] { cursor: default; opacity: 0.45; }
+.scenario-game.is-live-final button[data-scenario-choice][aria-pressed='true'] { opacity: 1; }
+.scenario-game.is-live-final legend::after { content: ' · Final'; color: var(--heat); }
 html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-shadow: 0 0 0 2px var(--live), 0 0 34px color-mix(in srgb, var(--live) 32%, transparent); }
 @keyframes goal-line { 50% { transform: scale(1.018); } }
 
-.live-lab { margin-top: 2.75rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
-.live-lab summary { display: flex; justify-content: space-between; gap: 1rem; padding: 0.8rem 1rem; cursor: pointer; font-family: var(--mono); font-size: 0.68rem; color: var(--chalk-dim); }
-.live-lab summary b { color: var(--chalk); text-transform: uppercase; letter-spacing: 0.08em; }
-.live-lab-body { padding: 0 1rem 1rem; border-top: 1px solid var(--rule); }
-.live-lab-body .scenario-note { margin-top: 0.8rem; }
-.live-lab-weeks { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.7rem; }
-.live-lab-weeks button { border: 1px solid var(--rule); border-radius: 999px; padding: 0.38rem 0.65rem; background: transparent; color: var(--chalk-dim); font: 600 0.6rem var(--mono); cursor: pointer; }
-.live-lab-weeks button[aria-pressed='true'] { border-color: var(--model); color: var(--model); }
-.live-lab-games { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.4rem; }
-.live-lab-game { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.15rem 0.6rem; padding: 0.55rem 0.65rem; border: 1px solid var(--rule); border-radius: 6px; font-family: var(--mono); font-size: 0.62rem; }
-.live-lab-matchup { display: flex; align-items: center; gap: 0.35rem; min-width: 0; }
-.live-lab-side { display: inline-flex; align-items: center; gap: 0.25rem; min-width: 0; }
-.live-lab-side > strong { color: var(--chalk-dim); font-variant-numeric: tabular-nums; }
-.live-lab-side.is-winner > strong { color: var(--live); }
-.live-lab-at { color: var(--chalk-dim); }
-.live-lab-game > span { color: var(--chalk-dim); text-align: right; }
-.live-lab-game > span + span, .live-lab-game small { grid-column: 1 / -1; text-align: left; }
-.live-lab-game small { color: var(--chalk-dim); }
-.live-lab-game.is-in { border-color: color-mix(in srgb, var(--heat) 55%, var(--rule)); }
-.live-lab-game.is-in > span:first-of-type { color: var(--heat); }
-
 @media (max-width: 760px) {
-  .gameday-grid, .scenario-layout, .scenario-games, .live-lab-games,
+  .gameday-grid, .scenario-layout, .scenario-games,
   .preseason-games { grid-template-columns: 1fr; }
   .scenario-board-wrap { position: static; }
   .gameday-card:hover { transform: none; }
@@ -3631,8 +3614,6 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
   .scenario-game button,
   .share-scenario,
   .pick,
-  .live-lab-weeks button,
-  .live-lab summary,
   .back {
     min-height: 44px;
   }
