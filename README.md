@@ -227,10 +227,32 @@ templates/, assets/   the site itself
 
 ## Notes on the data
 
-Results come from one file:
-`nflverse-data/releases/download/schedules/games.csv`. Upstream commits every
-15–90 minutes year round and lands within minutes of a game going final, so the
-morning rebuild always has the previous night's scores.
+The schedule and primary results come from
+`nflverse-data/releases/download/schedules/games.csv`. Each online rebuild also
+checks ESPN's scoreboard for recent games still missing a result. A confirmed
+final updates pool standings immediately, even if the other games that week
+have not finished or nflverse has not caught up. In-progress leads never enter
+the rebuilt standings.
+
+ESPN results must match the season, round/week, Eastern game date, home/away
+teams, and the event ID when the schedule supplies one. Only explicit finals
+with complete integer scores qualify; ambiguous matches and preseason games
+are ignored. Once nflverse publishes a result, it takes precedence, including
+corrections. Both feeds use the same scoring engine, so wins are counted once.
+
+Confirmed supplemental finals are stored separately in
+`data/<year>/espn-finals.json`, preserving them through ESPN outages and offline
+builds without changing the raw nflverse CSV. The existing data snapshot step
+commits that cache. Builds query at most one scoreboard date range, covering
+missing results from the last seven days, with a ten-second timeout. ESPN is an
+unofficial feed; if it fails, the build uses previously confirmed results and
+the existing staleness guard still applies.
+
+The rebuilt home page shows the week's progress (for example, **1 of 16 games
+final**), recent final scores, everyone tied for the lead, and each entry's
+points earned and games remaining in that week. The result source identifies
+any ESPN finals still awaiting nflverse. The Live page's baseline includes
+those same finals, so the browser does not add them again.
 
 Team pages also show each club's head coach and roster — who is active, who is
 on injured reserve, who is stashed on the practice squad. The coach rides along
@@ -249,8 +271,8 @@ The Gameday page has two additional, explicitly optional sources:
   possession, down-and-distance, red-zone state, and last play. Polling speeds
   up only while a game is live and stops once the slate is final. A built-in
   2026 preseason test bench makes the integration observable on the deployed
-  static site before pool scoring begins. This unofficial feed is display-only:
-  nflverse finals remain the ledger the next build scores from.
+  static site before pool scoring begins. Live leads remain display-only;
+  confirmed finals can also fill missing results in the next build.
 
 Either optional request may fail without affecting the static schedule,
 standings, projections, or deployment.

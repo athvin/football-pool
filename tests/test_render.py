@@ -496,7 +496,7 @@ def test_theme_toggle_is_present(site_final):
 def test_preseason_builds_with_no_games_played(pool, games_2025, tmp_path):
     empty = games_2025.copy()
     empty[["played", "home_won", "away_won", "is_tie"]] = False
-    data = GameData(empty, 2025, datetime.now(timezone.utc), None, "cache")
+    data = GameData(empty, 2025, datetime(2025, 8, 1, tzinfo=timezone.utc), None, "cache")
 
     render_site(pool, data, tmp_path)
     html = (tmp_path / "index.html").read_text()

@@ -11,6 +11,7 @@ from football_pool import cli
 from football_pool.nflverse import GameData, parse_games
 
 FIXTURES = Path(__file__).parent / "fixtures"
+SUPPLEMENT_RESULTS = cli._supplement_results
 
 
 @pytest.fixture(autouse=True)
@@ -22,6 +23,7 @@ def no_roster_network(monkeypatch):
     The one test about the roster path overrides this with its own stub.
     """
     monkeypatch.setattr(cli, "_fetch_roster", lambda year, offline: None)
+    monkeypatch.setattr(cli, "_supplement_results", lambda data, offline: data)
 
 
 @pytest.fixture
@@ -59,6 +61,21 @@ def test_standings_says_preseason_when_nothing_is_played(monkeypatch, season, ca
 
     assert cli.main(["standings"]) == 0
     assert "preseason, no games played" in capsys.readouterr().out
+
+
+def test_standings_loads_supplemental_finals_with_a_separate_cache(wired, monkeypatch, tmp_path, capsys):
+    from football_pool import espn
+
+    season, data = wired
+    calls = []
+    def supplement(gd, cache_path, *, offline):
+        calls.append((gd, cache_path, offline))
+        return gd
+    monkeypatch.setattr(cli, "_supplement_results", SUPPLEMENT_RESULTS)
+    monkeypatch.setattr(cli, "data_dir", lambda year, root=None: tmp_path / str(year))
+    monkeypatch.setattr(espn, "supplement_results", supplement)
+    assert cli.main(["standings", "--offline"]) == 0
+    assert calls == [(data, tmp_path / "2025/espn-finals.json", True)]
 
 
 def test_fetch_reports_counts_and_provenance(monkeypatch, capsys):

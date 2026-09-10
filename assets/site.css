@@ -487,6 +487,20 @@ a, button, select, summary, label { touch-action: manipulation; }
 
 .state-value.sm { font-size: 1.1rem; }
 .state-value .unit { font-size: 0.8rem; color: var(--chalk-dim); }
+.state-note { color: var(--chalk-dim); font: 0.65rem/1.6 var(--mono); margin-top: 0.4rem; }
+.week-snapshot { padding: 1rem; margin-bottom: 1rem; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--surface); }
+.week-snapshot .section-head { gap: 0.75rem; flex-wrap: wrap; margin: 0; }
+.week-snapshot .section-title { margin: 0; }
+.week-snapshot p { font: 0.8rem/1.7 var(--body); margin: 0.65rem 0; }
+.week-snapshot a { color: var(--model); }
+.week-snapshot .week-results-label, .week-result-status { color: var(--chalk-dim); font: 0.6rem/1.6 var(--mono); }
+.week-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 240px)); gap: 0.6rem; list-style: none; padding: 0; margin: 0.5rem 0; }
+.week-results li { padding: 0.65rem; border: 1px solid var(--rule); border-radius: 5px; background: var(--surface-2); }
+.week-results li > div { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.4rem; }
+.week-results .team-chip { font-size: 0.65rem; }
+.week-results .chip-logo { width: 20px; height: 20px; }
+.week-snapshot .week-snapshot-note { color: var(--chalk-dim); font-size: 0.7rem; }
+.row-week { display: block; margin-top: 0.4rem; color: var(--chalk-dim); font: 0.65rem/1.6 var(--mono); }
 
 /* --- page headings ----------------------------------------------------- */
 .page-head { margin: 2rem 0 1rem; }
