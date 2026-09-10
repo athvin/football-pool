@@ -3254,6 +3254,7 @@ html[data-me] .rooting-anon { display: none; }
 .live-drive-direction[data-direction='left'] { flex-direction: row-reverse; }
 .live-direction-arrow { color: var(--live); font: 1.8rem/1 var(--body); }
 .live-field-label { color: var(--chalk); font: 500 0.73rem/1.7 var(--mono); margin: 0 0 0.65rem; }
+.live-field-play { color: var(--chalk-dim); font: 400 0.8rem/1.6 var(--body); margin: 0.8rem 0 0; overflow-wrap: anywhere; }
 .live-field { overflow: hidden; border: 1px solid #829b86; border-radius: 4px; background: #214e35; box-shadow: 0 3px 14px #0003; }
 .live-field svg { display: block; width: 100%; height: auto; }
 .live-endzone rect { fill: var(--team-bg, #193b35); }
@@ -3290,6 +3291,12 @@ html[data-me] .rooting-anon { display: none; }
 .live-play-notice:empty { display: none; }
 .live-drive { margin-block: 0.65rem; border: 1px solid var(--rule); border-radius: 7px; }
 .live-drive > summary { min-height: 44px; padding: 0.9rem; cursor: pointer; background: var(--surface-2); color: var(--chalk); font: 0.7rem/1.7 var(--mono); }
+.live-drive-heading { display: inline-flex; align-items: center; gap: 0.65rem; max-width: 100%; vertical-align: middle; }
+.live-drive-heading strong { font: 600 0.85rem/1.5 var(--body); }
+.live-drive-heading .team-chip { flex-shrink: 0; font-size: 0.65rem; }
+.live-drive-heading .chip-logo { width: 20px; height: 20px; }
+.live-drive-meta { display: block; margin-top: 0.5rem; color: var(--chalk-dim); }
+.live-possession-change { margin: 0; padding: 0.55rem 0.9rem; border-left: 2px solid var(--model); color: var(--chalk); font: 500 0.75rem/1.7 var(--body); overflow-wrap: anywhere; }
 .live-drive ol { list-style: none; margin: 0; padding: 0 0.9rem; }
 .live-play { padding: 0.9rem 0; border-top: 1px solid var(--rule); }
 .live-play b { color: var(--chalk-dim); font: 0.62rem var(--mono); }
@@ -3323,6 +3330,7 @@ html[data-me] .rooting-anon { display: none; }
   .live-score-side .team-chip { font-size: 0.85rem; gap: 0.3rem; } .live-score-side .team-chip img { width: 24px; height: 24px; }
   .live-game-meta { flex-wrap: wrap; }
   .live-field-wrap { padding: 0.7rem; }
+  .live-field-head { flex-direction: column; align-items: flex-start; gap: 0.45rem; }
   .live-possession { gap: 0.4rem; } .live-possession strong { font-size: 0.73rem; }
   .live-possession .team-chip { font-size: 0.65rem; gap: 0.2rem; padding-inline: 0.35rem; }
   .live-possession .chip-logo { width: 18px; height: 18px; }
