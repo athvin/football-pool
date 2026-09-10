@@ -108,10 +108,10 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_07_DAL_PHI,2026,REG,7,2026-10-26,20:15,DAL,,PHI,,,,Home,3.0,48.5,136.0,-162.0,401873009,Brian Schottenheimer,Nick Sirianni,8,8,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
 2026_08_CAR_GB,2026,REG,8,2026-10-29,20:15,CAR,,GB,,,,Home,7.0,45.5,280.0,-355.0,401873023,Dave Canales,Matt LaFleur,4,4,outdoors,grass,,,,,,GNB00,Lambeau Field
 2026_08_ARI_DAL,2026,REG,8,2026-11-01,13:00,ARI,,DAL,,,,Home,,,,,401873024,Jonathan Gannon,Brian Schottenheimer,7,6,,matrixturf,,,,,,DAL00,AT&T Stadium
-2026_08_ATL_TB,2026,REG,8,2026-11-01,13:00,ATL,,TB,,,,Home,4.5,46.5,185.0,-225.0,401873025,Raheem Morris,Todd Bowles,7,7,outdoors,grass,,,,,,TAM00,Raymond James Stadium
+2026_08_ATL_TB,2026,REG,8,2026-11-01,13:00,ATL,,TB,,,,Home,,,,,401873025,Raheem Morris,Todd Bowles,7,7,outdoors,grass,,,,,,TAM00,Raymond James Stadium
 2026_08_BAL_BUF,2026,REG,8,2026-11-01,13:00,BAL,,BUF,,,,Home,2.5,51.5,114.0,-135.0,401873026,Jesse Minter,Sean McDermott,7,14,outdoors,a_turf,,,,,,BUF00,Highmark Stadium
 2026_08_CLE_PIT,2026,REG,8,2026-11-01,13:00,CLE,,PIT,,,,Home,6.0,39.5,210.0,-258.0,401873027,Todd Monken,Mike McCarthy,7,7,outdoors,grass,,,,,,PIT00,Acrisure Stadium
-2026_08_IND_JAX,2026,REG,8,2026-11-01,13:00,IND,,JAX,,,,Home,,,,,401873028,Shane Steichen,Liam Coen,7,14,outdoors,grass,,,,,,JAX00,EverBank Stadium
+2026_08_IND_JAX,2026,REG,8,2026-11-01,13:00,IND,,JAX,,,,Home,4.5,49.5,185.0,-225.0,401873028,Shane Steichen,Liam Coen,7,14,outdoors,grass,,,,,,JAX00,EverBank Stadium
 2026_08_KC_DEN,2026,REG,8,2026-11-01,16:25,KC,,DEN,,,,Home,,,,,401873033,Andy Reid,Sean Payton,7,7,outdoors,grass,,,,,,DEN00,Empower Field at Mile High
 2026_08_LAC_LA,2026,REG,8,2026-11-01,16:05,LAC,,LAR,,,,Home,,,,,401873032,Jim Harbaugh,Sean McVay,14,7,dome,matrixturf,,,,,,LAX01,SoFi Stadium
 2026_08_LV_NYJ,2026,REG,8,2026-11-01,13:00,LV,,NYJ,,,,Home,1.5,40.5,102.0,-122.0,401873029,Klint Kubliak,Aaron Glenn,7,7,outdoors,fieldturf,,,,,,NYC01,MetLife Stadium
