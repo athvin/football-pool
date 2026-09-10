@@ -189,7 +189,8 @@ function markup(data) {
       <p data-live-situation-text></p><span data-live-venue></span><button data-live-copy>Copy</button><p data-live-share-status></p>
       <div role="tablist">${['overview', 'plays', 'stats'].map((v) => `<button data-live-view="${v}" aria-controls="panel-${v}" aria-selected="${v === 'overview'}" tabindex="${v === 'overview' ? 0 : -1}">${v}</button>`).join('')}</div>
       ${['overview', 'plays', 'stats'].map((v) => `<section id="panel-${v}" ${v === 'overview' ? '' : 'hidden'}></section>`).join('')}
-      <p data-live-detail-status></p><p data-live-field-label></p>
+      <p data-live-detail-status></p><p data-live-field-label></p><p data-live-field-play hidden></p>
+      <span data-live-possession-label></span>
       <div data-live-field-head><span data-live-possession-chip></span><strong data-live-possession-name></strong>
         <div data-live-direction><span data-live-direction-arrow></span><span data-live-direction-text></span></div></div>
       <div data-live-field><svg><g data-live-away-end><text></text></g><g data-live-home-end><text></text></g>
@@ -347,9 +348,11 @@ describe('Live page controller', () => {
     expect($('[data-live-target]').hidden).toBe(true);
     delete competition.situation.possession;
     await vi.advanceTimersByTimeAsync(LIVE_INTERVAL);
-    expect($('[data-live-field]').hidden).toBe(true);
-    expect($('[data-live-field-head]').hidden).toBe(true);
-    expect($('[data-live-field-legend]').hidden).toBe(true);
+    expect($('[data-live-field]').hidden).toBe(false);
+    expect($('[data-live-field-head]').hidden).toBe(false);
+    expect($('[data-live-field-legend]').hidden).toBe(false);
+    expect($('[data-live-field-label]').textContent).toContain('Last known position');
+    expect($('[data-live-possession-name]').textContent).toBe('Falcons had the ball');
   });
 
   test('polls without duplicate requests, preserves expanded drives, and replaces corrected plays', async () => {
@@ -376,6 +379,126 @@ describe('Live page controller', () => {
     await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
     expect($('[data-live-play-notice]').textContent).toBe('');
     expect(document.activeElement).toBe(owner);
+  });
+
+  test('retains the previous field through a touchdown and halftime, then resumes with the next possession', async () => {
+    await start();
+    const competition = board.events[0].competitions[0];
+    competition.competitors.find((c) => c.homeAway === 'away').score = '28';
+    competition.situation = { lastPlay: { text: 'Pass complete for 20 yards, TOUCHDOWN.' } };
+    await controller.refresh();
+    expect($('[data-live-scoreboard]').textContent).toContain('TB28');
+    expect($('[data-live-field]').hidden).toBe(false);
+    expect($('[data-live-ball]').style.transform).toBe('translate(900px, 266.67px)');
+    expect($('[data-live-first-down]').style.transform).toBe('translateX(980px)');
+    expect($('[data-live-field-label]').textContent).toBe('Last known position · Q3 8:12: 2nd & 8 at ATL 20. Waiting for the next ball spot.');
+    expect($('[data-live-field]').getAttribute('aria-label')).toContain('Last known position');
+    expect($('[data-live-possession-label]').textContent).toBe('Previous possession');
+    expect($('[data-live-possession-name]').textContent).toBe('TB had the ball');
+    expect($('[data-live-direction-text]').textContent).toBe('Was driving right');
+    expect($('[data-live-field-play]').textContent).toContain('TOUCHDOWN');
+    expect($('[data-live-field-play]').hidden).toBe(false);
+
+    competition.situation = { possession: competition.competitors.find((c) => c.homeAway === 'home').id,
+      downDistanceText: '1st & 10 at ATL 30', distance: 10 };
+    await controller.refresh();
+    expect($('[data-live-field-label]').textContent).toBe('1st & 10 at ATL 30');
+    expect($('[data-live-possession-label]').textContent).toBe('Possession');
+    expect($('[data-live-possession-name]').textContent).toBe('ATL ball');
+    expect($('[data-live-ball]').style.transform).toBe('translate(800px, 266.67px)');
+    expect($('[data-live-first-down]').style.transform).toBe('translateX(700px)');
+
+    delete competition.situation;
+    board.events[0].status.type.name = 'STATUS_HALFTIME';
+    await controller.refresh();
+    expect($('[data-live-field]').hidden).toBe(false);
+    expect($('[data-live-field-label]').textContent).toContain('1st & 10 at ATL 30');
+    expect($('[data-live-possession-name]').textContent).toBe('ATL had the ball');
+    details = summary('post'); board = scoreboard(details);
+    await controller.refresh();
+    expect($('[data-live-field]').hidden).toBe(true);
+    expect($('[data-live-field-label]').textContent).toContain('Final');
+  });
+
+  test('an initial feed without a spot shows an unmarked field and the last reported play', async () => {
+    delete board.events[0].competitions[0].situation;
+    await start();
+    expect($('[data-live-field]').hidden).toBe(false);
+    expect($('[data-live-field-head]').hidden).toBe(true);
+    expect($('[data-live-field-legend]').hidden).toBe(true);
+    for (const selector of ['[data-live-ball]', '[data-live-scrimmage]', '[data-live-attack-arrow]', '[data-live-first-down]']) {
+      expect($(selector).style.display).toBe('none');
+    }
+    expect($('[data-live-field-label]').textContent).not.toContain('Last known');
+    expect($('[data-live-away-end]').textContent).toBe('TB');
+    expect($('[data-live-home-end]').textContent).toBe('ATL');
+    expect($('[data-live-field-play]').textContent).toContain(parseLiveSummary(details, helpers).plays[0].text);
+    board = scoreboard(details);
+    await controller.refresh();
+    expect($('[data-live-ball]').style.display).toBe('');
+    expect($('[data-live-first-down]').style.display).toBe('');
+    expect($('[data-live-field-head]').hidden).toBe(false);
+  });
+
+  test('field history and play descriptions stay with their game when switching matchups', async () => {
+    const second = scoreboard(summary('in', '999')).events[0];
+    delete second.competitions[0].situation;
+    second.competitions[0].competitors.find((c) => c.homeAway === 'away').team = { abbreviation: 'NE', name: 'Patriots' };
+    second.competitions[0].competitors.find((c) => c.homeAway === 'home').team = { abbreviation: 'SEA', name: 'Seahawks' };
+    board.events.push(second);
+    await start();
+    board.events[0].competitions[0].situation = { lastPlay: { text: '<img src=x onerror=alert(1)> Touchdown.' } };
+    await controller.refresh();
+    expect($('[data-live-field-play] img')).toBeNull();
+    expect($('[data-live-field-play]').textContent).toContain('<img');
+    window.history.replaceState(null, '', '/live/?game=999');
+    window.dispatchEvent(new PopStateEvent('popstate')); await flush();
+    expect($('[data-live-field]').hidden).toBe(false);
+    expect($('[data-live-field-head]').hidden).toBe(true);
+    expect($('[data-live-ball]').style.display).toBe('none');
+    expect($('[data-live-field-play]').hidden).toBe(true);
+    expect($('[data-live-away-end]').textContent).toBe('PATRIOTS');
+    expect($('[data-live-home-end]').textContent).toBe('SEAHAWKS');
+    window.history.replaceState(null, '', `/live/?game=${ID}`);
+    window.dispatchEvent(new PopStateEvent('popstate')); await flush();
+    expect($('[data-live-ball]').style.display).toBe('');
+    expect($('[data-live-field-label]').textContent).toContain('Last known position');
+    expect($('[data-live-possession-name]').textContent).toBe('TB had the ball');
+  });
+
+  test.each(['Punt', 'Interception', 'Touchdown', 'Fumble'])('collapsed drives identify the offense and the %s possession change', async (result) => {
+    const older = details.drives.previous[0];
+    older.displayResult = result;
+    details.header.competitions[0].competitors.find((c) => c.homeAway === 'away').team.name = 'Buccaneers';
+    details.header.competitions[0].competitors.find((c) => c.homeAway === 'home').team.name = 'Falcons';
+    await start();
+    const newest = $('[data-drive]'); newest.open = false;
+    expect(newest.querySelector('summary strong').textContent).toBe('Buccaneers drive');
+    expect(newest.querySelector('summary .team-chip').textContent).toBe('TB');
+    expect(newest.querySelector('summary a')).toBeNull();
+    const separator = $('[data-possession-change]');
+    expect(separator.textContent).toBe(`Possession changeFalcons · ${result} → Buccaneers ball`);
+    expect(separator.previousElementSibling).toBe(newest);
+    expect(separator.nextElementSibling.dataset.drive).toBe(older.id);
+    older.displayResult = 'Turnover on downs';
+    await controller.refresh();
+    expect(newest.open).toBe(false);
+    expect($('[data-possession-change]')).toBe(separator);
+    expect(separator.textContent).toContain('Turnover on downs');
+    expect(document.querySelectorAll('[data-possession-change]')).toHaveLength(1);
+  });
+
+  test('possession separators handle missing results and disappear when corrected drives keep the same team', async () => {
+    delete details.drives.previous[0].displayResult;
+    await start();
+    expect($('[data-possession-change]').textContent).toContain('ATL · Drive ended → TB ball');
+    details.drives.previous[0].team.abbreviation = 'TB';
+    await controller.refresh();
+    expect($('[data-possession-change]')).toBeNull();
+    details.drives.previous[0].team = {};
+    await controller.refresh();
+    expect($('[data-possession-change]')).toBeNull();
+    expect($('[data-live-drives]').textContent).toContain('Team not reported drive');
   });
 
   test('reloads the official baseline atomically and never carries another pool into it', async () => {

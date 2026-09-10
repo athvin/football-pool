@@ -273,6 +273,17 @@ stay fixed in the diagram: away on the left, home on the right. The possession
 banner and arrow show the offense moving toward the opponent's end zone; this
 is a consistent field view, not a stadium compass direction from ESPN.
 
+When ESPN omits the situation after a score or between drives, the field keeps
+that game's last confirmed position for the current page session. It is labeled
+"Last known position" with the game clock and previous possession, and the last
+reported play appears below the field. The next complete situation restores the
+live markers automatically. A page opened before any ball spot is available
+shows the named field without markers; pregame and final games hide the field.
+On Plays, collapsed drives show a team badge, team name, and drive result.
+Between drives by different teams, a possession-change separator names the
+previous drive's reported result and the team taking over. Drives remain newest
+first, and corrections update the separators along with the plays.
+
 During live games the page polls every
 20 seconds, with a **5-second updates** toggle next to Refresh for faster scores,
 plays, stats, and provisional standings. The browser remembers this choice.

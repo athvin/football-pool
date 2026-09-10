@@ -196,6 +196,7 @@ export function initLivePage(doc, win, helpers) {
   const events = new Map();
   const fetchedWindows = new Set();
   const summaries = new Map();
+  const fieldSnapshots = new Map();
   const requests = new Set();
   const listeners = [];
   const $ = (selector) => root.querySelector(selector);
@@ -402,35 +403,52 @@ export function initLivePage(doc, win, helpers) {
   }
 
   function renderField(game) {
-    const field = liveFieldPosition(game, helpers.normalizeEspnTeam);
-    for (const selector of ['[data-live-field]', '[data-live-field-head]', '[data-live-field-legend]']) $(selector).hidden = !field;
-    $('[data-live-field-label]').textContent = field ? game.down
-      : 'Field position will appear when ESPN reports the next down and ball spot.';
-    if (!field) return;
+    const current = liveFieldPosition(game, helpers.normalizeEspnTeam);
+    // ESPN clears the situation after scores and between drives. Keep the last
+    // confirmed snapshot for this game, explicitly presented as history.
+    if (current) fieldSnapshots.set(game.id, { game, field: current });
+    if (game && game.state !== 'in') fieldSnapshots.delete(game.id);
+    const snapshot = game?.state === 'in' ? fieldSnapshots.get(game.id) : null;
+    const field = snapshot?.field;
+    const previous = Boolean(field && !current);
+    const lastPlay = game?.lastPlay || summaries.get(game?.id)?.data.plays[0]?.text || '';
+    $('[data-live-field-play]').textContent = lastPlay ? `Last reported play: ${lastPlay}` : '';
+    $('[data-live-field-play]').hidden = !lastPlay;
+    $('[data-live-field]').hidden = game?.state !== 'in';
+    for (const selector of ['[data-live-field-head]', '[data-live-field-legend]']) $(selector).hidden = !field;
+    const label = field ? `${previous ? `Last known position${snapshot.game.clock ? ` · ${snapshot.game.clock}` : ''}: ` : ''}${snapshot.game.down}${previous ? '. Waiting for the next ball spot.' : ''}`
+      : game?.state === 'in' ? 'Waiting for ESPN to report the next ball spot.'
+        : game?.state === 'post' ? 'Final — field position is no longer live.' : 'Field position appears when the game is live.';
+    $('[data-live-field-label]').textContent = label;
+    $('[data-live-field]').setAttribute('aria-label', label);
+    for (const selector of ['[data-live-ball]', '[data-live-scrimmage]', '[data-live-attack-arrow]']) $(selector).style.display = field ? '' : 'none';
+    $('[data-live-first-down]').style.display = !field || field.first === null ? 'none' : '';
+    if (!game) return;
     const name = (team) => team === game.away ? game.awayName || team : game.homeName || team;
-    const attack = field.direction === 1 ? 'right' : 'left';
-    $('[data-live-field]').setAttribute('aria-label',
-      `${name(game.possession)} ball, attacking ${attack}. ${game.down}. `
-      + `${field.first === null ? '' : `${field.goalToGo ? 'Goal line' : 'First down'}: ${field.target}. `}${field.toGoal} yards to the end zone.`);
     for (const [selector, team] of [['[data-live-away-end]', game.away], ['[data-live-home-end]', game.home]]) {
       const end = $(selector);
       end.setAttribute('style', chipTemplates.get(team)?.getAttribute('style') || '');
       end.querySelector('text').textContent = name(team).toUpperCase();
     }
+    if (!field) return;
+    const possession = snapshot.game.possession;
+    const attack = field.direction === 1 ? 'right' : 'left';
+    $('[data-live-field]').setAttribute('aria-label',
+      `${previous ? `${label} Previous play: ` : ''}${name(possession)} ball, attacking ${attack}. ${snapshot.game.down}. `
+      + `${field.first === null ? '' : `${field.goalToGo ? 'Goal line' : 'First down'}: ${field.target}. `}${field.toGoal} yards to the end zone.`);
     const possessionChip = $('[data-live-possession-chip]');
-    if (possessionChip.dataset.team !== game.possession) {
-      possessionChip.replaceChildren(chip(game.possession)); possessionChip.dataset.team = game.possession;
+    if (possessionChip.dataset.team !== possession) {
+      possessionChip.replaceChildren(chip(possession)); possessionChip.dataset.team = possession;
     }
-    $('[data-live-possession-name]').textContent = `${name(game.possession)} ball`;
+    $('[data-live-possession-label]').textContent = previous ? 'Previous possession' : 'Possession';
+    $('[data-live-possession-name]').textContent = `${name(possession)} ${previous ? 'had the ball' : 'ball'}`;
     $('[data-live-direction]').dataset.direction = attack;
     $('[data-live-direction-arrow]').textContent = field.direction === 1 ? '→' : '←';
-    $('[data-live-direction-text]').textContent = `Driving ${attack}`;
+    $('[data-live-direction-text]').textContent = `${previous ? 'Was driving' : 'Driving'} ${attack}`;
     const x = (position) => 100 + position * 10;
     $('[data-live-scrimmage]').style.transform = `translateX(${x(field.ball)}px)`;
     $('[data-live-ball]').style.transform = `translate(${x(field.ball)}px, 266.67px)`;
     $('[data-live-attack-arrow]').style.transform = `translate(${Math.max(155, Math.min(1045, x(field.ball)))}px, 355px) scaleX(${field.direction})`;
-    // SVG elements do not support HTML's hidden property.
-    $('[data-live-first-down]').style.display = field.first === null ? 'none' : '';
     if (field.first !== null) $('[data-live-first-down]').style.transform = `translateX(${x(field.first)}px)`;
     $('[data-live-spot]').textContent = field.spot;
     $('[data-live-target]').hidden = field.first === null;
@@ -479,13 +497,23 @@ export function initLivePage(doc, win, helpers) {
     });
     const anchorTop = anchor ? anchor.getBoundingClientRect().top : null;
     const previous = new Map(Array.from(drivesRoot.querySelectorAll('[data-drive]'), (el) => [el.dataset.drive, el]));
+    const changes = new Map(Array.from(drivesRoot.querySelectorAll('[data-possession-change]'), (el) => [el.dataset.possessionChange, el]));
+    const teamName = (team) => team === data.event.away ? data.event.awayName
+      : team === data.event.home ? data.event.homeName : team || 'Team not reported';
+    let position = 0;
     for (const empty of drivesRoot.querySelectorAll('.live-empty')) empty.remove();
     for (const [index, drive] of data.drives.entries()) {
       let details = previous.get(drive.id);
       if (!details) { details = node('details', 'live-drive'); details.dataset.drive = drive.id; details.open = index === 0;
         details.append(node('summary'), node('ol')); }
       previous.delete(drive.id);
-      details.firstChild.textContent = `${drive.team} · ${drive.result}${drive.yards != null ? ` · ${drive.yards} yards` : ''}${drive.duration ? ` · ${drive.duration}` : ''}`;
+      const heading = node('span', 'live-drive-heading');
+      // A drive's badge belongs to its disclosure control, so it is not a link.
+      const template = chip(drive.team); const badge = node('span', template.className);
+      badge.setAttribute('style', template.getAttribute('style') || ''); badge.append(...template.childNodes);
+      heading.append(badge, node('strong', '', `${teamName(drive.team)} drive`));
+      details.firstChild.replaceChildren(heading, node('span', 'live-drive-meta',
+        `${drive.result}${drive.yards != null ? ` · ${drive.yards} yards` : ''}${drive.duration ? ` · ${drive.duration}` : ''}`));
       const list = details.lastChild;
       const oldPlays = new Map(Array.from(list.children, (el) => [el.dataset.play, el]));
       for (const [playIndex, play] of drive.plays.entries()) {
@@ -497,9 +525,20 @@ export function initLivePage(doc, win, helpers) {
         li.lastChild.textContent = play.text; place(list, li, playIndex);
       }
       for (const li of oldPlays.values()) li.remove();
-      place(drivesRoot, details, index);
+      place(drivesRoot, details, position++);
+      // Drives are newest first: the older drive's result explains how the
+      // team in the drive immediately above this separator received the ball.
+      const older = data.drives[index + 1];
+      if (older?.team && drive.team && older.team !== drive.team) {
+        const change = changes.get(drive.id) || node('p', 'live-possession-change');
+        changes.delete(drive.id); change.dataset.possessionChange = drive.id;
+        change.replaceChildren(node('span', 'live-field-kicker', 'Possession change'),
+          node('span', '', `${teamName(older.team)} · ${older.result === 'Drive in progress' ? 'Drive ended' : older.result} → ${teamName(drive.team)} ball`));
+        place(drivesRoot, change, position++);
+      }
     }
     for (const el of previous.values()) el.remove();
+    for (const el of changes.values()) el.remove();
     if (anchor?.isConnected) { const shift = anchor.getBoundingClientRect().top - anchorTop; if (shift) win.scrollBy(0, shift); }
     if (!data.drives.length) drivesRoot.append(node('p', 'live-empty', 'Play-by-play has not been reported yet.'));
     if (sameGame) {
