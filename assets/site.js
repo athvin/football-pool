@@ -614,6 +614,8 @@ export function parseEspnScoreboard(payload) {
       date: event.date || competition.date || '',
       away: normalizeEspnTeam(away.team?.abbreviation),
       home: normalizeEspnTeam(home.team?.abbreviation),
+      awayName: away.team?.name || away.team?.displayName || normalizeEspnTeam(away.team?.abbreviation),
+      homeName: home.team?.name || home.team?.displayName || normalizeEspnTeam(home.team?.abbreviation),
       awayScore: String(away.score ?? '0'),
       homeScore: String(home.score ?? '0'),
       awayWinner: Boolean(away.winner),

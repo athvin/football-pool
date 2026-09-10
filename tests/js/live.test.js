@@ -136,11 +136,28 @@ describe('Live feed and scoring contracts', () => {
     for (const c of d.header.competitions[0].competitors) delete c.linescores;
     const parsed = parseLiveSummary(d, helpers);
     expect(parsed.drives).toEqual([]); expect(parsed.teamStats).toEqual([]); expect(parsed.playerStats).toEqual([]);
-    expect(liveFieldPosition(game(), normalizeEspnTeam)).toEqual({ ball: 80, first: 88, own: 'TB', other: 'ATL' });
-    expect(liveFieldPosition(game({ possession: 'ATL' }), normalizeEspnTeam).ball).toBe(20);
+    expect(liveFieldPosition(game(), normalizeEspnTeam)).toEqual({ ball: 80, first: 88,
+      direction: 1, toGoal: 20, goalToGo: false, spot: 'ATL 20', target: 'ATL 12' });
+    expect(liveFieldPosition(game({ possession: 'ATL' }), normalizeEspnTeam))
+      .toMatchObject({ ball: 80, first: 72, direction: -1, toGoal: 80, target: 'ATL 28' });
     expect(liveFieldPosition(game({ distance: 30 }), normalizeEspnTeam).first).toBe(100);
     for (const g of [game({ state: 'post' }), game({ down: '' }), game({ possession: '' }),
       game({ down: '1st & 10 at XXX 20' }), game({ down: '1st & 10 at ATL 60' })]) expect(liveFieldPosition(g, normalizeEspnTeam)).toBeNull();
+  });
+
+  test('places midfield, goal-to-go, and missing-distance markers without inventing a first down', () => {
+    expect(liveFieldPosition(game({ down: '1st & 10 at 50', distance: 10 }), normalizeEspnTeam))
+      .toMatchObject({ ball: 50, first: 60, spot: 'Midfield', target: 'ATL 40' });
+    expect(liveFieldPosition(game({ down: '1st & Goal at TB 3', possession: 'ATL', distance: 3 }), normalizeEspnTeam))
+      .toMatchObject({ ball: 3, first: 0, direction: -1, toGoal: 3, goalToGo: true, target: 'Goal line' });
+    expect(liveFieldPosition(game({ down: '2nd & Goal at ATL 1', distance: 0 }), normalizeEspnTeam))
+      .toMatchObject({ ball: 99, first: 100, toGoal: 1, goalToGo: true });
+    for (const distance of [0, undefined, NaN, Infinity, -2]) {
+      expect(liveFieldPosition(game({ distance }), normalizeEspnTeam)).toMatchObject({ first: null, target: '' });
+    }
+    for (const down of [undefined, 'Kickoff', '1st & 10 at 20', '1st & 10 at TB 100', '1st & 10 at TB 3.5']) {
+      expect(liveFieldPosition(game({ down }), normalizeEspnTeam)).toBeNull();
+    }
   });
 
   test('chooses relevant live games and reduces requests as football ends', () => {
@@ -172,11 +189,16 @@ function markup(data) {
       <p data-live-situation-text></p><span data-live-venue></span><button data-live-copy>Copy</button><p data-live-share-status></p>
       <div role="tablist">${['overview', 'plays', 'stats'].map((v) => `<button data-live-view="${v}" aria-controls="panel-${v}" aria-selected="${v === 'overview'}" tabindex="${v === 'overview' ? 0 : -1}">${v}</button>`).join('')}</div>
       ${['overview', 'plays', 'stats'].map((v) => `<section id="panel-${v}" ${v === 'overview' ? '' : 'hidden'}></section>`).join('')}
-      <p data-live-detail-status></p><p data-live-field-label></p><div data-live-field><span data-live-own-end></span><span data-live-other-end></span><i data-live-ball></i><i data-live-first-down></i></div>
+      <p data-live-detail-status></p><p data-live-field-label></p>
+      <div data-live-field-head><span data-live-possession-chip></span><strong data-live-possession-name></strong>
+        <div data-live-direction><span data-live-direction-arrow></span><span data-live-direction-text></span></div></div>
+      <div data-live-field><svg><g data-live-away-end><text></text></g><g data-live-home-end><text></text></g>
+        <g data-live-ball></g><g data-live-first-down></g><g data-live-scrimmage></g><g data-live-attack-arrow></g></svg></div>
+      <div data-live-field-legend><span data-live-spot></span><span data-live-target><span data-live-target-text></span></span><span data-live-goal-distance></span></div>
       <div data-live-stakes></div><div data-live-quarters></div><ol data-live-scoring></ol>
       <div data-live-drives></div><p data-live-play-notice></p><div data-live-team-stats></div><div data-live-player-stats></div>
       <ol data-live-standings><li>Static standings</li></ol><p data-live-board-status></p>
-      <span data-live-chip="TB"><a class="team-chip" href="/team/TB/">TB</a></span>
+      <span data-live-chip="TB"><a class="team-chip" href="/team/TB/" style="--team-bg:#d50a0a;--team-fg:#ffffff;--team-edge:#ff7900">TB</a></span>
       <script id="live-data" type="application/json">${JSON.stringify(data)}</script>
     </div>`;
 }
@@ -286,6 +308,48 @@ describe('Live page controller', () => {
     expect($('[data-entrant="alex"]').classList.contains('is-me')).toBe(true);
     $('[data-tz-select]').value = 'UTC'; $('[data-tz-select]').dispatchEvent(new Event('change'));
     expect($('[data-live-board-status]').textContent).toContain('UTC');
+  });
+
+  test('keeps end zones fixed while possession, scrimmage, and first-down markers follow the drive', async () => {
+    const competition = board.events[0].competitions[0];
+    const home = competition.competitors.find((c) => c.homeAway === 'home');
+    competition.competitors.find((c) => c.homeAway === 'away').team.name = 'Buccaneers';
+    home.team.name = 'Falcons';
+    await start();
+    const awayEnd = $('[data-live-away-end]'); const homeEnd = $('[data-live-home-end]');
+    expect(awayEnd.textContent).toBe('BUCCANEERS'); expect(homeEnd.textContent).toBe('FALCONS');
+    expect(awayEnd.style.getPropertyValue('--team-bg')).toBe('#d50a0a');
+    expect($('[data-live-possession-name]').textContent).toBe('Buccaneers ball');
+    expect($('[data-live-direction-text]').textContent).toBe('Driving right');
+    expect($('[data-live-scrimmage]').style.transform).toBe('translateX(900px)');
+    expect($('[data-live-ball]').style.transform).toBe('translate(900px, 266.67px)');
+    expect($('[data-live-first-down]').style.transform).toBe('translateX(980px)');
+    expect($('[data-live-field]').getAttribute('aria-label')).toContain('First down: ATL 12');
+    competition.situation.possession = home.id;
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL);
+    expect(awayEnd.textContent).toBe('BUCCANEERS'); expect(homeEnd.textContent).toBe('FALCONS');
+    expect($('[data-live-possession-name]').textContent).toBe('Falcons ball');
+    expect($('[data-live-possession-chip]').textContent).toBe('ATL');
+    expect($('[data-live-direction-arrow]').textContent).toBe('←');
+    expect($('[data-live-direction-text]').textContent).toBe('Driving left');
+    expect($('[data-live-scrimmage]').style.transform).toBe('translateX(900px)');
+    expect($('[data-live-first-down]').style.transform).toBe('translateX(820px)');
+    expect($('[data-live-goal-distance]').textContent).toBe('80 yards to goal');
+    competition.situation.downDistanceText = '1st & Goal at TB 1'; competition.situation.distance = 1;
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL);
+    expect($('[data-live-scrimmage]').style.transform).toBe('translateX(110px)');
+    expect($('[data-live-first-down]').style.transform).toBe('translateX(100px)');
+    expect($('[data-live-target-text]').textContent).toBe('Goal line');
+    expect($('[data-live-goal-distance]').textContent).toBe('1 yard to goal');
+    competition.situation.downDistanceText = '1st & 10 at TB 1'; delete competition.situation.distance;
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL);
+    expect($('[data-live-first-down]').style.display).toBe('none');
+    expect($('[data-live-target]').hidden).toBe(true);
+    delete competition.situation.possession;
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL);
+    expect($('[data-live-field]').hidden).toBe(true);
+    expect($('[data-live-field-head]').hidden).toBe(true);
+    expect($('[data-live-field-legend]').hidden).toBe(true);
   });
 
   test('polls without duplicate requests, preserves expanded drives, and replaces corrected plays', async () => {

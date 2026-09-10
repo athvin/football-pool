@@ -1,0 +1,78 @@
+<div class="live-field-wrap">
+  <div class="live-field-head" data-live-field-head hidden>
+    <div class="live-possession">
+      <span data-live-possession-chip></span>
+      <div><span class="live-field-kicker">Possession</span><strong data-live-possession-name></strong></div>
+    </div>
+    <div class="live-drive-direction" data-live-direction>
+      <span data-live-direction-text></span><span class="live-direction-arrow" data-live-direction-arrow aria-hidden="true"></span>
+    </div>
+  </div>
+  <p class="live-field-label" data-live-field-label>Field position appears when the game is live.</p>
+  <div class="live-field" data-live-field role="img" aria-label="Field position unavailable" hidden>
+    {# 120 × 53⅓ yards including 10-yard end zones. Hash marks are 70′9″
+       from each sideline: https://operations.nfl.com/rules-officiating/2026-nfl-rulebook #}
+    <svg viewBox="0 0 1200 533.33" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="live-turf" x2="0" y2="1">
+          <stop stop-color="#214e35"/><stop offset=".5" stop-color="#2a6040"/><stop offset="1" stop-color="#193e2a"/>
+        </linearGradient>
+        <linearGradient id="live-leather" x2="0" y2="1">
+          <stop stop-color="#ce8653"/><stop offset=".5" stop-color="#99512e"/><stop offset="1" stop-color="#5f2d1b"/>
+        </linearGradient>
+      </defs>
+      <rect width="1200" height="533.33" fill="url(#live-turf)"/>
+      {% for yard in range(0, 100, 10) %}
+      <rect x="{{ 100 + yard * 10 }}" width="50" height="533.33" fill="#ffffff" opacity=".035"/>
+      {% endfor %}
+      <g class="live-endzone" data-live-away-end>
+        <rect width="100" height="533.33"/>
+        <path d="M8 0V533.33"/>
+        <text transform="translate(56 266.67) rotate(-90)" text-anchor="middle" dominant-baseline="middle"></text>
+      </g>
+      <g class="live-endzone" data-live-home-end>
+        <rect x="1100" width="100" height="533.33"/>
+        <path d="M1192 0V533.33"/>
+        <text transform="translate(1144 266.67) rotate(90)" text-anchor="middle" dominant-baseline="middle"></text>
+      </g>
+      <g class="live-yard-lines">
+        {% for yard in range(0, 101, 5) %}
+        <path d="M{{ 100 + yard * 10 }} 0V533.33"{% if yard % 10 == 0 %} class="is-major"{% endif %}/>
+        {% endfor %}
+      </g>
+      <g class="live-yard-hashes">
+        {% for yard in range(1, 100) if yard % 5 != 0 %}
+        <path d="M{{ 100 + yard * 10 }} 0v12 m0 217.16v6.67 m0 61.67v6.67 M{{ 100 + yard * 10 }} 521.33v12"/>
+        {% endfor %}
+      </g>
+      <g class="live-yard-numbers" text-anchor="middle">
+        {% for yard in range(10, 100, 10) %}
+        {% set x = 100 + yard * 10 %}{% set number = yard if yard <= 50 else 100 - yard %}
+        <text transform="translate({{ x }} 110) rotate(180)">{{ number }}</text>
+        <text x="{{ x }}" y="423.33">{{ number }}</text>
+        {% if yard != 50 %}
+        <path d="M-7 -5L0 5L7 -5Z" transform="translate({{ x + (-30 if yard < 50 else 30) }} 100) rotate({{ 90 if yard < 50 else -90 }})"/>
+        <path d="M-7 -5L0 5L7 -5Z" transform="translate({{ x + (-30 if yard < 50 else 30) }} 413.33) rotate({{ 90 if yard < 50 else -90 }})"/>
+        {% endif %}
+        {% endfor %}
+      </g>
+      <path class="live-field-boundary" d="M2 2H1198V531.33H2Z"/>
+      <g class="live-field-marker live-first-down" data-live-first-down><path d="M0 0V533.33"/></g>
+      <g class="live-field-marker live-scrimmage" data-live-scrimmage><path d="M0 0V533.33"/></g>
+      <g class="live-attack-arrow" data-live-attack-arrow><path d="M-35 0H35M17 -17L35 0L17 17"/></g>
+      <g class="live-ball" data-live-ball>
+        <ellipse rx="43" ry="32" fill="#071e15" opacity=".3"/>
+        <g transform="rotate(-25)">
+          <path d="M-36 0Q0 -38 36 0Q0 38 -36 0Z" fill="url(#live-leather)" stroke="#f4dcc0" stroke-width="3"/>
+          <path d="M-24 -9Q-20 0 -24 9M24 -9Q20 0 24 9" fill="none" stroke="#f4dcc0" stroke-width="4"/>
+          <path d="M-13 0H13M-9 -5V5M0 -5V5M9 -5V5" fill="none" stroke="#fff4e4" stroke-width="3" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+  <div class="live-field-legend" data-live-field-legend hidden>
+    <span><i class="live-line-key is-scrimmage" aria-hidden="true"></i>Ball: <strong data-live-spot></strong></span>
+    <span data-live-target><i class="live-line-key is-first-down" aria-hidden="true"></i><span data-live-target-text></span></span>
+    <span class="live-goal-distance" data-live-goal-distance></span>
+  </div>
+</div>

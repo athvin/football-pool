@@ -38,12 +38,7 @@
       </div>
       <p class="live-detail-status" data-live-detail-status role="status">Select a game for plays and stats.</p>
       <section id="live-panel-overview" role="tabpanel" aria-labelledby="live-tab-overview" tabindex="0">
-        <div class="live-field-wrap"><p class="live-field-label" data-live-field-label>Field position appears when the game is live.</p>
-          <div class="live-field" data-live-field role="img" aria-label="Field position unavailable" hidden>
-            <span class="live-endzone" data-live-own-end></span><span class="live-endzone live-endzone-far" data-live-other-end></span>
-            <span class="live-first-down" data-live-first-down></span><span class="live-ball" data-live-ball>◆</span>
-          </div>
-        </div>
+        {% include '_live_field.html' %}
         <section class="live-pool-stakes"><h3>In this pool</h3><div data-live-stakes>Choose a matchup to see the stakes.</div></section>
         <section class="live-scoring-summary"><h3>Scoring plays</h3><ol data-live-scoring><li class="live-empty">Scoring plays will appear here.</li></ol></section>
       </section>
