@@ -549,6 +549,10 @@ a, button, select, summary, label { touch-action: manipulation; }
   animation-delay: calc(var(--i, 0) * 38ms);
 }
 
+/* The whole row follows its own link on click — initRowTap — so it carries
+   the cursor the links inside it already have. */
+.row { cursor: pointer; }
+
 /* The accent rail wipes in from the left on hover. */
 .row::before {
   content: '';
@@ -2406,6 +2410,75 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
   margin-top: 0.5rem;
 }
 
+/* The bulk moves under the names: whole-field selections and the way out.
+   Squarer than the name chips on purpose — these are verbs, not people. */
+.pick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.pick-action {
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  color: var(--chalk-dim);
+  cursor: pointer;
+  transition: color 0.16s, border-color 0.16s;
+}
+
+.pick-action:hover, .pick-action:focus-visible { color: var(--chalk); border-color: var(--edge); }
+
+.compare-status {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--chalk-dim);
+}
+
+/* The race read-out: the picked names in the order they actually stand,
+   leader's total first and everyone else measured back from it. The dots
+   repeat the line colours, so the strip reads straight onto the chart. */
+.compare-race {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.25rem;
+}
+
+.race-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  color: var(--chalk-dim);
+}
+
+.race-chip:first-child { border-color: var(--edge); color: var(--chalk); }
+
+.race-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.race-lead { font-weight: 700; color: var(--live); }
+.race-gap { font-weight: 600; color: var(--heat); }
+
 /* --- "this is me" ------------------------------------------------------ */
 /* Pick your name once and it follows you around the site. Six near-identical
    rows on a phone is exactly the situation where finding yourself is the whole
@@ -3520,14 +3593,19 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
     scroll-snap-align: center;
   }
 
-  /* Viewer preferences take one predictable row beneath their timestamps,
-     then scroll away with the opening screen instead of becoming 100px of
-     permanent chrome. */
-  .viewer-bar { position: relative; top: auto; }
+  /* The viewer bar stays pinned on a phone — who you are and how fresh the
+     numbers are qualify every figure on the page, and on the device where
+     this site is mostly read they kept scrolling away. Pinned chrome has to
+     earn its height, so the bar condenses: the two selects share one row
+     with their labels folded away (still read to assistive tech — the labels
+     are hidden accessibly, and the chosen values name themselves), and the
+     freshness strip keeps only the stamp that is a caveat. "Site built" is
+     reference and still opens the page, it just does not ride along. */
   .viewer-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: stretch;
-    gap: 0.55rem;
+    gap: 0.2rem 0.55rem;
+    padding-block: 0.35rem;
   }
   .freshness {
     grid-column: 1 / -1;
@@ -3535,19 +3613,27 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
     gap: 0.25rem 0.9rem;
     margin-inline-end: 0;
   }
+  .fresh-item { font-size: 0.62rem; }
+  .freshness .fresh-item:nth-child(2) { display: none; }
   .viewer-inner .me-picker,
   .viewer-inner .tz {
     min-width: 0;
     flex-direction: column;
     align-items: stretch;
-    gap: 0.1rem;
+    gap: 0;
+  }
+  .viewer-inner .viewer-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
   .viewer-inner select { width: 100%; }
 }
 
-/* A viewer bar over 100px tall is useful setup and poor permanent chrome.
-   Let it leave with the rest of the opening screen on a phone; the primary
-   section navigation remains available above it. */
+/* Small-phone fitting for the controls that carry intrinsic widths. */
 @media (max-width: 640px) {
   /* Native selects keep their intrinsic text width unless explicitly allowed
      to shrink. The head-to-head labels are long enough to push a 320px page
@@ -3631,6 +3717,7 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
   .scenario-game button,
   .share-scenario,
   .pick,
+  .pick-action,
   .live-lab-weeks button,
   .live-lab summary,
   .back {

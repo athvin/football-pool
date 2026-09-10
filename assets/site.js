@@ -65,12 +65,30 @@ export function scenarioLocation(pathname = '', search = '', hash = '') {
  *
  * Pick order rather than a fixed per-entrant colour, so the first person you
  * choose is always the first colour and nobody's line changes hue as the
- * standings move. Six is the cap: beyond that the hues stop being reliably
- * distinguishable, which is the whole reason to have distinct ones.
+ * standings move. The first six are tuned by hand; there is no cap on picks,
+ * so past them the colours are generated — see pickColor.
  */
 export const PICK_COLORS = [
   '#c6ff3d', '#4dd8e6', '#ff9f1c', '#b48ce8', '#ff6b35', '#5ee6a8',
 ];
+
+/**
+ * The colour for the nth pick, for any n.
+ *
+ * The hand-tuned palette runs out at six, and the old answer was to drop the
+ * oldest pick on the floor — which read as a broken button, especially on a
+ * phone. Now the wheel keeps going: each further pick steps the hue by the
+ * golden angle, which is the standard way to keep consecutive hues far apart
+ * without keeping a list. Fixed saturation and lightness keep every generated
+ * colour readable on both themes. Past a dozen lines some pairs will begin to
+ * rhyme — at that point the endpoint labels and the race read-out carry the
+ * identification, and the viewer chose that trade by picking that many.
+ */
+export function pickColor(index) {
+  if (index < PICK_COLORS.length) return PICK_COLORS[index];
+  const hue = (210 + (index - PICK_COLORS.length) * 137.508) % 360;
+  return `hsl(${hue.toFixed(1)}, 82%, 64%)`;
+}
 
 /**
  * Flip between themes.
@@ -1832,30 +1850,118 @@ function initMe(doc, storage, meKey = ME_KEY, requested = '') {
 }
 
 /**
+ * The standings rows, tappable end to end.
+ *
+ * The name is the link, but the whole row lifts on hover and reads as one
+ * control — and under a thumb the name alone is a small target, so a tap
+ * anywhere on the row that does not already mean something else follows the
+ * row's own link. Same convention as the schedule's game rows.
+ */
+function initRowTap(doc) {
+  for (const board of doc.querySelectorAll('.board')) {
+    board.addEventListener('click', (event) => {
+      const row = event.target.closest?.('.row');
+      if (!row || !board.contains(row)) return;
+      // A chip, a name — anything that already means something else.
+      if (event.target.closest('a, button, select, summary')) return;
+      // And never while the reader is selecting a score to copy it.
+      if (doc.defaultView?.getSelection?.()?.toString()) return;
+      row.querySelector('.row-link')?.click();
+    });
+  }
+}
+
+/**
+ * The names a shared comparison URL asks to light up.
+ *
+ * `?compare=brian+paul` — the same slugs the picker matches on, separated by
+ * spaces (which is what URLSearchParams makes of `+`), though commas work too
+ * for a hand-typed link. Unknown names are dropped later, against the roster.
+ */
+export function compareLaunchParams(search = '') {
+  let params;
+  try {
+    params = new URLSearchParams(String(search));
+  } catch {
+    return [];
+  }
+  return (params.get('compare') || '').split(/[\s,]+/).filter(Boolean);
+}
+
+/**
+ * The picked entrants as a race: leader first, everyone else measured back.
+ *
+ * `totals` maps slug → current points. Anyone without a real number cannot be
+ * placed in a race, so one missing total empties the whole read-out rather
+ * than inventing a zero and calling somebody last.
+ */
+export function raceOrder(picked, totals) {
+  const rows = picked.map((slug) => ({ slug, total: Number(totals.get(slug)) }));
+  if (rows.some((r) => !Number.isFinite(r.total))) return [];
+  rows.sort((a, b) => b.total - a.total);
+  return rows.map((r) => ({ ...r, behind: rows[0].total - r.total }));
+}
+
+/**
  * The comparison chart: pick who you want to read against.
  *
  * Every line is already in the document; picking only toggles classes and sets
  * a colour, so with scripting off the chart still renders the whole field.
  */
-function initCompare(doc, storage, compareKey = COMPARE_KEY) {
+function initCompare(doc, storage, compareKey = COMPARE_KEY, win = undefined) {
   const charts = Array.from(doc.querySelectorAll('[data-compare]'));
   const buttons = Array.from(doc.querySelectorAll('[data-pick]'));
   if (!charts.length || !buttons.length) return;
 
   const known = new Set(buttons.map((b) => b.dataset.pick));
+  // Standings order, because that is the order the build writes the buttons.
+  const order = buttons.map((b) => b.dataset.pick);
+  const names = new Map(buttons.map((b) => [b.dataset.pick, b.textContent.trim()]));
+  const totals = new Map(buttons.map((b) => [b.dataset.pick, b.dataset.total]));
   const stored = (storage.get(compareKey) || '').split(' ').filter(Boolean);
   const me = doc.documentElement.dataset.me;
 
-  // Nothing stored yet, but they have told us who they are: start on them.
-  // Opening the page already showing your own line is the point of the chart.
-  let picked = (stored.length ? stored : (me ? [me] : [])).filter((s) => known.has(s));
+  // A shared link names its own line-up and wins outright; otherwise whatever
+  // this device had lit last time; otherwise, nothing stored yet but they have
+  // told us who they are: start on them. Opening the page already showing your
+  // own line is the point of the chart.
+  const shared = compareLaunchParams(win?.location?.search || '');
+  let picked = (shared.length ? shared : stored.length ? stored : (me ? [me] : []))
+    .filter((s) => known.has(s));
 
   const empty = doc.querySelector('[data-compare-empty]');
+  const race = doc.querySelector('[data-compare-race]');
+
+  // The race read-out: the picked names re-ordered by where they actually
+  // stand, each with its gap back to the best of the picked. The chart shows
+  // the shape; this line says the number the shape is about.
+  const paintRace = (colors) => {
+    if (!race) return;
+    race.textContent = '';
+    const standings = raceOrder(picked, totals);
+    race.hidden = standings.length < 2;
+    if (race.hidden) return;
+    standings.forEach((r, i) => {
+      const chip = doc.createElement('span');
+      chip.className = 'race-chip';
+      const dot = doc.createElement('i');
+      dot.className = 'race-dot';
+      dot.style.background = colors.get(r.slug);
+      const name = doc.createElement('span');
+      name.className = 'race-name';
+      name.textContent = names.get(r.slug);
+      const figure = doc.createElement('b');
+      figure.className = i === 0 ? 'race-lead' : 'race-gap';
+      figure.textContent = i === 0
+        ? `${r.total.toFixed(2)} pts`
+        : (r.behind ? `−${r.behind.toFixed(2)}` : 'level');
+      chip.append(dot, name, figure);
+      race.append(chip);
+    });
+  };
 
   const paint = () => {
-    const colors = new Map(
-      picked.map((slug, i) => [slug, PICK_COLORS[i % PICK_COLORS.length]]),
-    );
+    const colors = new Map(picked.map((slug, i) => [slug, pickColor(i)]));
 
     for (const button of buttons) {
       const color = colors.get(button.dataset.pick);
@@ -1901,6 +2007,7 @@ function initCompare(doc, storage, compareKey = COMPARE_KEY) {
     }
 
     if (empty) empty.hidden = picked.length > 0;
+    paintRace(colors);
     storage.set(compareKey, picked.join(' '));
   };
 
@@ -1909,12 +2016,62 @@ function initCompare(doc, storage, compareKey = COMPARE_KEY) {
       const slug = button.dataset.pick;
       picked = picked.includes(slug)
         ? picked.filter((s) => s !== slug)
-        // Past the palette, the oldest pick drops out rather than two lines
-        // sharing a colour — which would defeat the entire chart.
-        : [...picked, slug].slice(-PICK_COLORS.length);
+        : [...picked, slug];
       paint();
     });
   }
+
+  // The bulk moves. Each sets the line-up outright rather than adding to it:
+  // "Top 5" means the top five, not the top five plus whoever was already lit.
+  const raceButton = doc.querySelector('[data-pick-group="race"]');
+  const myRace = () => {
+    const who = doc.documentElement.dataset.me || '';
+    const at = order.indexOf(who);
+    return at === -1 ? null : order.slice(Math.max(0, at - 1), at + 2);
+  };
+  // "My race" only makes sense once the page knows who you are, and the
+  // identity picker is live on the same page — so the button follows it.
+  const placeRaceButton = () => {
+    if (raceButton) raceButton.hidden = !myRace();
+  };
+  placeRaceButton();
+  doc.querySelector('[data-me-select]')?.addEventListener('change', placeRaceButton);
+
+  for (const action of doc.querySelectorAll('[data-pick-group]')) {
+    action.addEventListener('click', () => {
+      const group = action.dataset.pickGroup;
+      if (group === 'none') picked = [];
+      else if (group === 'all') picked = [...order];
+      else if (group === 'top') picked = order.slice(0, 5);
+      else if (group === 'race') picked = myRace() ?? picked;
+      paint();
+    });
+  }
+
+  // Share the exact line-up: the picks ride in the URL, so opening the link
+  // recreates this comparison on any device. Same convention as Gameday.
+  doc.querySelector('[data-compare-share]')?.addEventListener('click', async () => {
+    const status = doc.querySelector('[data-compare-status]');
+    const say = (text) => { if (status) status.textContent = text; };
+    if (!picked.length) {
+      say('Nothing to share yet — pick a name or two first.');
+      return;
+    }
+    const loc = win?.location;
+    const params = new URLSearchParams(loc?.search || '');
+    params.set('compare', picked.join(' '));
+    const target = `${loc?.pathname || ''}?${params.toString()}${loc?.hash || ''}`;
+    win?.history?.replaceState?.(null, '', target);
+    try {
+      const copy = win?.navigator?.clipboard?.writeText;
+      if (typeof copy !== 'function') throw new Error('clipboard unavailable');
+      await copy.call(win.navigator.clipboard, `${loc?.origin || ''}${target}`);
+      say('Link copied — paste it into the group chat. Opening it lights up this exact race.');
+    } catch {
+      say('This race is in the address bar — copy the URL to share it.');
+    }
+  });
+
   paint();
 }
 
@@ -2390,10 +2547,26 @@ function initBracket(doc) {
 
   // Delegated, so thirteen games cost two listeners rather than fifty-two.
   // Pointing anywhere that is not a team — a slot, a label, the gap — clears,
-  // which is what makes the trace feel attached to the pointer.
+  // which is what makes the trace feel attached to the pointer. Mouse only:
+  // a tap's synthetic hover would fight the tap handling below.
   const retrace = (event) => trace(teamOf(event.target));
-  bracket.addEventListener('mouseover', retrace);
-  bracket.addEventListener('mouseleave', () => trace(null));
+  bracket.addEventListener('pointerover', (event) => {
+    if (event.pointerType !== 'touch') retrace(event);
+  });
+  bracket.addEventListener('pointerleave', (event) => {
+    if (event.pointerType !== 'touch') trace(null);
+  });
+  // A finger cannot hover, so on touch the tap does what the hover does: tap
+  // a team to trace its path, tap it again — or anywhere else — to let go.
+  let touched = false;
+  bracket.addEventListener('pointerdown', (event) => {
+    touched = event.pointerType === 'touch';
+  });
+  bracket.addEventListener('click', (event) => {
+    if (!touched) return;
+    const side = event.target?.closest?.('.tie-side[data-team]');
+    trace(side && !side.classList.contains('is-path') ? side.dataset.team : null);
+  });
   bracket.addEventListener('focusin', retrace);
   bracket.addEventListener('focusout', (event) => {
     if (!teamOf(event.relatedTarget)) trace(null);
@@ -2448,8 +2621,15 @@ function initGlossary(doc, win) {
     const button = term.querySelector('.info');
     if (!button) continue;
 
-    term.addEventListener('pointerenter', () => show(term));
-    term.addEventListener('pointerleave', () => {
+    // Hover is not a finger's idea. A tap fires pointerenter and then click
+    // on the same gesture, and treating that enter as a hover meant the click
+    // that followed toggled the popover straight back off — the button "did
+    // nothing" on every phone. pointerType is what separates the two.
+    term.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'touch') show(term);
+    });
+    term.addEventListener('pointerleave', (event) => {
+      if (event.pointerType === 'touch') return;
       // A tap leaves the pointer nowhere, and closing on that would undo the
       // tap that opened it. Only a mouse leaving actually means "done here".
       if (!term.contains(doc.activeElement)) close();
@@ -2472,6 +2652,12 @@ function initGlossary(doc, win) {
 
   doc.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') close();
+  });
+  // A finger has no blur to close on — iOS does not focus a tapped button —
+  // so tapping anywhere that is not a term dismisses, the same gesture that
+  // dismisses everything else on a phone.
+  doc.addEventListener('click', (event) => {
+    if (open && !event.target?.closest?.('.term')) close();
   });
   // Anything that moves the page moves the anchor out from under the popover.
   win.addEventListener('scroll', close, { passive: true });
@@ -2731,7 +2917,8 @@ export function init(doc = document, win = window) {
   initScenario(doc, win, launch.preset);
   initLiveGames(doc, win);
   initLiveHarness(doc, win);
-  initCompare(doc, storage, scopedKey(COMPARE_KEY, scope));
+  initCompare(doc, storage, scopedKey(COMPARE_KEY, scope), win);
+  initRowTap(doc);
   initSort(doc, win);
   initOdometer(doc, win);
   initHeatmap(doc);

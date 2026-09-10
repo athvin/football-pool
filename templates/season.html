@@ -23,22 +23,40 @@
 
 <h2 class="section-title">Compare</h2>
 <p class="page-sub">
-  Pick anyone to bring their line forward — as many as six at once, each in its
+  Pick anyone to bring their line forward — as many as you like, each in its
   own colour. Set "who are you?" at the top of the page and you will open
-  here on your own line every time. Your picks are remembered on this device.
+  here on your own line every time. Your picks are remembered on this device,
+  and Share puts them in a link the group chat can open.
 </p>
 
 <div class="compare-picks" role="group" aria-label="Entrants to compare">
   {% for r in compare_points %}
-  <button class="pick" type="button" data-pick="{{ r[1] }}" aria-pressed="false">
+  <button class="pick" type="button" data-pick="{{ r[1] }}"
+          data-total="{{ '%.2f'|format(r[2][-1]) }}" aria-pressed="false">
     {{ r[0] }}
   </button>
   {% endfor %}
 </div>
 
+{# The bulk moves, and the way out. "My race" is hidden until the page knows
+   who you are — the client unhides it, because only the client knows. #}
+<div class="pick-actions" role="group" aria-label="Quick comparisons">
+  <button class="pick-action" type="button" data-pick-group="top">Top 5</button>
+  <button class="pick-action" type="button" data-pick-group="race" hidden
+          title="You, whoever you are chasing, and whoever is chasing you">My race</button>
+  <button class="pick-action" type="button" data-pick-group="all">Everyone</button>
+  <button class="pick-action" type="button" data-pick-group="none">Clear</button>
+  <button class="pick-action" type="button" data-compare-share>Share</button>
+  <span class="compare-status" data-compare-status role="status" aria-live="polite"></span>
+</div>
+
 <p class="compare-empty" data-compare-empty>
   Nobody picked yet — every line is drawn faintly below. Choose a name to light it up.
 </p>
+
+{# Filled in by the client from the picks: leader first, everyone else
+   measured back. Hidden until there are at least two people to race. #}
+<div class="compare-race" data-compare-race hidden aria-label="The picked race, leader first"></div>
 
 <h3 class="section-title">Points</h3>
 <div class="chart-card compare-card" data-compare>

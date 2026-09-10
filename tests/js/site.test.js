@@ -27,6 +27,7 @@ import {
   TZ_KEY,
   cellValue,
   centeredScrollLeft,
+  compareLaunchParams,
   compareValues,
   countUpValue,
   drawField,
@@ -51,7 +52,9 @@ import {
   outsideHelpTeams,
   parseEspnScoreboard,
   parseScenarioHash,
+  pickColor,
   preseasonScoreboardUrl,
+  raceOrder,
   relativeAge,
   rowTops,
   safeStorage,
@@ -1306,10 +1309,51 @@ describe('identity is scoped per pool', () => {
 // ---------------------------------------------------------------------------
 // Comparison chart
 // ---------------------------------------------------------------------------
-function compareMarkup(slugs = ['brian-moore', 'paul-moore', 'brenda-moore']) {
+describe('pickColor', () => {
+  test('the hand-tuned palette comes first, verbatim', () => {
+    PICK_COLORS.forEach((color, i) => expect(pickColor(i)).toBe(color));
+  });
+
+  test('past the palette every colour is still distinct', () => {
+    const colors = Array.from({ length: 24 }, (_, i) => pickColor(i));
+    expect(new Set(colors).size).toBe(24);
+    // Generated, not looped back over the palette.
+    expect(pickColor(PICK_COLORS.length)).toMatch(/^hsl\(/);
+  });
+});
+
+describe('compareLaunchParams', () => {
+  test('reads the slugs out of a shared link, spaces or commas', () => {
+    expect(compareLaunchParams('?compare=brian+paul')).toEqual(['brian', 'paul']);
+    expect(compareLaunchParams('?compare=brian,paul')).toEqual(['brian', 'paul']);
+  });
+
+  test('no parameter, or garbage, is simply no request', () => {
+    expect(compareLaunchParams('')).toEqual([]);
+    expect(compareLaunchParams('?me=brian')).toEqual([]);
+    expect(compareLaunchParams(null)).toEqual([]);
+  });
+});
+
+describe('raceOrder', () => {
+  test('leader first, everyone else measured back', () => {
+    const out = raceOrder(['a', 'b', 'c'], new Map([['a', '10'], ['b', '30'], ['c', '22.5']]));
+    expect(out.map((r) => r.slug)).toEqual(['b', 'c', 'a']);
+    expect(out.map((r) => r.behind)).toEqual([0, 7.5, 20]);
+  });
+
+  test('one missing total empties the race rather than inventing a zero', () => {
+    expect(raceOrder(['a', 'b'], new Map([['a', '10']]))).toEqual([]);
+  });
+});
+
+function compareMarkup(slugs = ['brian-moore', 'paul-moore', 'brenda-moore'], totals = {}) {
   document.documentElement.removeAttribute('data-me');
   const picks = slugs
-    .map((s) => `<button class="pick" data-pick="${s}" aria-pressed="false">${s}</button>`)
+    .map((s) => {
+      const total = totals[s] === undefined ? '' : ` data-total="${totals[s]}"`;
+      return `<button class="pick" data-pick="${s}"${total} aria-pressed="false">${s}</button>`;
+    })
     .join('');
   const lines = slugs
     .map(
@@ -1321,7 +1365,16 @@ function compareMarkup(slugs = ['brian-moore', 'paul-moore', 'brenda-moore']) {
     .join('');
   document.body.innerHTML = `
     <div class="compare-picks">${picks}</div>
+    <div class="pick-actions">
+      <button data-pick-group="top">Top 5</button>
+      <button data-pick-group="race" hidden>My race</button>
+      <button data-pick-group="all">Everyone</button>
+      <button data-pick-group="none">Clear</button>
+      <button data-compare-share>Share</button>
+      <span data-compare-status></span>
+    </div>
     <p data-compare-empty>nothing picked</p>
+    <div class="compare-race" data-compare-race hidden></div>
     <div data-compare><svg>${lines}</svg></div>`;
 }
 
@@ -1376,18 +1429,120 @@ describe('comparison chart', () => {
     expect(line.style.getPropertyValue('--pick-color')).toBe('');
   });
 
-  test('past the palette the oldest pick drops rather than reusing a colour', () => {
-    const many = Array.from({ length: PICK_COLORS.length + 1 }, (_, i) => `p${i}`);
+  test('there is no cap: every pick stays lit, each in its own colour', () => {
+    const many = Array.from({ length: PICK_COLORS.length + 6 }, (_, i) => `p${i}`);
     compareMarkup(many);
     init(document, fakeWindow());
     for (const slug of many) document.querySelector(`[data-pick="${slug}"]`).click();
 
     const picked = pickedSlugs();
-    expect(picked).toHaveLength(PICK_COLORS.length);
-    expect(picked).not.toContain('p0'); // the first one picked made way
+    expect(picked).toHaveLength(many.length); // nobody made way
     expect(new Set(picked.map((s) =>
       document.querySelector(`.cmp-line[data-entrant="${s}"]`).style.getPropertyValue('--pick-color'),
-    )).size).toBe(PICK_COLORS.length);
+    )).size).toBe(many.length);
+  });
+
+  test('quick actions: Everyone, Top 5 and Clear set the line-up outright', () => {
+    const many = Array.from({ length: 8 }, (_, i) => `p${i}`);
+    compareMarkup(many);
+    init(document, fakeWindow());
+
+    document.querySelector('[data-pick-group="all"]').click();
+    expect(pickedSlugs()).toHaveLength(8);
+
+    document.querySelector('[data-pick-group="top"]').click();
+    expect(pickedSlugs()).toEqual(['p0', 'p1', 'p2', 'p3', 'p4']);
+
+    document.querySelector('[data-pick-group="none"]').click();
+    expect(pickedSlugs()).toEqual([]);
+    expect(document.querySelector('[data-compare-empty]').hidden).toBe(false);
+  });
+
+  test('My race stays hidden until an identity is set, then picks the neighbours', () => {
+    const many = ['p0', 'p1', 'p2', 'p3'];
+    compareMarkup(many);
+    init(document, fakeWindow({ store: new Map([[ME_KEY, 'p2']]) }));
+
+    const race = document.querySelector('[data-pick-group="race"]');
+    expect(race.hidden).toBe(false);
+    race.click();
+    // Whoever p2 is chasing, p2, and whoever is chasing p2.
+    expect(pickedSlugs().sort()).toEqual(['p1', 'p2', 'p3']);
+  });
+
+  test('My race is hidden for a viewer who has not said who they are', () => {
+    compareMarkup();
+    init(document, fakeWindow());
+    expect(document.querySelector('[data-pick-group="race"]').hidden).toBe(true);
+  });
+
+  test('the race read-out orders picks by points, leader first with gaps back', () => {
+    compareMarkup(['a', 'b', 'c'], { a: '10.00', b: '30.00', c: '22.50' });
+    init(document, fakeWindow());
+    for (const slug of ['a', 'b', 'c']) document.querySelector(`[data-pick="${slug}"]`).click();
+
+    const race = document.querySelector('[data-compare-race]');
+    expect(race.hidden).toBe(false);
+    const chips = [...race.querySelectorAll('.race-chip')];
+    expect(chips.map((c) => c.querySelector('.race-name').textContent)).toEqual(['b', 'c', 'a']);
+    expect(chips[0].querySelector('.race-lead').textContent).toBe('30.00 pts');
+    expect(chips[1].querySelector('.race-gap').textContent).toBe('−7.50');
+    expect(chips[2].querySelector('.race-gap').textContent).toBe('−20.00');
+  });
+
+  test('the race read-out needs two people and real totals', () => {
+    compareMarkup(['a', 'b'], { a: '10.00', b: '30.00' });
+    init(document, fakeWindow());
+    const race = document.querySelector('[data-compare-race]');
+
+    document.querySelector('[data-pick="a"]').click();
+    expect(race.hidden).toBe(true); // one person is not a race
+
+    // And markup without totals — an older page, say — never shows garbage.
+    compareMarkup(['a', 'b']);
+    init(document, fakeWindow());
+    document.querySelector('[data-pick="a"]').click();
+    document.querySelector('[data-pick="b"]').click();
+    expect(document.querySelector('[data-compare-race]').hidden).toBe(true);
+  });
+
+  test('a shared ?compare= link beats the stored selection', () => {
+    compareMarkup();
+    const win = fakeWindow({ store: new Map([[COMPARE_KEY, 'brenda-moore']]) });
+    win.location = { search: '?compare=brian-moore+paul-moore' };
+    init(document, win);
+    expect(pickedSlugs().sort()).toEqual(['brian-moore', 'paul-moore']);
+  });
+
+  test('Share writes the picks into the URL and copies the link', async () => {
+    compareMarkup();
+    const win = fakeWindow();
+    win.location = { search: '', pathname: '/season/', origin: 'https://pool.example', hash: '' };
+    const replaceState = vi.fn();
+    win.history = { replaceState };
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    win.navigator = { clipboard: { writeText } };
+    init(document, win);
+
+    document.querySelector('[data-pick="paul-moore"]').click();
+    document.querySelector('[data-pick="brian-moore"]').click();
+    document.querySelector('[data-compare-share]').click();
+    await setImmediate();
+
+    const target = replaceState.mock.calls[0][2];
+    expect(target).toBe('/season/?compare=paul-moore+brian-moore');
+    expect(writeText).toHaveBeenCalledWith('https://pool.example/season/?compare=paul-moore+brian-moore');
+    expect(document.querySelector('[data-compare-status]').textContent).toContain('Link copied');
+  });
+
+  test('Share with nothing picked explains itself instead of copying', () => {
+    compareMarkup();
+    const win = fakeWindow();
+    win.navigator = { clipboard: { writeText: vi.fn() } };
+    init(document, win);
+    document.querySelector('[data-compare-share]').click();
+    expect(win.navigator.clipboard.writeText).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-compare-status]').textContent).toContain('pick a name');
   });
 
   test('it opens on your own line once you have said who you are', () => {
@@ -2250,6 +2405,30 @@ describe('the definition popovers', () => {
     first.dispatchEvent(new window.Event('pointerenter'));
     document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
 
+    expect(first.classList.contains('is-open')).toBe(false);
+  });
+
+  test('a finger tap opens it once, not open-and-shut', () => {
+    // A tap fires pointerenter and then click on the same gesture. If the
+    // enter counts as a hover, the click that follows toggles the popover
+    // straight back off — which is "the button does nothing" on a phone.
+    const [first] = terms();
+    const enter = new window.Event('pointerenter');
+    Object.defineProperty(enter, 'pointerType', { value: 'touch' });
+    first.dispatchEvent(enter);
+    expect(first.classList.contains('is-open')).toBe(false);
+
+    first.querySelector('.info').dispatchEvent(new window.Event('click'));
+    expect(first.classList.contains('is-open')).toBe(true);
+  });
+
+  test('tapping anywhere else closes it — a finger has no blur', () => {
+    const [first] = terms();
+    first.querySelector('.info').dispatchEvent(new window.Event('click'));
+    expect(first.classList.contains('is-open')).toBe(true);
+
+    document.querySelector('main')
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     expect(first.classList.contains('is-open')).toBe(false);
   });
 
@@ -3212,6 +3391,47 @@ describe('a definition button inside a sortable heading', () => {
   });
 });
 
+describe('tapping a standings row', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div class="board">
+        <div class="row" data-slug="brian-moore">
+          <span class="row-rank">1</span>
+          <a class="row-link" href="/entrant/brian-moore/"><span class="row-name">Brian</span></a>
+          <a class="team-chip" href="/team/KC/">KC</a>
+          <span class="row-points">42.00</span>
+        </div>
+      </div>`;
+  });
+
+  test('a tap anywhere on the row follows the row\'s own link', () => {
+    init(document, fakeWindow());
+    const followed = vi.fn();
+    document.querySelector('.row-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      followed();
+    });
+
+    document.querySelector('.row-points')
+      .dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(followed).toHaveBeenCalledOnce();
+  });
+
+  test('a tap that already means something else is left alone', () => {
+    init(document, fakeWindow());
+    const followed = vi.fn();
+    document.querySelector('.row-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      followed();
+    });
+    const chip = document.querySelector('.team-chip');
+    chip.addEventListener('click', (e) => e.preventDefault());
+
+    chip.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(followed).not.toHaveBeenCalled();
+  });
+});
+
 describe('tracing a team through the playoffs', () => {
   const bracketMarkup = () => {
     document.body.innerHTML = `
@@ -3234,7 +3454,7 @@ describe('tracing a team through the playoffs', () => {
 
   beforeEach(bracketMarkup);
 
-  const over = (el) => el.dispatchEvent(new window.MouseEvent('mouseover', { bubbles: true }));
+  const over = (el) => el.dispatchEvent(new window.MouseEvent('pointerover', { bubbles: true }));
   const chipFor = (round, team) =>
     document.querySelector(`.tie[data-tie="${round}"] .tie-side[data-team="${team}"] .team-chip`);
 
@@ -3274,7 +3494,35 @@ describe('tracing a team through the playoffs', () => {
     init(document, fakeWindow());
     over(chipFor('DIV', 'DEN'));
     document.querySelector('[data-bracket]')
-      .dispatchEvent(new window.MouseEvent('mouseleave'));
+      .dispatchEvent(new window.MouseEvent('pointerleave'));
+    expect(document.querySelectorAll('.is-path')).toHaveLength(0);
+  });
+
+  test('a tap traces, and tapping the traced team again lets go', () => {
+    // On a phone the trace was unreachable: hover never happens, and the
+    // synthetic hover a tap fires is followed by a click on the same spot.
+    init(document, fakeWindow());
+    // jsdom has no PointerEvent constructor; the pointer type rides on a
+    // plain event exactly as the real one would carry it.
+    const down = (el, pointerType) => {
+      const event = new window.Event('pointerdown', { bubbles: true });
+      Object.defineProperty(event, 'pointerType', { value: pointerType });
+      el.dispatchEvent(event);
+    };
+    const tap = (el) => {
+      down(el, 'touch');
+      el.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    };
+
+    tap(chipFor('WC', 'NE'));
+    expect(document.querySelectorAll('.tie-side.is-path')).toHaveLength(2);
+
+    tap(chipFor('WC', 'NE'));
+    expect(document.querySelectorAll('.is-path')).toHaveLength(0);
+
+    // And a mouse click changes nothing — hover already owns the trace.
+    down(chipFor('WC', 'NE'), 'mouse');
+    chipFor('WC', 'NE').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     expect(document.querySelectorAll('.is-path')).toHaveLength(0);
   });
 
