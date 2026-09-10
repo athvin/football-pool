@@ -112,14 +112,25 @@ export function chooseLiveGame(events, picks = []) {
 
 export function liveFieldPosition(event, normalizeTeam) {
   if (event?.state !== 'in' || ![event.away, event.home].includes(event.possession)) return null;
-  const match = event.down.match(/\bat ([A-Z]+) (\d+)\b/);
+  const match = event.down?.match(/\bat (?:([A-Z]+) )?(\d{1,2})(?:\s|$)/);
   if (!match) return null;
-  const side = normalizeTeam(match[1]);
+  const side = normalizeTeam(match[1] || '');
   const yards = Number(match[2]);
-  if (![event.away, event.home].includes(side) || yards > 50) return null;
-  const ball = side === event.possession ? yards : 100 - yards;
-  return { ball, first: Math.min(100, ball + event.distance),
-    own: event.possession, other: event.possession === event.away ? event.home : event.away };
+  if ((side && ![event.away, event.home].includes(side)) || yards > 50 || (!side && yards !== 50)) return null;
+  // Keep away/home end zones fixed. Coordinates describe this field view,
+  // rather than a stadium compass direction, which the feed does not supply.
+  const ball = side === event.away ? yards : 100 - yards;
+  const direction = event.possession === event.away ? 1 : -1;
+  const toGoal = direction === 1 ? 100 - ball : ball;
+  const distance = Number(event.distance);
+  const validDistance = Number.isFinite(distance) && distance > 0;
+  const goalToGo = /&\s*Goal\b/i.test(event.down) || (validDistance && distance >= toGoal);
+  const first = goalToGo ? (direction === 1 ? 100 : 0)
+    : validDistance ? ball + direction * distance : null;
+  const spot = (position) => position === 50 ? 'Midfield'
+    : `${position < 50 ? event.away : event.home} ${position < 50 ? position : 100 - position}`;
+  return { ball, first, direction, toGoal, goalToGo, spot: spot(ball),
+    target: first === null ? '' : goalToGo ? 'Goal line' : spot(first) };
 }
 
 /** Keep the full latest snapshot, including corrected plays. Current drives
@@ -353,8 +364,7 @@ export function initLivePage(doc, win, helpers) {
       $('[data-live-game-status]').textContent = selected ? 'Loading game…' : 'No matchup available';
       $('[data-live-scoreboard]').replaceChildren(); delete $('[data-live-scoreboard]').dataset.teams;
       $('[data-live-situation-text]').textContent = ''; $('[data-live-venue]').textContent = '';
-      $('[data-live-field]').hidden = true;
-      $('[data-live-field-label]').textContent = 'Field position is unavailable for this game state.';
+      renderField(null);
       $('[data-live-stakes]').textContent = 'Choose a matchup to see the stakes.';
       $('[data-live-espn]').href = selected ? `https://www.espn.com/nfl/game/_/gameId/${selected}` : 'https://www.espn.com/nfl/scoreboard';
       return;
@@ -379,17 +389,7 @@ export function initLivePage(doc, win, helpers) {
     $('[data-live-situation-text]').textContent = game.state === 'in'
       ? [game.possession ? `${game.possession} ball` : '', game.down, game.redZone ? 'RED ZONE' : ''].filter(Boolean).join(' · ') : '';
     $('[data-live-venue]').textContent = [game.venue, game.network].filter(Boolean).join(' · ');
-    const field = liveFieldPosition(game, helpers.normalizeEspnTeam);
-    $('[data-live-field]').hidden = !field;
-    $('[data-live-field-label]').textContent = field ? game.down : 'Field position is unavailable for this game state.';
-    if (field) {
-      $('[data-live-field]').setAttribute('aria-label', `${game.possession} ball. ${game.down}`);
-      $('[data-live-own-end]').textContent = field.own;
-      $('[data-live-other-end]').textContent = field.other;
-      $('[data-live-ball]').style.left = `${8 + field.ball * 0.84}%`;
-      $('[data-live-first-down]').style.left = `${8 + field.first * 0.84}%`;
-      $('[data-live-first-down]').hidden = !game.distance;
-    }
+    renderField(game);
     const stakes = $('[data-live-stakes]'); stakes.replaceChildren();
     const known = selectedKnown();
     if (!known) stakes.textContent = game.seasonType === 1 ? 'Preseason games do not score pool points.' : 'Pool impact is awaiting a matching schedule entry.';
@@ -399,6 +399,43 @@ export function initLivePage(doc, win, helpers) {
       const p = node('p'); p.append(chip(team), node('span', '',
         `${owners.length ? owners.map((e) => e.name).join(', ') : 'No owners in this pool'}${gains !== null ? ` · ${points(gains)} points each with a win` : known.scored ? ' · included in official standings' : ''}`)); stakes.append(p);
     }
+  }
+
+  function renderField(game) {
+    const field = liveFieldPosition(game, helpers.normalizeEspnTeam);
+    for (const selector of ['[data-live-field]', '[data-live-field-head]', '[data-live-field-legend]']) $(selector).hidden = !field;
+    $('[data-live-field-label]').textContent = field ? game.down
+      : 'Field position will appear when ESPN reports the next down and ball spot.';
+    if (!field) return;
+    const name = (team) => team === game.away ? game.awayName || team : game.homeName || team;
+    const attack = field.direction === 1 ? 'right' : 'left';
+    $('[data-live-field]').setAttribute('aria-label',
+      `${name(game.possession)} ball, attacking ${attack}. ${game.down}. `
+      + `${field.first === null ? '' : `${field.goalToGo ? 'Goal line' : 'First down'}: ${field.target}. `}${field.toGoal} yards to the end zone.`);
+    for (const [selector, team] of [['[data-live-away-end]', game.away], ['[data-live-home-end]', game.home]]) {
+      const end = $(selector);
+      end.setAttribute('style', chipTemplates.get(team)?.getAttribute('style') || '');
+      end.querySelector('text').textContent = name(team).toUpperCase();
+    }
+    const possessionChip = $('[data-live-possession-chip]');
+    if (possessionChip.dataset.team !== game.possession) {
+      possessionChip.replaceChildren(chip(game.possession)); possessionChip.dataset.team = game.possession;
+    }
+    $('[data-live-possession-name]').textContent = `${name(game.possession)} ball`;
+    $('[data-live-direction]').dataset.direction = attack;
+    $('[data-live-direction-arrow]').textContent = field.direction === 1 ? '→' : '←';
+    $('[data-live-direction-text]').textContent = `Driving ${attack}`;
+    const x = (position) => 100 + position * 10;
+    $('[data-live-scrimmage]').style.transform = `translateX(${x(field.ball)}px)`;
+    $('[data-live-ball]').style.transform = `translate(${x(field.ball)}px, 266.67px)`;
+    $('[data-live-attack-arrow]').style.transform = `translate(${Math.max(155, Math.min(1045, x(field.ball)))}px, 355px) scaleX(${field.direction})`;
+    // SVG elements do not support HTML's hidden property.
+    $('[data-live-first-down]').style.display = field.first === null ? 'none' : '';
+    if (field.first !== null) $('[data-live-first-down]').style.transform = `translateX(${x(field.first)}px)`;
+    $('[data-live-spot]').textContent = field.spot;
+    $('[data-live-target]').hidden = field.first === null;
+    $('[data-live-target-text]').textContent = field.goalToGo ? 'Goal line' : `1st down: ${field.target}`;
+    $('[data-live-goal-distance]').textContent = `${field.toGoal} ${field.toGoal === 1 ? 'yard' : 'yards'} to goal`;
   }
 
   function table(caption, headings, rows) {

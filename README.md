@@ -266,7 +266,14 @@ during the September 9, 2026 Patriots–Seahawks game. These are unofficial feed
 so availability and latency are not guaranteed.
 
 Scores come from the scoreboard; the selected game's summary supplies plays,
-quarter scoring, and team/player stats. During live games the page polls every
+quarter scoring, and team/player stats. The Overview field uses team-colored,
+named end zones, yard numbers and hash marks, a football at the blue line of
+scrimmage, and a yellow first-down line (the goal line for goal-to-go). End zones
+stay fixed in the diagram: away on the left, home on the right. The possession
+banner and arrow show the offense moving toward the opponent's end zone; this
+is a consistent field view, not a stadium compass direction from ESPN.
+
+During live games the page polls every
 20 seconds, with a **5-second updates** toggle next to Refresh for faster scores,
 plays, stats, and provisional standings. The browser remembers this choice.
 Polling slows to three minutes before kickoff and stops for completed games.
