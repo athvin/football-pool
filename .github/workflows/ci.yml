@@ -155,12 +155,18 @@ jobs:
           test -f public-project/rules/index.html
           test -f public-project/schedule/index.html
           test -f public-project/gameday/index.html
+          test -f public-project/live/index.html
+          test -f public-project/data/live.json
           test -f public-project/data/standings.json
 
           # The second pool is a whole site of its own, one level down...
           test -f public-project/friends/index.html
           test -f public-project/friends/rules/index.html
           test -f public-project/friends/gameday/index.html
+          test -f public-project/friends/live/index.html
+          test -f public-project/friends/data/live.json
+          grep -q 'data-baseline-url="/football-pool/friends/data/live.json"' public-project/friends/live/index.html
+          grep -qE '/football-pool/assets/live\.js\?v=[0-9a-f]{8}' public-project/friends/live/index.html
           test -f public-project/friends/data/standings.json
 
           # ...but /assets/ belongs to the SITE, not the pool. A pool-relative

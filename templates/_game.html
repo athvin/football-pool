@@ -62,6 +62,7 @@
   </button>
 
   <div class="game-more" id="more-{{ g.game_id }}">
+    <a class="game-center-link" href="{{ ('/live/?matchup=' ~ g.game_id)|url }}">Game Center <span aria-hidden="true">↗</span></a>
     <dl class="game-facts">
       <div>
         <dt>{{ term('swing', 'Swing') }}</dt>

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% from '_links.html' import team_chip %}
+{% block title %}Live · {{ season.year }} {{ season.pool.name }}{% endblock %}
+{% block description %}Live NFL scores, play-by-play, and what the current leaders mean for {{ season.pool.name }}.{% endblock %}
+{% block content %}
+<div class="page-head live-heading">
+  <div><p class="eyebrow">Football as it happens</p><h1 class="page-title">Live</h1></div>
+  <div class="live-tools">
+    <button type="button" data-live-refresh>Refresh</button>
+    <button type="button" data-live-fast-refresh aria-pressed="false" title="Refresh live games every 5 seconds when on, or 20 seconds when off.">5-second updates <span data-live-fast-state aria-hidden="true">Off</span></button>
+    <span class="live-connection" data-live-connection role="status">Connecting to ESPN…</span>
+  </div>
+</div>
+
+<div data-live-center data-baseline-url="{{ '/data/live.json'|url }}"
+     data-entrant-base="{{ '/entrant/'|url }}">
+  <div class="live-slate-head"><h2 class="section-title" data-live-slate-title>Games</h2><span class="section-note">Choose a matchup</span></div>
+  <nav class="live-game-rail" data-live-game-rail aria-label="Choose a game"></nav>
+  <noscript><p class="empty">Live scores and play-by-play need JavaScript. You can still read the <a href="{{ '/schedule/'|url }}">schedule</a> and <a href="{{ '/'|url }}">official standings</a>.</p></noscript>
+
+  <div class="live-layout">
+    <section class="live-game-center" aria-label="Game Center">
+      <header class="live-match-header">
+        <div class="live-game-meta"><span data-live-game-status>Choose a game</span><a data-live-espn href="https://www.espn.com/nfl/scoreboard" target="_blank" rel="noopener">Open on ESPN ↗</a></div>
+        <div class="live-scoreboard" data-live-scoreboard></div>
+        <p class="live-situation" data-live-situation-text></p>
+        <div class="live-quarter-scores" data-live-quarters></div>
+        <div class="live-game-meta"><span data-live-venue></span><button type="button" class="live-copy" data-live-copy>Copy game link</button></div>
+        <p class="live-share-status" data-live-share-status role="status"></p>
+      </header>
+
+      <div class="live-view-tabs" role="tablist" aria-label="Game views">
+        {% for view, label in [('overview', 'Overview'), ('plays', 'Plays'), ('stats', 'Stats')] %}
+        <button type="button" role="tab" id="live-tab-{{ view }}" data-live-view="{{ view }}"
+                aria-controls="live-panel-{{ view }}" aria-selected="{{ 'true' if loop.first else 'false' }}"
+                tabindex="{{ '0' if loop.first else '-1' }}">{{ label }}</button>
+        {% endfor %}
+      </div>
+      <p class="live-detail-status" data-live-detail-status role="status">Select a game for plays and stats.</p>
+      <section id="live-panel-overview" role="tabpanel" aria-labelledby="live-tab-overview" tabindex="0">
+        <div class="live-field-wrap"><p class="live-field-label" data-live-field-label>Field position appears when the game is live.</p>
+          <div class="live-field" data-live-field role="img" aria-label="Field position unavailable" hidden>
+            <span class="live-endzone" data-live-own-end></span><span class="live-endzone live-endzone-far" data-live-other-end></span>
+            <span class="live-first-down" data-live-first-down></span><span class="live-ball" data-live-ball>◆</span>
+          </div>
+        </div>
+        <section class="live-pool-stakes"><h3>In this pool</h3><div data-live-stakes>Choose a matchup to see the stakes.</div></section>
+        <section class="live-scoring-summary"><h3>Scoring plays</h3><ol data-live-scoring><li class="live-empty">Scoring plays will appear here.</li></ol></section>
+      </section>
+      <section id="live-panel-plays" role="tabpanel" aria-labelledby="live-tab-plays" tabindex="0" hidden>
+        <p class="live-play-notice" data-live-play-notice role="status"></p>
+        <div data-live-drives><p class="live-empty">Play-by-play will appear when available.</p></div>
+      </section>
+      <section id="live-panel-stats" role="tabpanel" aria-labelledby="live-tab-stats" tabindex="0" hidden>
+        <div data-live-team-stats></div><div data-live-player-stats><p class="live-empty">Game stats will appear when available.</p></div>
+      </section>
+    </section>
+
+    <aside class="live-pool-board" aria-labelledby="live-pool-title">
+      <p class="eyebrow">If current leaders win</p><h2 class="section-title" id="live-pool-title">Live pool standings</h2>
+      <p class="live-board-note">Current leaders count as winners. Tied games stay pending until someone leads or the game ends in a tie.</p>
+      <div class="live-board-labels" aria-hidden="true"><span>Entrant</span><span>Live gain</span><span>Total</span></div>
+      <ol data-live-standings>
+      {% for e in live.entrants|sort(attribute='banked', reverse=true) %}
+        <li><span>{{ e.name }}</span><span>—</span><strong>{{ e.banked|points }}</strong></li>
+      {% endfor %}
+      </ol>
+      <p class="live-board-note" data-live-board-status>Starting from the latest official standings.</p>
+      <p class="live-board-note">Provisional game points only. Division and playoff-berth bonuses are included when the official standings update.</p>
+      <a href="{{ '/'|url }}">Official standings ↗</a>
+    </aside>
+  </div>
+  <p class="live-attribution">Scores, plays, and stats from ESPN’s unofficial public feed. Updates can be delayed or unavailable.</p>
+  <div data-live-chips hidden>{% for team in season.teams %}<span data-live-chip="{{ team }}">{{ team_chip(team, 'scored', large=true) }}</span>{% endfor %}</div>
+  <script type="application/json" id="live-data">{{ live|tojson }}</script>
+</div>
+<script type="module">
+  import { initLivePage } from '{{ "/assets/live.js"|url }}';
+  import { fetchEspnJson, parseEspnScoreboard, normalizeEspnTeam, formatTimestamp } from '{{ "/assets/site.js"|url }}';
+  initLivePage(document, window, { fetchEspnJson, parseEspnScoreboard, normalizeEspnTeam, formatTimestamp });
+</script>
+{% endblock %}

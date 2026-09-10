@@ -76,6 +76,7 @@ MARKET_COLUMNS = [
 # are: a coach's name decorates a team page and can never reach a score, so its
 # absence must not stop a publish.
 INFO_COLUMNS = [
+    "espn",  # optional event ID for the browser's Game Center
     "away_coach",
     "home_coach",
     "away_rest",
@@ -353,6 +354,11 @@ def parse_games(raw: bytes | str | Path, season: int) -> pd.DataFrame:
     df = df[df["season"] == season].copy()
     if df.empty:
         raise DataError(f"no games found for season {season}")
+
+    if "espn" in df.columns:
+        # Nullable IDs otherwise become strings such as "401872656.0".
+        ids = pd.to_numeric(df["espn"], errors="coerce")
+        df["espn"] = ids.where((ids > 0) & (ids < 2**53) & (ids % 1 == 0)).astype("Int64")
 
     for col in ("home_team", "away_team"):
         df[col] = df[col].replace(TEAM_ALIASES)

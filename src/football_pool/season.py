@@ -122,6 +122,7 @@ RESERVED_SLUGS = frozenset(
         "entrant",
         "forecast",
         "gameday",
+        "live",
         "index",
         "rules",
         "schedule",

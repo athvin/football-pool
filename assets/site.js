@@ -608,6 +608,7 @@ export function parseEspnScoreboard(payload) {
     const displayClock = event?.status?.displayClock || '';
     games.push({
       id: String(event.id),
+      seasonYear: Number(event?.season?.year || payload?.season?.year || 0),
       seasonType: Number(event?.season?.type || 0),
       week: Number(event?.week?.number || 0),
       date: event.date || competition.date || '',
@@ -617,10 +618,18 @@ export function parseEspnScoreboard(payload) {
       homeScore: String(home.score ?? '0'),
       awayWinner: Boolean(away.winner),
       homeWinner: Boolean(home.winner),
+      completed: Boolean(event?.status?.type?.completed),
+      statusName: event?.status?.type?.name || '',
+      scoresAvailable: away.score != null && home.score != null
+        && String(away.score).trim() !== '' && String(home.score).trim() !== ''
+        && Number.isFinite(Number(away.score)) && Number.isFinite(Number(home.score)),
       state,
       status: event?.status?.type?.shortDetail || event?.status?.type?.detail || '',
-      clock: state === 'in' ? `Q${period} ${displayClock}`.trim() : '',
+      clock: state === 'in' ? `${period > 4 ? 'OT' : `Q${period}`} ${displayClock}`.trim() : '',
+      period,
+      displayClock,
       down: situation.downDistanceText || '',
+      distance: Number(situation.distance || 0),
       possession: possession ? normalizeEspnTeam(possession.team?.abbreviation) : '',
       redZone: Boolean(situation.isRedZone),
       lastPlay: situation.lastPlay?.text || '',
@@ -1212,27 +1221,30 @@ function paintLiveGames(doc, games) {
   }
 }
 
-async function fetchEspnGames(win, url = ESPN_SCOREBOARD) {
+export async function fetchEspnJson(win, url, signal) {
+  const primary = 'https://site.web.api.espn.com/';
+  const legacy = 'https://site.api.espn.com/';
+  const options = { cache: 'no-store', credentials: 'omit', ...(signal ? { signal } : {}) };
   let response;
   try {
-    response = await win.fetch(url, { cache: 'no-store' });
+    response = await win.fetch(url, options);
   } catch (error) {
     // A CORS-blocked 403 is deliberately opaque to JavaScript: fetch rejects
     // before exposing its status. The `.web` host is primary because it is the
     // one ESPN currently permits browsers to read; this legacy retry covers a
     // transient failure on that host without weakening the static fallback.
-    if (!url.startsWith(ESPN_SCOREBOARD)) throw error;
-    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_LEGACY), {
-      cache: 'no-store',
-    });
+    if (signal?.aborted || !url.startsWith(primary)) throw error;
+    response = await win.fetch(url.replace(primary, legacy), options);
   }
-  if (response.status === 403 && url.startsWith(ESPN_SCOREBOARD)) {
-    response = await win.fetch(url.replace(ESPN_SCOREBOARD, ESPN_SCOREBOARD_LEGACY), {
-      cache: 'no-store',
-    });
+  if (response.status === 403 && url.startsWith(primary)) {
+    response = await win.fetch(url.replace(primary, legacy), options);
   }
   if (!response.ok) throw new Error(`ESPN ${response.status}`);
-  return parseEspnScoreboard(await response.json());
+  return response.json();
+}
+
+async function fetchEspnGames(win, url = ESPN_SCOREBOARD) {
+  return parseEspnScoreboard(await fetchEspnJson(win, url));
 }
 
 /** Clone one of the server-rendered canonical team chips into live markup. */
