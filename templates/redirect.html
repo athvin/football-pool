@@ -8,6 +8,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="0; url={{ target|url }}">
+{# A shared Game Center link carries ?matchup= or ?game=; the meta refresh
+   above cannot forward them, so with scripting on the query and hash ride
+   along. Without scripting the destination still lands somewhere sensible. #}
+<script>location.replace({{ (target|url)|tojson }} + location.search + location.hash)</script>
 <title>Moved · {{ season.year }} {{ season.pool.name }}</title>
 <meta name="robots" content="noindex">
 </head>

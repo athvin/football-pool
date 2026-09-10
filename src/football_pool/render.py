@@ -1613,15 +1613,17 @@ def render_site(
         schedule=_schedule(ctx),
         bracket=_bracket(ctx),
     )
+    # The Game Center lives on the Gameday page now, fed by the same immutable
+    # baseline the browser refreshes from. The old Live tab forwards below.
+    live = _live_data(ctx)
     write(
         "gameday/index.html",
         "gameday.html",
         page="gameday",
         gameday=_gameday(ctx),
+        live=live,
     )
     write("forecast/index.html", "forecast.html", page="forecast")
-    live = _live_data(ctx)
-    write("live/index.html", "live.html", page="live", live=live)
     live_path = out_dir / "data" / "live.json"
     live_path.parent.mkdir(parents=True, exist_ok=True)
     live_path.write_text(json.dumps(live, separators=(",", ":")))
@@ -1633,6 +1635,9 @@ def render_site(
     # The old addresses live in a year of group-chat links, so they forward.
     write("weeks/index.html", "redirect.html", page="weeks", target="/season/")
     write("trends/index.html", "redirect.html", page="trends", target="/season/")
+    # Live merged into Gameday: one Sunday page. The stub's script carries a
+    # shared ?matchup= or ?game= link through to the Game Center.
+    write("live/index.html", "redirect.html", page="live", target="/gameday/")
     write(
         "season/index.html",
         "season.html",

@@ -2,9 +2,9 @@
 
 A static scoreboard for our leveling-factor pools. GitHub Actions refresh it
 around NFL game windows, recompute everyone's totals from real results, and
-publish the site to GitHub Pages. The Live tab adds a browser-only Game Center
-with scores, play-by-play, stats, and provisional pool standings. Gameday also
-shows a compact live overlay between static builds.
+publish the site to GitHub Pages. The Gameday page adds a browser-only Game
+Center with scores, play-by-play, stats, and provisional pool standings, and
+its rooting cards show a compact live overlay between static builds.
 
 One season can carry more than one pool — different people, different stakes,
 the same football. Today there are two:
@@ -251,7 +251,7 @@ the existing staleness guard still applies.
 The rebuilt home page shows the week's progress (for example, **1 of 16 games
 final**), recent final scores, everyone tied for the lead, and each entry's
 points earned and games remaining in that week. The result source identifies
-any ESPN finals still awaiting nflverse. The Live page's baseline includes
+any ESPN finals still awaiting nflverse. The Game Center's baseline includes
 those same finals, so the browser does not add them again.
 
 Team pages also show each club's head coach and roster — who is active, who is
@@ -269,18 +269,20 @@ The Gameday page has two additional, explicitly optional sources:
   Weather is displayed with attribution and never enters the model or score.
 - An open browser polls ESPN's public NFL scoreboard for live score, clock,
   possession, down-and-distance, red-zone state, and last play. Polling speeds
-  up only while a game is live and stops once the slate is final. A built-in
-  2026 preseason test bench makes the integration observable on the deployed
-  static site before pool scoring begins. Live leads remain display-only;
-  confirmed finals can also fill missing results in the next build.
+  up only while a game is live and stops once the slate is final. Live leads
+  remain display-only; confirmed finals can also fill missing results in the
+  next build.
 
 Either optional request may fail without affecting the static schedule,
 standings, projections, or deployment.
 
-### The Live tab
+### The Game Center
 
-Every pool has its own `/live/` page. Game Center links on Gameday, the schedule,
-and team pages open that matchup. The browser reads ESPN's public
+Every pool's Gameday page carries a Game Center section (the former Live tab;
+`/live/` forwards there, carrying its query string). Game Center links on the
+rooting cards, the schedule, and team pages open that matchup. Games that end
+while the page is open are called into the what-if scoreboard by their real
+score and locked. The browser reads ESPN's public
 `site.web.api.espn.com` NFL `scoreboard` and `summary?event=...` endpoints directly;
 there is no proxy, server, API key, or subscription. The older `site.api.espn.com`
 host is a fallback. Both endpoints were verified from the GitHub Pages origin
@@ -324,7 +326,7 @@ An event without an unambiguous schedule match cannot affect pool points.
 The page checks for a new official baseline every five minutes, replacing it
 atomically so a result already included by cron is not added again. Choosing a
 different game does not change which results count toward live standings.
-`/live/?game=<ESPN-event-id>` shares a game; static links use
+`/gameday/?game=<ESPN-event-id>` shares a game; static links use
 `?matchup=<nflverse-game-id>` when the committed schedule predates ESPN IDs.
 Offline builds remain sufficient to ship the feature: live data is fetched
 only in the visitor's browser.

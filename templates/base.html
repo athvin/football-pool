@@ -94,7 +94,6 @@
       <a href="{{ gameday_path|url }}"
          {% if page == 'gameday' %}aria-current="page"{% endif %}
          {% if page == 'entrant' and entrant.projection %}title="Open Gameday as {{ entrant.name }} with the best slate preselected"{% endif %}>Gameday</a>
-      <a href="{{ '/live/'|url }}" {% if page == 'live' %}aria-current="page"{% endif %}>Live</a>
       <a href="{{ '/season/'|url }}" {% if page == 'season' %}aria-current="page"{% endif %}>Season</a>
       <a href="{{ '/forecast/'|url }}" {% if page == 'forecast' %}aria-current="page"{% endif %}>Forecast</a>
     </nav>
