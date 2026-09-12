@@ -5,7 +5,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_01_ATL_PIT,2026,REG,1,2026-09-13,13:00,ATL,,PIT,,,,Home,6.0,41.5,215.0,-265.0,401872658,Raheem Morris,Mike McCarthy,7,7,outdoors,grass,,,Cooper Rush,Aaron Rodgers,,PIT00,Acrisure Stadium
 2026_01_BAL_IND,2026,REG,1,2026-09-13,13:00,BAL,,IND,,,,Home,-3.5,47.5,-175.0,145.0,401872659,Jesse Minter,Shane Steichen,7,7,,fieldturf,,,Lamar Jackson,Daniel Jones,,IND00,Lucas Oil Stadium
 2026_01_BUF_HOU,2026,REG,1,2026-09-13,13:00,BUF,,HOU,,,,Home,-1.5,44.5,-118.0,-102.0,401872660,Sean McDermott,DeMeco Ryans,7,7,,astroturf,,,Josh Allen,C.J. Stroud,,HOU00,Reliant Stadium
-2026_01_CHI_CAR,2026,REG,1,2026-09-13,13:00,CHI,,CAR,,,,Home,-3.0,47.5,-166.0,140.0,401872661,Ben Johnson,Dave Canales,7,7,outdoors,grass,,,Caleb Williams,Bryce Young,,CAR00,Bank of America Stadium
+2026_01_CHI_CAR,2026,REG,1,2026-09-13,13:00,CHI,,CAR,,,,Home,-3.0,47.5,-170.0,142.0,401872661,Ben Johnson,Dave Canales,7,7,outdoors,grass,,,Caleb Williams,Bryce Young,,CAR00,Bank of America Stadium
 2026_01_CLE_JAX,2026,REG,1,2026-09-13,13:00,CLE,,JAX,,,,Home,8.5,39.5,350.0,-455.0,401872922,Todd Monken,Liam Coen,7,7,outdoors,grass,,,Deshaun Watson,Trevor Lawrence,,JAX00,EverBank Stadium
 2026_01_DAL_NYG,2026,REG,1,2026-09-13,20:20,DAL,,NYG,,,,Home,-3.0,48.5,-162.0,136.0,401872930,Brian Schottenheimer,John Harbaugh,7,7,outdoors,fieldturf,,,Dak Prescott,Jaxson Dart,,NYC01,MetLife Stadium
 2026_01_GB_MIN,2026,REG,1,2026-09-13,16:25,GB,,MIN,,,,Home,1.5,46.5,105.0,-125.0,401872927,Matt LaFleur,Kevin O'Connell,7,7,dome,sportturf,,,Jordan Love,Kyler Murray,,MIN01,U.S. Bank Stadium
@@ -123,7 +123,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_09_JAX_BAL,2026,REG,9,2026-11-05,20:15,JAX,,BAL,,,,Home,4.5,49.5,170.0,-205.0,401873037,Liam Coen,Jesse Minter,4,4,outdoors,grass,,,,,,BAL00,M&T Bank Stadium
 2026_09_ARI_SEA,2026,REG,9,2026-11-08,16:25,ARI,,SEA,,,,Home,,,,,401873048,Jonathan Gannon,Mike Macdonald,7,6,outdoors,fieldturf,,,,,,SEA00,Lumen Field
 2026_09_CIN_ATL,2026,REG,9,2026-11-08,09:30,CIN,,ATL,,,,Neutral,-5.5,49.5,-230.0,190.0,401873038,Zac Taylor,Raheem Morris,7,7,,fieldturf,,,,,,MAD01,Bernabeu
-2026_09_CLE_NO,2026,REG,9,2026-11-08,13:00,CLE,,NO,,,,Home,,,,,401873039,Todd Monken,Kellen Moore,7,14,dome,sportturf,,,,,,NOR00,Caesars Superdome
+2026_09_CLE_NO,2026,REG,9,2026-11-08,13:00,CLE,,NO,,,,Home,3.5,41.5,164.0,-198.0,401873039,Todd Monken,Kellen Moore,7,14,dome,sportturf,,,,,,NOR00,Caesars Superdome
 2026_09_DAL_IND,2026,REG,9,2026-11-08,13:00,DAL,,IND,,,,Home,-1.5,52.5,-125.0,105.0,401873040,Brian Schottenheimer,Shane Steichen,7,7,,fieldturf,,,,,,IND00,Lucas Oil Stadium
 2026_09_DEN_CAR,2026,REG,9,2026-11-08,13:00,DEN,,CAR,,,,Home,-3.0,42.5,-162.0,136.0,401873041,Sean Payton,Dave Canales,7,10,outdoors,grass,,,,,,CAR00,Bank of America Stadium
 2026_09_DET_MIA,2026,REG,9,2026-11-08,13:00,DET,,MIA,,,,Home,-6.5,47.5,-278.0,225.0,401873042,Dan Campbell,Jeff Hafley,7,7,outdoors,grass,,,,,,MIA00,Hard Rock Stadium
@@ -131,7 +131,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_09_HOU_LAC,2026,REG,9,2026-11-08,16:05,HOU,,LAC,,,,Home,,,,,401873046,DeMeco Ryans,Jim Harbaugh,14,7,dome,matrixturf,,,,,,LAX01,SoFi Stadium
 2026_09_LA_WAS,2026,REG,9,2026-11-08,13:00,LAR,,WAS,,,,Home,,,,,401873043,Sean McVay,Dan Quinn,7,7,outdoors,grass,,,,,,WAS00,Northwest Stadium
 2026_09_LV_SF,2026,REG,9,2026-11-08,16:05,LV,,SF,,,,Home,,,,,401873047,Klint Kubliak,Kyle Shanahan,7,14,outdoors,grass,,,,,,SFO01,Levi's Stadium
-2026_09_NYG_PHI,2026,REG,9,2026-11-08,13:00,NYG,,PHI,,,,Home,5.5,44.5,195.0,-238.0,401873044,John Harbaugh,Nick Sirianni,14,7,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
+2026_09_NYG_PHI,2026,REG,9,2026-11-08,13:00,NYG,,PHI,,,,Home,,,,,401873044,John Harbaugh,Nick Sirianni,14,7,outdoors,grass,,,,,,PHI00,Lincoln Financial Field
 2026_09_NYJ_KC,2026,REG,9,2026-11-08,13:00,NYJ,,KC,,,,Home,,,,,401873045,Aaron Glenn,Andy Reid,7,7,outdoors,grass,,,,,,KAN00,GEHA Field at Arrowhead Stadium
 2026_09_TB_CHI,2026,REG,9,2026-11-08,20:20,TB,,CHI,,,,Home,,,,,401873050,Todd Bowles,Ben Johnson,7,6,outdoors,grass,,,,,,CHI98,Soldier Field
 2026_09_BUF_MIN,2026,REG,9,2026-11-09,20:15,BUF,,MIN,,,,Home,,,,,401873051,Sean McDermott,Kevin O'Connell,8,8,dome,sportturf,,,,,,MIN01,U.S. Bank Stadium
