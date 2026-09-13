@@ -761,7 +761,9 @@ function boardMarkup(data) {
       ${data.entrants.map((e, i) => `
       <div class="row${i === 0 ? ' is-leader' : ''}" data-slug="${e.slug}">
         <span class="row-rank">${i + 1}</span>
-        <span class="row-who"><a class="row-link" href="/entrant/${e.slug}/"><span class="row-name">${e.name}</span></a></span>
+        <span class="row-who"><a class="row-link" href="/entrant/${e.slug}/"><span class="row-name">${e.name}</span></a>${
+  i === 0 ? '<span class="row-week">Week 1: +0.00 · 1 game left</span>' : ''
+}</span>
         <span class="row-score"><span class="row-points">${e.banked.toFixed(2)}</span></span>
       </div>`).join('')}
     </div>
@@ -827,6 +829,17 @@ describe('Live standings board', () => {
     // A different clock is a repaint of the stamp, not a refetch.
     $('[data-tz-select]').value = 'UTC'; $('[data-tz-select]').dispatchEvent(new Event('change'));
     expect(status.textContent).toContain('UTC');
+    // Every entrant has a side in the one live game, said under their row —
+    // beneath the weekly "games left" line where one exists, on its own where
+    // the build predates the week's first final.
+    expect($('[data-slug="alex"] [data-live-now]').textContent).toBe('1 game live now');
+    expect($('[data-slug="alex"] .row-week').nextElementSibling.dataset.liveNow).toBe('');
+    expect($('[data-slug="blair"] .row-who [data-live-now]').textContent).toBe('1 game live now');
+    // The game going final clears the "live now" count while its points stay.
+    board = scoreboard(summary('post'));
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect($('[data-slug="alex"] [data-live-now]').hidden).toBe(true);
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
   });
 
   test('a tied live game leaves the official board untouched until a lead lands', async () => {
@@ -836,6 +849,8 @@ describe('Live standings board', () => {
     expect($('[data-slug="alex"] .row-points').dataset.liveTotal).toBeUndefined();
     expect($('[data-live-gain]')).toBeNull();
     expect($('[data-live-standings-status]').hidden).toBe(true);
+    // The one thing a tied game does say: the reader's games are on right now.
+    expect($('[data-slug="cam"] [data-live-now]').textContent).toBe('1 game live now');
     homeSide().score = '17';
     await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
     expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
@@ -927,6 +942,7 @@ describe('Live standings board', () => {
     expect(requestsFor('live.json')).toBe(2);
     expect(requestsFor('scoreboard?')).toBe(0);
     expect($('[data-slug="alex"] .row-points').textContent).toBe('10.00');
+    expect($('[data-live-now]')).toBeNull();
   });
 
   test('does nothing without a board, rows, or a valid baseline', () => {
