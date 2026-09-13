@@ -548,6 +548,57 @@ export function tooltipPosition(anchor, size, viewport, gap = 8) {
   return { left, top, flipped: flip };
 }
 
+/**
+ * The 5-second updates toggle, one control in the viewer bar for every page.
+ *
+ * It used to live beside the Game Center's Refresh button, which meant any
+ * other page that wanted live numbers had to grow its own copy. It is a viewer
+ * preference like theme and time zone, so it lives with them: site.js paints
+ * and stores it, and each live controller — the Game Center, the standings
+ * board — listens for `pool:live-interval` rather than owning the button.
+ *
+ * The storage key is a published contract with live.js, which reads it at
+ * startup: the two files stay import-free of each other on purpose, so the
+ * event carries only `fast` and every controller maps that onto its own
+ * interval constants.
+ */
+export const FAST_REFRESH_KEY = 'pool-live-fast-refresh';
+
+export function initFastRefresh(doc, win) {
+  const button = doc.querySelector('[data-live-fast-refresh]');
+  // Bound at most once per button, whoever asks first — the guard is on the
+  // element because tests (and the gameday page) wire modules independently.
+  if (!button || button.dataset.liveFastBound === 'true') return;
+  button.dataset.liveFastBound = 'true';
+
+  let fast = false;
+  try {
+    fast = win.localStorage.getItem(FAST_REFRESH_KEY) === 'true';
+  } catch {
+    /* The toggle still works for this visit when storage is unavailable. */
+  }
+
+  const paint = () => {
+    button.setAttribute('aria-pressed', String(fast));
+    const state = button.querySelector('[data-live-fast-state]');
+    if (state) state.textContent = fast ? 'On' : 'Off';
+  };
+  paint();
+
+  button.addEventListener('click', () => {
+    fast = !fast;
+    try {
+      win.localStorage.setItem(FAST_REFRESH_KEY, String(fast));
+    } catch {
+      /* Storage is optional; keep the choice for this visit. */
+    }
+    paint();
+    if (typeof win.CustomEvent === 'function') {
+      doc.dispatchEvent(new win.CustomEvent('pool:live-interval', { detail: { fast } }));
+    }
+  });
+}
+
 /** Storage that silently no-ops when it is unavailable (private browsing). */
 export function safeStorage(store) {
   return {
@@ -2490,8 +2541,14 @@ function initOdometer(doc, win) {
 
   const duration = 620;
   const start = win.performance.now();
+  // The live standings overlay claims a total the moment real scores land on
+  // it, and from then on the count-up must not write the static number back
+  // over the live one — not mid-count, and not from the settle timer below.
+  const live = (el) => el.dataset.liveTotal !== undefined;
   const settle = () => {
-    for (const { el, value } of runs) el.textContent = value.toFixed(2);
+    for (const { el, value } of runs) {
+      if (!live(el)) el.textContent = value.toFixed(2);
+    }
   };
 
   // If animation frames stop arriving — a backgrounded tab, a throttled
@@ -2506,7 +2563,7 @@ function initOdometer(doc, win) {
       return;
     }
     for (const { el, value } of runs) {
-      el.textContent = countUpValue(value, progress).toFixed(2);
+      if (!live(el)) el.textContent = countUpValue(value, progress).toFixed(2);
     }
     win.requestAnimationFrame(step);
   };
@@ -2586,6 +2643,7 @@ export function init(doc = document, win = window) {
     ? gamedayLaunchParams(win.location?.search || '')
     : { me: '', preset: '' };
   initTheme(doc, storage, win);
+  initFastRefresh(doc, win);
   initPrimaryNavigation(doc);
   initStickyChrome(doc, win);
   initDetail(doc, storage);

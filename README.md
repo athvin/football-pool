@@ -309,8 +309,11 @@ previous drive's reported result and the team taking over. Drives remain newest
 first, and corrections update the separators along with the plays.
 
 During live games the page polls every
-20 seconds, with a **5-second updates** toggle next to Refresh for faster scores,
-plays, stats, and provisional standings. The browser remembers this choice.
+20 seconds, with a **5-second updates** toggle for faster scores, plays,
+stats, and provisional standings. The toggle lives in the viewer bar at the
+top of every page — one control shared by the Game Center and the live
+standings board, rather than a button each page grows for itself — and the
+browser remembers the choice.
 Polling slows to three minutes before kickoff and stops for completed games.
 Hidden/offline pages pause; failures retain the last data and retry
 with backoff. A manual refresh and a direct ESPN link remain available.
@@ -436,7 +439,13 @@ off, and nothing else changes.
 ## The pages
 
 - **Standings** — the leaderboard, with the banked/guaranteed/ceiling bar, plus
-  the projection table.
+  the projection table. During games the browser recomputes it live from the
+  same `data/live.json` baseline and ESPN feed the Game Center uses: unbanked
+  finals and current leaders move the totals, ranks, and row order in place,
+  each live row wearing a green `+x.xx live` gain, with a status line naming
+  how many live results are on the board and that they are provisional until
+  the next official rebuild. With scripting off the page is simply the
+  official board.
 - **Schedule** — the NFL slate week by week, opening on the week being played,
   with what each side of every game is worth and who in the pool holds it.
 - **Season** — what happened and how it moved, in one place: points scored in

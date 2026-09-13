@@ -165,6 +165,17 @@
     </label>
     {% endif %}
 
+    {# The one live-data preference, beside the other viewer choices. The
+       Standings board and the Gameday Game Center both poll ESPN while
+       football is on; this switches both between 20-second and 5-second
+       updates, from one place, without each page growing its own button.
+       Owned by site.js like theme and time zone; live controllers listen. #}
+    <button class="fast-refresh" type="button" data-live-fast-refresh aria-pressed="false"
+            title="Refresh live scores every 5 seconds when on, or 20 seconds when off.">
+      <span class="viewer-label">5-second updates</span>
+      <span class="fast-refresh-state" data-live-fast-state aria-hidden="true">Off</span>
+    </button>
+
     <label class="tz">
       <span class="viewer-label">Time zone</span>
       <select data-tz-select>

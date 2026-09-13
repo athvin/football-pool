@@ -20,6 +20,8 @@ import {
   RED_ZONE,
   REVEAL_SELECTOR,
   ESPN_SCOREBOARD,
+  FAST_REFRESH_KEY,
+  initFastRefresh,
   LIVE_POLL_MS,
   PREGAME_POLL_MS,
   STALE_AFTER_HOURS,
@@ -1136,6 +1138,101 @@ describe('init', () => {
     init(document, win);
     expect(document.querySelector('.row-points').textContent).toBe('—');
     expect(win._frames).toHaveLength(0);
+  });
+
+  test('a live-claimed total is never overwritten by the count-up', () => {
+    // The live standings overlay marks a total it has written; neither the
+    // frames nor the settle timer may put the static number back over it.
+    document.body.innerHTML = `
+      <span class="row-points" data-live-total="true">41.70</span>
+      <span class="hero-total">39.20</span>`;
+    const win = fakeWindow();
+    win.setTimeout = () => {};
+    let clock = 0;
+    win.performance.now = () => clock;
+    init(document, win);
+    for (let i = 0; i < 5 && win._frames.length; i += 1) {
+      clock += 400;
+      win._frames.shift()(clock);
+    }
+    expect(document.querySelector('.row-points').textContent).toBe('41.70');
+    expect(document.querySelector('.hero-total').textContent).toBe('39.20');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The 5-second updates toggle
+// ---------------------------------------------------------------------------
+describe('the 5-second updates toggle', () => {
+  function toggleMarkup() {
+    document.body.innerHTML = `
+      <button class="fast-refresh" data-live-fast-refresh aria-pressed="false">
+        <span class="viewer-label">5-second updates</span>
+        <span data-live-fast-state aria-hidden="true">Off</span>
+      </button>`;
+  }
+  const button = () => document.querySelector('[data-live-fast-refresh]');
+
+  test('paints from storage, flips, stores, and announces the choice', () => {
+    toggleMarkup();
+    const win = fakeWindow();
+    win.CustomEvent = window.CustomEvent;
+    const heard = [];
+    const listener = (event) => heard.push(event.detail.fast);
+    document.addEventListener('pool:live-interval', listener);
+    try {
+      init(document, win);
+      expect(button().getAttribute('aria-pressed')).toBe('false');
+      button().click();
+      expect(button().getAttribute('aria-pressed')).toBe('true');
+      expect(button().textContent).toContain('On');
+      expect(win._store.get(FAST_REFRESH_KEY)).toBe('true');
+      button().click();
+      expect(button().textContent).toContain('Off');
+      expect(win._store.get(FAST_REFRESH_KEY)).toBe('false');
+      expect(heard).toEqual([true, false]);
+    } finally {
+      document.removeEventListener('pool:live-interval', listener);
+    }
+  });
+
+  test('restores the stored preference and binds only once', () => {
+    toggleMarkup();
+    const win = fakeWindow({ store: new Map([[FAST_REFRESH_KEY, 'true']]) });
+    win.CustomEvent = window.CustomEvent;
+    const heard = [];
+    const listener = (event) => heard.push(event.detail.fast);
+    document.addEventListener('pool:live-interval', listener);
+    try {
+      init(document, win);
+      // A live controller on the page asks too; the second wiring is a no-op
+      // so one click can never announce the choice twice.
+      initFastRefresh(document, win);
+      expect(button().getAttribute('aria-pressed')).toBe('true');
+      button().click();
+      expect(heard).toEqual([false]);
+    } finally {
+      document.removeEventListener('pool:live-interval', listener);
+    }
+  });
+
+  test('blocked storage still switches for this visit, quietly', () => {
+    toggleMarkup();
+    const win = fakeWindow();
+    win.localStorage = {
+      getItem() { throw new Error('blocked'); },
+      setItem() { throw new Error('blocked'); },
+    };
+    // No CustomEvent either: the toggle still paints, it just has nobody to
+    // tell — the state a headless or ancient browser would be in.
+    expect(() => init(document, win)).not.toThrow();
+    button().click();
+    expect(button().getAttribute('aria-pressed')).toBe('true');
+  });
+
+  test('a page without the button is left alone', () => {
+    document.body.innerHTML = '<p>no toggle here</p>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
   });
 });
 

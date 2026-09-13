@@ -1605,7 +1605,12 @@ def render_site(
         target.write_text(env.get_template(template).render(**shared, **kw))
         written.append(target)
 
-    write("index.html", "index.html", page="standings")
+    # One immutable scoring baseline feeds every live surface: the standings
+    # board recomputes itself from it in the browser during games, the Gameday
+    # Game Center reads the embedded copy, and both refresh from the same
+    # data/live.json written below.
+    live = _live_data(ctx)
+    write("index.html", "index.html", page="standings", live=live)
     write(
         "schedule/index.html",
         "schedule.html",
@@ -1615,7 +1620,6 @@ def render_site(
     )
     # The Game Center lives on the Gameday page now, fed by the same immutable
     # baseline the browser refreshes from. The old Live tab forwards below.
-    live = _live_data(ctx)
     write(
         "gameday/index.html",
         "gameday.html",

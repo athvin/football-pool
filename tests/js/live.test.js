@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { setImmediate } from 'node:timers/promises';
 import fixture from '../fixtures/espn_game_summary.json';
-import { fetchEspnJson, parseEspnScoreboard, normalizeEspnTeam, formatTimestamp } from '../../assets/site.js';
-import { BASELINE_INTERVAL, FAST_LIVE_INTERVAL, LIVE_INTERVAL, WAIT_INTERVAL, chooseLiveGame, initLivePage,
+import { fetchEspnJson, initFastRefresh, parseEspnScoreboard, normalizeEspnTeam, formatTimestamp } from '../../assets/site.js';
+import { BASELINE_INTERVAL, FAST_LIVE_INTERVAL, LIVE_INTERVAL, WAIT_INTERVAL, chooseLiveGame, initLiveBoard, initLivePage,
   liveFieldPosition, liveOutcome, livePoolStandings, liveRefreshDelay, liveScoreboardUrl,
   matchLiveGame, parseLiveSummary, validateLiveBaseline } from '../../assets/live.js';
 
@@ -221,7 +221,13 @@ describe('Live page controller', () => {
     markup(baseline);
   });
   afterEach(() => { controller?.destroy(); controller = null; vi.useRealTimers(); vi.restoreAllMocks(); });
-  async function start() { controller = initLivePage(document, window, helpers); await controller.ready; await flush(); }
+  // The 5-second toggle lives in the global viewer bar and belongs to
+  // site.js; wiring it here mirrors the page, where init() runs on load.
+  async function start() {
+    initFastRefresh(document, window);
+    controller = initLivePage(document, window, helpers);
+    await controller.ready; await flush();
+  }
   const requestsFor = (name) => fetcher.mock.calls.filter(([url]) => String(url).includes(name)).length;
 
   test('switches both feeds to five seconds and back without keeping old timers', async () => {
@@ -270,6 +276,7 @@ describe('Live page controller', () => {
     fetcher.mockImplementation((url, options) => String(url).includes('summary?')
       ? new Promise((resolve) => { release = () => resolve(original(url, options)); })
       : original(url, options));
+    initFastRefresh(document, window);
     controller = initLivePage(document, window, helpers); await flush();
     $('[data-live-fast-refresh]').click();
     await vi.advanceTimersByTimeAsync(FAST_LIVE_INTERVAL);
@@ -742,5 +749,194 @@ describe('Live page controller', () => {
     expect($('[data-live-connection]').textContent).toContain('unavailable');
     board = scoreboard(); await controller.refresh();
     expect($('[data-live-board-status]').textContent).not.toContain('awaiting scores');
+  });
+});
+
+function boardMarkup(data) {
+  document.body.innerHTML = `
+    <select data-tz-select><option>America/New_York</option><option>UTC</option></select>
+    <div data-you><a href="/entrant/alex/"><span class="you-rank">#1</span><span class="you-label">your entry</span><span>Alex</span><span class="you-pts">10.00 pts</span></a></div>
+    <button data-live-fast-refresh aria-pressed="false"><span data-live-fast-state aria-hidden="true">Off</span></button>
+    <div class="board" data-live-board data-baseline-url="/data/live.json">
+      ${data.entrants.map((e, i) => `
+      <div class="row${i === 0 ? ' is-leader' : ''}" data-slug="${e.slug}">
+        <span class="row-rank">${i + 1}</span>
+        <span class="row-who"><a class="row-link" href="/entrant/${e.slug}/"><span class="row-name">${e.name}</span></a></span>
+        <span class="row-score"><span class="row-points">${e.banked.toFixed(2)}</span></span>
+      </div>`).join('')}
+    </div>
+    <p class="board-live-status" data-live-standings-status role="status" hidden></p>
+    <script id="live-data" type="application/json">${JSON.stringify(data)}</script>`;
+}
+
+describe('Live standings board', () => {
+  let controller; let baseline; let board; let fetcher;
+  const $ = (s) => document.querySelector(s);
+  const flush = () => setImmediate();
+  const rowOrder = () => Array.from(
+    document.querySelectorAll('[data-live-board] .row'), (el) => el.dataset.slug,
+  );
+  beforeEach(() => {
+    vi.useFakeTimers(); vi.setSystemTime(NOW);
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: true });
+    document.documentElement.removeAttribute('data-me');
+    window.localStorage.removeItem('pool-live-fast-refresh');
+    baseline = seed(); board = scoreboard();
+    fetcher = vi.fn(async (url) => ({ ok: true, status: 200, json: async () => clone(
+      String(url).includes('scoreboard?') ? board : baseline) }));
+    window.fetch = fetcher;
+    boardMarkup(baseline);
+  });
+  afterEach(() => { controller?.destroy(); controller = null; vi.useRealTimers(); vi.restoreAllMocks(); });
+  async function start() {
+    initFastRefresh(document, window);
+    controller = initLiveBoard(document, window, helpers);
+    await controller.ready; await flush();
+  }
+  const requestsFor = (name) => fetcher.mock.calls.filter(([url]) => String(url).includes(name)).length;
+  const homeSide = () => board.events[0].competitions[0].competitors.find((c) => c.homeAway === 'home');
+
+  test('recomputes totals, ranks, and order from live leads', async () => {
+    document.documentElement.dataset.me = 'cam';
+    await start();
+    expect(rowOrder()).toEqual(['alex', 'cam', 'blair']);
+    const alex = $('[data-slug="alex"]');
+    expect(alex.querySelector('.row-points').textContent).toBe('12.00');
+    expect(alex.querySelector('.row-points').dataset.liveTotal).toBe('true');
+    expect(alex.querySelector('[data-live-gain]').textContent).toBe('+2.00 live');
+    expect(alex.querySelector('.row-rank').textContent).toBe('1');
+    expect(alex.classList.contains('is-leader')).toBe(true);
+    const blair = $('[data-slug="blair"]');
+    expect(blair.querySelector('.row-rank').textContent).toBe('3');
+    expect(blair.classList.contains('is-leader')).toBe(false);
+    expect(blair.querySelector('[data-live-gain]').hidden).toBe(true);
+    const status = $('[data-live-standings-status]');
+    expect(status.hidden).toBe(false);
+    expect(status.textContent).toContain('1 live result on the board');
+    // The viewer's own strip above the board follows their row.
+    expect($('[data-you] .you-rank').textContent).toBe('#2');
+    expect($('[data-you] .you-pts').textContent).toBe('11.00 pts');
+    // A lead change reorders the board on the next poll.
+    homeSide().score = '24';
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect(rowOrder()).toEqual(['blair', 'cam', 'alex']);
+    expect($('[data-slug="blair"] .row-points').textContent).toBe('13.00');
+    expect($('[data-slug="blair"]').classList.contains('is-leader')).toBe(true);
+    expect($('[data-slug="alex"]').classList.contains('is-leader')).toBe(false);
+    // A different clock is a repaint of the stamp, not a refetch.
+    $('[data-tz-select]').value = 'UTC'; $('[data-tz-select]').dispatchEvent(new Event('change'));
+    expect(status.textContent).toContain('UTC');
+  });
+
+  test('a tied live game leaves the official board untouched until a lead lands', async () => {
+    homeSide().score = '21';
+    await start();
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('10.00');
+    expect($('[data-slug="alex"] .row-points').dataset.liveTotal).toBeUndefined();
+    expect($('[data-live-gain]')).toBeNull();
+    expect($('[data-live-standings-status]').hidden).toBe(true);
+    homeSide().score = '17';
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    // Once touched, a lead that evaporates falls back to banked, not to the
+    // last provisional number.
+    homeSide().score = '21';
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('10.00');
+    expect($('[data-live-standings-status]').textContent).toContain('0 live results');
+  });
+
+  test('the global toggle switches the board between 20 and 5 second polling', async () => {
+    await start();
+    expect(requestsFor('scoreboard?')).toBe(1);
+    $('[data-live-fast-refresh]').click();
+    await vi.advanceTimersByTimeAsync(FAST_LIVE_INTERVAL);
+    expect(requestsFor('scoreboard?')).toBe(2);
+    $('[data-live-fast-refresh]').click();
+    await vi.advanceTimersByTimeAsync(FAST_LIVE_INTERVAL);
+    expect(requestsFor('scoreboard?')).toBe(2);
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL - FAST_LIVE_INTERVAL);
+    expect(requestsFor('scoreboard?')).toBe(3);
+  });
+
+  test('restores the five-second preference on a new page', async () => {
+    window.localStorage.setItem('pool-live-fast-refresh', 'true');
+    await start();
+    await vi.advanceTimersByTimeAsync(FAST_LIVE_INTERVAL);
+    expect(requestsFor('scoreboard?')).toBe(2);
+  });
+
+  test('adopts a newer official baseline atomically and rejects another pool', async () => {
+    await start();
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    baseline = clone(baseline); baseline.generated = new Date(NOW + 1000).toISOString();
+    baseline.entrants[0].banked = 12; baseline.entrants[2].banked = 11;
+    baseline.games[0].scored = true; baseline.games[0].points = {};
+    baseline.games[0].awayScore = 21; baseline.games[0].homeScore = 17;
+    await vi.advanceTimersByTimeAsync(BASELINE_INTERVAL); await flush();
+    // The banked result is not added again on top of the live lead.
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    expect($('[data-slug="alex"] [data-live-gain]').hidden).toBe(true);
+    expect($('[data-live-standings-status]').textContent).toContain('0 live results');
+    baseline = clone(baseline); baseline.pool = 'friends';
+    baseline.generated = new Date(NOW + BASELINE_INTERVAL + 1000).toISOString();
+    baseline.entrants[0].banked = 999;
+    await controller.refresh(); await flush();
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+  });
+
+  test('failures keep the last board, back off, and pauses resume cleanly', async () => {
+    await start();
+    fetcher.mockImplementation(async () => { throw new Error('network'); });
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect($('[data-live-standings-status]').textContent).toContain('unavailable');
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    const count = fetcher.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(fetcher.mock.calls.length).toBe(count);
+    fetcher.mockImplementation(async (url) => ({ ok: true, status: 200, json: async () => clone(
+      String(url).includes('scoreboard?') ? board : baseline) }));
+    await vi.advanceTimersByTimeAsync(1000); await flush();
+    expect($('[data-live-standings-status]').textContent).not.toContain('unavailable');
+    Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect($('[data-live-standings-status]').textContent).toContain('paused');
+    const paused = fetcher.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(600_000);
+    expect(fetcher.mock.calls.length).toBe(paused);
+    Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+    document.dispatchEvent(new Event('visibilitychange')); await flush();
+    expect(fetcher.mock.calls.length).toBeGreaterThan(paused);
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: false });
+    window.dispatchEvent(new Event('offline'));
+    expect($('[data-live-standings-status]').textContent).toContain('Offline');
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, value: true });
+    window.dispatchEvent(new Event('online')); await flush();
+    window.dispatchEvent(new Event('pagehide')); window.dispatchEvent(new Event('pageshow')); await flush();
+  });
+
+  test('a fully banked slate polls only the official baseline', async () => {
+    baseline.games[0].scored = true; baseline.games[0].points = {};
+    baseline.games[0].awayScore = 21; baseline.games[0].homeScore = 17;
+    boardMarkup(baseline);
+    await start();
+    expect(requestsFor('scoreboard?')).toBe(0);
+    expect(requestsFor('live.json')).toBe(1);
+    await vi.advanceTimersByTimeAsync(BASELINE_INTERVAL); await flush();
+    expect(requestsFor('live.json')).toBe(2);
+    expect(requestsFor('scoreboard?')).toBe(0);
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('10.00');
+  });
+
+  test('does nothing without a board, rows, or a valid baseline', () => {
+    document.body.innerHTML = '';
+    expect(initLiveBoard(document, window, helpers)).toBeNull();
+    boardMarkup(baseline);
+    document.querySelector('#live-data').textContent = '{"bad": true}';
+    expect(initLiveBoard(document, window, helpers)).toBeNull();
+    boardMarkup(baseline);
+    for (const row of document.querySelectorAll('.row')) row.remove();
+    expect(initLiveBoard(document, window, helpers)).toBeNull();
   });
 });
