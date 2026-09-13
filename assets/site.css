@@ -704,6 +704,31 @@ html:not([data-me]) .row.is-leader .row-rank { color: var(--live); }
 }
 .row-live-gain[hidden] { display: none; }
 
+/* How many of this entry's games are on right now, under the weekly line —
+   "3 games left" alone hides that two of them are in progress. The dot
+   breathes on the same pulse the Gameday live strip uses; the global
+   reduced-motion rule stills it like everything else. */
+.row-live-now {
+  display: block;
+  font: 600 0.65rem/1.6 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--live);
+  margin-top: 0.15rem;
+  white-space: nowrap;
+}
+.row-live-now::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 0.4rem;
+  background: var(--live);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--live) 50%, transparent);
+  animation: live-pulse 1.6s infinite;
+}
+.row-live-now[hidden] { display: none; }
+
 .board-live-status {
   font-family: var(--mono);
   font-size: 0.72rem;

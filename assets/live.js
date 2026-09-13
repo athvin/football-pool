@@ -918,8 +918,42 @@ export function initLiveBoard(doc, win, helpers) {
     }
   }
 
+  /** How many of each entrant's games are being played right now.
+   *
+   * "3 games left" alone is confusing while two of them are on: this names
+   * the in-progress subset under each row, beside the server's weekly line.
+   * Painted on every render, not only once a result lands — a scoreless or
+   * tied game is exactly when the reader wonders whether anything is live —
+   * and it never touches the official numbers, so it stays outside the
+   * `touched` gate that protects them. */
+  function paintLiveNow() {
+    const live = baseline.games.filter((g) => !g.scored && observed(g)?.state === 'in');
+    for (const entrant of baseline.entrants) {
+      const el = rows.get(entrant.slug);
+      if (!el) continue;
+      const count = live.filter((g) => entrant.teams.includes(g.away)
+        || entrant.teams.includes(g.home)).length;
+      let badge = el.querySelector('[data-live-now]');
+      if (!badge) {
+        if (!count) continue;
+        badge = doc.createElement('span');
+        badge.className = 'row-live-now';
+        badge.setAttribute('data-live-now', '');
+        // Directly under the "Week N: +x · y games left" line it qualifies;
+        // early pages built before the week's first final have no such line
+        // yet, so the badge stands on its own at the end of the name block.
+        const week = el.querySelector('.row-week');
+        if (week) week.after(badge);
+        else (el.querySelector('.row-who') || el).append(badge);
+      }
+      badge.textContent = count ? `${count} ${count === 1 ? 'game' : 'games'} live now` : '';
+      badge.hidden = !count;
+    }
+  }
+
   function render(failed = false) {
     const board = livePoolStandings(baseline, [...events.values()], now());
+    paintLiveNow();
     if (board.contributing || touched) {
       touched = true;
       paintRows(board);

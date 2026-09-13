@@ -444,8 +444,11 @@ off, and nothing else changes.
   finals and current leaders move the totals, ranks, and row order in place,
   each live row wearing a green `+x.xx live` gain, with a status line naming
   how many live results are on the board and that they are provisional until
-  the next official rebuild. With scripting off the page is simply the
-  official board.
+  the next official rebuild. Each row also says how many of that entry's
+  games are being played right now, under the weekly "games left" line —
+  "3 games left" alone hides that two of them are on — and that count shows
+  even while a game is tied and not yet moving anyone's points. With
+  scripting off the page is simply the official board.
 - **Schedule** — the NFL slate week by week, opening on the week being played,
   with what each side of every game is worth and who in the pool holds it.
 - **Season** — what happened and how it moved, in one place: points scored in
