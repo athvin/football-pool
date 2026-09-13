@@ -114,7 +114,13 @@
 {% if not rows %}
   <p class="empty">No entries yet. Add people to <code>seasons/{{ season.year }}/picks.yaml</code>.</p>
 {% else %}
-<div class="board">
+{# The browser recomputes this board live during games, from the same
+   baseline and the same maths the Gameday Game Center uses — banked totals
+   plus unbanked finals and current leaders. The rows below stay the honest
+   official numbers with scripting off; live totals are an overlay, announced
+   in the status line underneath. The 5-second updates toggle in the bar
+   above speeds it up on gameday. #}
+<div class="board" data-live-board data-baseline-url="{{ '/data/live.json'|url }}">
   {% for r in rows %}
   {# The row is a container, not a link, and that is the whole reason the four
      chips below can be links at all: an anchor inside an anchor is not a thing
@@ -180,6 +186,15 @@
   </div>
   {% endfor %}
 </div>
+<p class="board-live-status" data-live-standings-status role="status" hidden></p>
+{% if live %}
+<script type="application/json" id="live-data">{{ live|tojson }}</script>
+<script type="module">
+  import { initLiveBoard } from '{{ "/assets/live.js"|url }}';
+  import { fetchEspnJson, parseEspnScoreboard, formatTimestamp } from '{{ "/assets/site.js"|url }}';
+  initLiveBoard(document, window, { fetchEspnJson, parseEspnScoreboard, formatTimestamp });
+</script>
+{% endif %}
 {% endif %}
 
 {% if state.progress and state.progress.started and forecast %}

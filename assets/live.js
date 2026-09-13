@@ -756,21 +756,14 @@ export function initLivePage(doc, win, helpers) {
     if (running) { refreshPending = true; return; }
     return poll(); };
   listen(doc.querySelector('[data-live-refresh]'), 'click', refresh);
-  const fastRefresh = doc.querySelector('[data-live-fast-refresh]');
-  const renderRefreshChoice = () => {
-    const enabled = liveInterval === FAST_LIVE_INTERVAL;
-    fastRefresh.setAttribute('aria-pressed', String(enabled));
-    fastRefresh.querySelector('[data-live-fast-state]').textContent = enabled ? 'On' : 'Off';
-  };
-  renderRefreshChoice();
-  listen(fastRefresh, 'click', () => {
-    liveInterval = liveInterval === LIVE_INTERVAL ? FAST_LIVE_INTERVAL : LIVE_INTERVAL;
-    try { win.localStorage.setItem(FAST_REFRESH_KEY, String(liveInterval === FAST_LIVE_INTERVAL)); }
-    catch { /* Storage is optional; keep the choice for this visit. */ }
-    renderRefreshChoice();
+  // The 5-second updates toggle lives in the global viewer bar and belongs to
+  // site.js like every other viewer preference; this controller only hears
+  // about the choice. In-flight requests use the new interval when they
+  // finish, and failure deadlines stay intact so changing the preference
+  // cannot bypass retry backoff.
+  listen(doc, 'pool:live-interval', (event) => {
+    liveInterval = event.detail?.fast ? FAST_LIVE_INTERVAL : LIVE_INTERVAL;
     if (!active()) return;
-    // In-flight requests use the new interval when they finish. Leave failure
-    // deadlines intact so changing the preference cannot bypass retry backoff.
     if (!running && !failures) scheduleNext();
     const cached = summaries.get(selected);
     if (cached && !detailFailures && !requests.has(detailController)) {
@@ -803,6 +796,245 @@ export function initLivePage(doc, win, helpers) {
   });
   const tz = doc.querySelector('[data-tz-select]'); if (tz) listen(tz, 'change', render);
   readLocation(); resolveSelection(); render();
+  const ready = poll();
+  return { ready, refresh, destroy() { stopped = true; suspend(); for (const remove of listeners) remove(); } };
+}
+
+/** Live provisional standings on the Standings page itself.
+ *
+ * The official board stays server-rendered — with scripting off the page is
+ * complete and honest. This controller overlays the same numbers the Game
+ * Center's board computes from the same baseline and the same ESPN feed:
+ * banked totals plus unbanked finals and current leaders. A score change
+ * therefore reorders the leaderboard in place instead of waiting for the
+ * next scheduled rebuild. Never add a delta to an already-updated total. */
+export function initLiveBoard(doc, win, helpers) {
+  const root = doc.querySelector('[data-live-board]');
+  if (!root || typeof win.fetch !== 'function') return null;
+  let baseline;
+  try {
+    baseline = validateLiveBaseline(JSON.parse(doc.querySelector('#live-data').textContent));
+  } catch { return null; }
+  const rows = new Map(Array.from(root.querySelectorAll('.row[data-slug]'), (el) => [el.dataset.slug, el]));
+  if (!rows.size) return null;
+
+  const status = doc.querySelector('[data-live-standings-status]');
+  const events = new Map();
+  const requests = new Set();
+  const listeners = [];
+  let stopped = false;
+  let running = false;
+  let refreshPending = false;
+  let timer;
+  let failures = 0;
+  // Until a live result actually lands, the server-rendered numbers are left
+  // exactly as built — including their arrival count-up. Once this overlay
+  // has written the board it keeps writing it, so a lead that evaporates
+  // (a tied game, a corrected feed) falls back to banked rather than holding.
+  let touched = false;
+  let lastScoreUpdate = 0;
+  let lastBaselineAttempt = -Infinity;
+  let liveInterval = LIVE_INTERVAL;
+  try {
+    if (win.localStorage.getItem(FAST_REFRESH_KEY) === 'true') liveInterval = FAST_LIVE_INTERVAL;
+  } catch { /* The toggle still works when browser storage is unavailable. */ }
+
+  const now = () => (win.Date || Date).now();
+  const active = () => !stopped && !doc.hidden && win.navigator.onLine !== false;
+  const listen = (target, name, callback) => {
+    target.addEventListener(name, callback); listeners.push(() => target.removeEventListener(name, callback));
+  };
+  const zone = () => doc.querySelector('[data-tz-select]')?.value || 'America/New_York';
+  const stamp = (time) => helpers.formatTimestamp(new Date(time).toISOString(), zone());
+  const currentWindow = () => baseline.windows.find((w) => Date.parse(w.closes) > now())
+    || baseline.windows.at(-1);
+  const windowGames = (w) => baseline.games.filter((g) => g.week === w.week && g.kind === w.kind);
+  const observed = (game) => matchLiveGame(game, [...events.values()], baseline.season);
+
+  async function request(url) {
+    const controller = new win.AbortController();
+    requests.add(controller);
+    const timeout = win.setTimeout(() => controller.abort(), 10_000);
+    try { return await helpers.fetchEspnJson(win, url, controller.signal); }
+    finally { win.clearTimeout(timeout); requests.delete(controller); }
+  }
+
+  function paintRows(board) {
+    const reduce = win.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const before = reduce ? null
+      : new Map([...rows.values()].map((el) => [el, el.getBoundingClientRect().top]));
+    for (const [index, row] of board.rows.entries()) {
+      const el = rows.get(row.slug);
+      if (!el) continue;
+      const rank = el.querySelector('.row-rank');
+      if (rank) rank.textContent = String(row.rank);
+      const total = el.querySelector('.row-points');
+      if (total) {
+        // Claiming the element stops the arrival count-up (and its late
+        // settle timer) from writing the static number back over this one.
+        total.dataset.liveTotal = 'true';
+        total.textContent = points(row.total);
+      }
+      let gain = el.querySelector('[data-live-gain]');
+      if (!gain && total) {
+        gain = doc.createElement('span');
+        gain.className = 'row-live-gain';
+        gain.setAttribute('data-live-gain', '');
+        total.after(gain);
+      }
+      if (gain) {
+        gain.textContent = row.delta ? `+${points(row.delta)} live` : '';
+        gain.hidden = !row.delta;
+      }
+      el.classList.toggle('is-leader', row.rank === 1 && cents(row.total) > 0
+        && !el.classList.contains('is-eliminated'));
+      if (root.children[index] !== el) {
+        // Rows glide to their new places rather than teleporting; the reorder
+        // must never drop the keyboard mid-row, so focus is carried across.
+        const focused = doc.activeElement;
+        const restore = el.contains(focused);
+        root.insertBefore(el, root.children[index] || null);
+        if (restore) focused.focus({ preventScroll: true });
+      }
+    }
+    if (before) {
+      for (const [el, top] of before) {
+        const dy = top - el.getBoundingClientRect().top;
+        if (Math.abs(dy) >= 1) {
+          el.animate?.([{ transform: `translateY(${dy.toFixed(1)}px)` }, { transform: 'none' }],
+            { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+        }
+      }
+    }
+    // The "your entry" strip above the board quotes rank and points from the
+    // viewer's own row; it must not be left telling the pre-kickoff story.
+    const mine = board.rows.find((row) => row.slug === doc.documentElement.dataset.me);
+    const strip = mine && doc.querySelector('[data-you]');
+    if (strip) {
+      const rank = strip.querySelector('.you-rank');
+      const pts = strip.querySelector('.you-pts');
+      if (rank) rank.textContent = `#${mine.rank}`;
+      if (pts) pts.textContent = `${points(mine.total)} pts`;
+    }
+  }
+
+  function render(failed = false) {
+    const board = livePoolStandings(baseline, [...events.values()], now());
+    if (board.contributing || touched) {
+      touched = true;
+      paintRows(board);
+    }
+    if (!status) return;
+    const parts = [];
+    if (failed && (touched || lastScoreUpdate)) {
+      parts.push(`Live scores unavailable; retrying.${lastScoreUpdate ? ` Last update ${stamp(lastScoreUpdate)}.` : ''}`);
+    } else if (touched) {
+      parts.push(`${board.contributing} live result${board.contributing === 1 ? '' : 's'} on the board — provisional until the next official rebuild.`);
+      if (lastScoreUpdate) parts.push(`Scores updated ${stamp(lastScoreUpdate)}.`);
+    }
+    if (board.missing) {
+      parts.push(`${board.missing} game${board.missing === 1 ? '' : 's'} awaiting scores.`);
+    }
+    status.textContent = parts.join(' ');
+    status.hidden = !parts.length;
+  }
+
+  function scheduleNext() {
+    win.clearTimeout(timer);
+    if (!active()) return;
+    const relevant = baseline.games.filter((g) => !g.scored && Date.parse(g.kickoff) <= now())
+      .map((g) => observed(g)).filter(Boolean);
+    const slate = currentWindow() ? windowGames(currentWindow()).map((g) => observed(g)).filter(Boolean) : [];
+    const delay = liveRefreshDelay([...slate, ...relevant], failures, liveInterval);
+    // Even after all games finish, pick up the next official baseline.
+    const baselineDue = Math.max(1000, BASELINE_INTERVAL - (now() - lastBaselineAttempt));
+    timer = win.setTimeout(poll, delay ? Math.min(delay, baselineDue) : baselineDue);
+  }
+
+  async function poll() {
+    if (!active() || running) return;
+    running = true;
+    let failed = false;
+    try {
+      if (now() - lastBaselineAttempt >= BASELINE_INTERVAL) {
+        lastBaselineAttempt = now();
+        try {
+          const data = validateLiveBaseline(await request(root.dataset.baselineUrl));
+          if (data.pool !== baseline.pool || data.season !== baseline.season) throw new Error('Different pool or season');
+          if (Date.parse(data.generated) > Date.parse(baseline.generated)) {
+            // A newer official baseline supersedes the built-in page numbers
+            // too, so from here on the overlay owns the board.
+            baseline = data;
+            touched = true;
+          }
+        } catch { /* Retain this baseline; the official board still stands. */ }
+      }
+      // Unlike the Game Center, this board has no rail to fill: a window is
+      // only worth a request while it holds an unbanked game that could still
+      // move the standings. A season already fully banked costs ESPN nothing.
+      const current = currentWindow();
+      const wanted = baseline.windows.filter((w) => windowGames(w).some((g) => !g.scored
+        && (w.key === current?.key || Date.parse(g.kickoff) <= now())
+        && !observed(g)?.completed));
+      for (let i = 0; i < wanted.length && active(); i += 3) {
+        await Promise.all(wanted.slice(i, i + 3).map(async (w) => {
+          try {
+            const payload = await request(liveScoreboardUrl(w));
+            if (!Array.isArray(payload?.events)) throw new Error('Invalid scoreboard');
+            const parsed = helpers.parseEspnScoreboard(payload);
+            if (payload.events.length && !parsed.length) throw new Error('Invalid scoreboard');
+            if (!active()) return;
+            for (const event of parsed) {
+              if (event.seasonYear !== baseline.season || !eventId(event.id)) continue;
+              if (events.get(event.id)?.completed && !event.completed) continue;
+              events.set(event.id, event);
+            }
+            lastScoreUpdate = now();
+          } catch { failed = true; }
+        }));
+      }
+      if (!active()) return;
+      failures = failed ? failures + 1 : 0;
+      render(failed);
+    } finally {
+      running = false;
+      if (refreshPending && active()) { refreshPending = false; poll(); }
+      else scheduleNext();
+    }
+  }
+
+  const refresh = () => {
+    lastBaselineAttempt = -Infinity;
+    if (running) { refreshPending = true; return; }
+    return poll();
+  };
+
+  const suspend = () => {
+    win.clearTimeout(timer);
+    for (const controller of requests) controller.abort();
+  };
+  const visibility = () => {
+    if (active()) { poll(); return; }
+    suspend();
+    if (status && (touched || lastScoreUpdate)) {
+      status.textContent = doc.hidden
+        ? 'Live updates paused while this tab is hidden.'
+        : 'Offline · showing the last received scores.';
+      status.hidden = false;
+    }
+  };
+  listen(doc, 'visibilitychange', visibility);
+  listen(win, 'online', visibility); listen(win, 'offline', visibility);
+  listen(win, 'pagehide', suspend); listen(win, 'pageshow', visibility);
+  listen(doc, 'pool:live-interval', (event) => {
+    liveInterval = event.detail?.fast ? FAST_LIVE_INTERVAL : LIVE_INTERVAL;
+    // In-flight requests use the new interval when they finish. Leave failure
+    // deadlines intact so changing the preference cannot bypass retry backoff.
+    if (active() && !running && !failures) scheduleNext();
+  });
+  const tz = doc.querySelector('[data-tz-select]');
+  if (tz) listen(tz, 'change', () => render(failures > 0));
+
   const ready = poll();
   return { ready, refresh, destroy() { stopped = true; suspend(); for (const remove of listeners) remove(); } };
 }

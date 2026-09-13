@@ -227,9 +227,11 @@
       <p class="eyebrow">Football as it happens</p>
       <h2 class="section-title" id="game-center-title">Game Center</h2>
     </div>
+    {# The 5-second updates toggle used to sit here; it moved to the global
+       viewer bar so every live surface — this Game Center and the Standings
+       board — shares the one switch. #}
     <div class="live-tools">
       <button type="button" data-live-refresh>Refresh</button>
-      <button type="button" data-live-fast-refresh aria-pressed="false" title="Refresh live games every 5 seconds when on, or 20 seconds when off.">5-second updates <span data-live-fast-state aria-hidden="true">Off</span></button>
       <span class="live-connection" data-live-connection role="status">Connecting to ESPN…</span>
     </div>
   </div>

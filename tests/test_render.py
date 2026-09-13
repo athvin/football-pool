@@ -1644,6 +1644,10 @@ _NOT_A_LINK = (
     r"<button[^>]*>.*?</button>",
     r'<p class="page-sub">.*?</p>',
     r'<span class="tie-slot">.*?</span>',
+    # A script block is data, not text a reader sees: the standings page now
+    # embeds the live scoring baseline the browser recomputes the board from,
+    # and every entrant is named in it the way they are named in an attribute.
+    r"<script\b[^>]*>.*?</script>",
 )
 
 
@@ -2000,6 +2004,28 @@ def test_game_center_and_baseline_stay_inside_each_pool(pair_site_based):
         assert 'Game Center' in (root / subpath / "schedule" / "index.html").read_text()
     assert baselines[0]["entrants"] != baselines[1]["entrants"]
     assert baselines[0]["games"] == baselines[1]["games"]
+
+
+def test_standings_board_recomputes_live_in_the_browser(pair_site_based):
+    """The leaderboard carries the same baseline the Game Center reads, so the
+    browser can recompute it during games instead of waiting for a rebuild."""
+    for subpath, prefix in [("", "/football-pool"), ("friends", "/football-pool/friends")]:
+        html = (pair_site_based.path / subpath / "index.html").read_text()
+        data = json.loads((pair_site_based.path / subpath / "data" / "live.json").read_text())
+        assert f'data-live-board data-baseline-url="{prefix}/data/live.json"' in html
+        assert 'data-live-standings-status' in html
+        assert re.search(r"/football-pool/assets/live\.js\?v=[0-9a-f]{8}", html)
+        embedded = json.loads(re.search(
+            r'<script type="application/json" id="live-data">(.*?)</script>', html
+        ).group(1))
+        assert embedded == data
+        assert data["pool"] == subpath
+        # The 5-second updates toggle is global chrome now: exactly one per
+        # page, from the viewer bar — Gameday no longer carries its own.
+        for page in ["index.html", "gameday/index.html", "schedule/index.html"]:
+            assert (pair_site_based.path / subpath / page).read_text().count(
+                "data-live-fast-refresh"
+            ) == 1, page
 
 
 def test_the_live_tab_forwards_to_gameday_with_its_query(pair_site_based):

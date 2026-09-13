@@ -690,6 +690,28 @@ html:not([data-me]) .row.is-leader .row-rank { color: var(--live); }
   white-space: nowrap;
 }
 
+/* --- the live overlay on the board --------------------------------------
+   Written by the client during games: the same provisional maths the Game
+   Center's board runs, applied to the official rows in place. The gain badge
+   wears the live colour because live is what that colour already means. */
+.row-live-gain {
+  display: block;
+  font: 600 0.66rem var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--live);
+  margin-top: 0.2rem;
+  white-space: nowrap;
+}
+.row-live-gain[hidden] { display: none; }
+
+.board-live-status {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  color: var(--chalk-dim);
+  line-height: 1.8;
+  margin-block: 0.8rem;
+}
+
 .row-bars {
   grid-area: bars;
   display: flex;
@@ -2444,7 +2466,7 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
 
 .viewer-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   align-items: center;
   gap: 1.25rem;
   padding-block: 0.45rem;
@@ -2513,6 +2535,33 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
   color: var(--chalk-dim);
   white-space: nowrap;
 }
+
+/* The 5-second updates toggle: the one live-data preference, kept with the
+   other viewer choices so no live page has to grow its own button. The state
+   pill is painted by the client; with scripting off the control is inert and
+   the pages simply poll at their calm default. */
+.fast-refresh {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.3rem 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.fast-refresh-state {
+  font: 600 0.66rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+
+.fast-refresh:hover { border-color: var(--edge); }
+.fast-refresh:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+.fast-refresh[aria-pressed='true'] { border-color: var(--model); }
+.fast-refresh[aria-pressed='true'] .fast-refresh-state { color: var(--model); }
 
 .me-picker { display: flex; flex-direction: column; gap: 0.15rem; }
 .me-picker select, .tz select, .heat-picker select {
@@ -3526,6 +3575,13 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
     gap: 0.1rem;
   }
   .viewer-inner select { width: 100%; }
+  /* The toggle takes its own full row under the two pickers, label on the
+     left and state on the right, so a thumb has the whole bar to hit. */
+  .viewer-inner .fast-refresh {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    min-height: 40px;
+  }
 }
 
 /* A viewer bar over 100px tall is useful setup and poor permanent chrome.
