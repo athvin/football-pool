@@ -933,8 +933,30 @@ function paintGamedayOrder(doc, win, animate = false) {
   }
 }
 
+/**
+ * Walk the reader to the "Who are you?" picker a message just pointed at.
+ *
+ * Every identity-dependent control answers "choose who you are above" when
+ * nobody is chosen. On a desktop the viewer bar is sticky, so the picker the
+ * message names is already on screen. On a phone it is not: the bar scrolls
+ * away with the opening screen, and on the Gameday page the status line the
+ * message lands in can sit a full slate of games below the button — so the
+ * tap reads as a button that simply does nothing. Bringing the picker into
+ * view and focusing it turns the dead end back into the next step.
+ */
+function walkToMePicker(doc, win) {
+  const picker = doc.querySelector('[data-me-select]');
+  if (!picker) return;
+  const box = picker.getBoundingClientRect?.();
+  const inView = box && box.bottom > 0 && box.top < (win?.innerHeight || 0);
+  if (!inView && typeof picker.scrollIntoView === 'function') {
+    picker.scrollIntoView({ block: 'center' });
+  }
+  picker.focus?.({ preventScroll: true });
+}
+
 /** Keep the high-level rooting board focused on consequential outside help. */
-function initRootingHelp(doc) {
+function initRootingHelp(doc, win) {
   const button = doc.querySelector('[data-rooting-help]');
   const grid = doc.querySelector('[data-gameday-cards]');
   const script = doc.querySelector('#gameday-data');
@@ -1006,6 +1028,7 @@ function initRootingHelp(doc) {
   button.addEventListener('click', () => {
     if (!active && !doc.documentElement.dataset.me) {
       if (status) status.textContent = 'Choose who you are at the top of the page first.';
+      walkToMePicker(doc, win);
       return;
     }
     active = !active;
@@ -1065,6 +1088,12 @@ function initScenario(doc, win, launchPreset = '') {
   let selections = parseScenarioHash(win.location?.hash || doc.location?.hash || '', data.games);
   const sharedScenario = Object.keys(selections).length > 0;
   let activePreset = sharedScenario ? '' : 'reset';
+  // A dream/help tap made before anyone has said who they are. The tap walks
+  // the reader up to the identity picker, and this remembers what they were
+  // trying to do so their pick finishes the job — on a phone the preset
+  // buttons are a whole slate of games below the picker, and "now scroll back
+  // down and tap it again" is exactly the round trip that reads as broken.
+  let pendingPreset = '';
   let previousMeRank = null;
   // Games the live feed reported final while this page was open. A final is a
   // fact, not a scenario: it is called by the real score, locked against every
@@ -1174,6 +1203,7 @@ function initScenario(doc, win, launchPreset = '') {
       const game = choice.closest('[data-scenario-game]').dataset.scenarioGame;
       if (finals[game]) return;
       activePreset = '';
+      pendingPreset = '';
       selections[game] = selections[game] === choice.dataset.scenarioChoice
         ? undefined : choice.dataset.scenarioChoice;
       if (!selections[game]) delete selections[game];
@@ -1192,8 +1222,11 @@ function initScenario(doc, win, launchPreset = '') {
             ? 'Choose who you are above to build your dream slate.'
             : 'Choose who you are above to find the other teams that help you.';
         }
+        pendingPreset = preset;
+        walkToMePicker(doc, win);
         return;
       }
+      pendingPreset = '';
       activePreset = preset;
       selections = scenarioPreset(data, preset, me);
       const standings = paint();
@@ -1226,6 +1259,32 @@ function initScenario(doc, win, launchPreset = '') {
   doc.querySelector('[data-me-select]')?.addEventListener('change', () => {
     previousMeRank = null;
     const status = root.querySelector('[data-scenario-status]');
+    if (pendingPreset) {
+      const me = doc.documentElement.dataset.me || '';
+      const wanted = pendingPreset;
+      // One-shot either way: they answered the question, or they chose
+      // "nobody" and declined it. A later identity change should never
+      // replay a preset they asked about minutes ago.
+      pendingPreset = '';
+      if (me) {
+        activePreset = wanted;
+        selections = scenarioPreset(data, wanted, me);
+        const standings = paint();
+        if (status) {
+          status.textContent = wanted === 'dream'
+            ? describeDream(standings, me)
+            : describeHelp(standings, me);
+        }
+        // The tap that started this walked them up to the picker; the result
+        // it asked for painted a screen below. Walk them back.
+        const box = root.getBoundingClientRect?.();
+        const inView = box && box.bottom > 0 && box.top < (win.innerHeight || 0);
+        if (!inView && typeof root.scrollIntoView === 'function') {
+          root.scrollIntoView({ block: 'start' });
+        }
+        return;
+      }
+    }
     if (activePreset === 'dream' || activePreset === 'help') {
       const me = doc.documentElement.dataset.me || '';
       selections = scenarioPreset(data, activePreset, me);
@@ -2656,7 +2715,7 @@ export function init(doc = document, win = window) {
   doc.querySelector('[data-me-select]')?.addEventListener(
     'change', () => paintGamedayOrder(doc, win, true),
   );
-  initRootingHelp(doc);
+  initRootingHelp(doc, win);
   // The clock comes in through `win` so a test can stand anywhere in the season
   // without touching global time — the same discipline the Python side follows
   // by passing the fetch instant around rather than calling now().
