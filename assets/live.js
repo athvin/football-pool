@@ -951,9 +951,82 @@ export function initLiveBoard(doc, win, helpers) {
     }
   }
 
+  /** This week's story, drawn on each row's four team chips.
+   *
+   * A green ring is a win already in the books, a red ring a loss; a pulsing
+   * green ring is a game on right now — the chip lit up while its team leads,
+   * grayed while it trails, plain while tied. The classes are the signal and
+   * the title spells it out for anyone hovering or on a screen reader. Rings
+   * describe only the current week's window, so they clear themselves when
+   * the schedule rolls over, and a tie or a suspended game marks nothing. */
+  const RING_CLASSES = ['is-won', 'is-lost', 'is-live', 'is-live-up', 'is-live-down'];
+
+  function teamWeekState(game, team) {
+    const opponent = team === game.away ? game.home : game.away;
+    const settled = (mine, theirs) => (mine === theirs ? null : {
+      classes: [mine > theirs ? 'is-won' : 'is-lost'],
+      title: `${team} ${mine > theirs ? 'beat' : 'lost to'} ${opponent} ${mine}–${theirs}`,
+    });
+    if (game.scored) {
+      if (game.awayScore == null || game.homeScore == null) return null;
+      return settled(team === game.away ? game.awayScore : game.homeScore,
+        team === game.away ? game.homeScore : game.awayScore);
+    }
+    const event = observed(game);
+    if (!event || /CANCEL|POSTPON|SUSPEND/.test(event.statusName || '')) return null;
+    const scores = [event.awayScore, event.homeScore].map(Number);
+    const readable = event.scoresAvailable !== false
+      && scores.every((s) => Number.isInteger(s) && s >= 0);
+    const mine = team === event.away ? scores[0] : scores[1];
+    const theirs = team === event.away ? scores[1] : scores[0];
+    if (event.state === 'post') {
+      // The same rules the standings use: only an explicit, complete final
+      // settles a game, and a final tie rings nothing.
+      const outcome = liveOutcome(event, game.kind);
+      if (!outcome || outcome === 'TIE' || !readable) return null;
+      return settled(mine, theirs);
+    }
+    if (event.state !== 'in') return null;
+    if (!readable || mine === theirs) {
+      return { classes: ['is-live'], title: `${team} playing ${opponent} now${readable ? `, tied ${mine}–${theirs}` : ''}` };
+    }
+    return {
+      classes: ['is-live', mine > theirs ? 'is-live-up' : 'is-live-down'],
+      title: `${team} ${mine > theirs ? 'leading' : 'trailing'} ${opponent} live, ${mine}–${theirs}`,
+    };
+  }
+
+  function paintTeamStates() {
+    const w = currentWindow();
+    const byTeam = new Map();
+    for (const game of (w ? windowGames(w) : [])) {
+      byTeam.set(game.away, game);
+      byTeam.set(game.home, game);
+    }
+    for (const el of rows.values()) {
+      for (const chip of el.querySelectorAll('.row-teams .team-chip')) {
+        const game = byTeam.get(chip.textContent.trim());
+        const state = game ? teamWeekState(game, chip.textContent.trim()) : null;
+        for (const cls of RING_CLASSES) {
+          chip.classList.toggle(cls, Boolean(state && state.classes.includes(cls)));
+        }
+        if (state) {
+          chip.dataset.liveRing = 'true';
+          chip.title = state.title;
+        } else if (chip.dataset.liveRing) {
+          // Only undo what this overlay wrote; a chip it never rang keeps
+          // whatever the server gave it.
+          delete chip.dataset.liveRing;
+          chip.removeAttribute('title');
+        }
+      }
+    }
+  }
+
   function render(failed = false) {
     const board = livePoolStandings(baseline, [...events.values()], now());
     paintLiveNow();
+    paintTeamStates();
     if (board.contributing || touched) {
       touched = true;
       paintRows(board);
