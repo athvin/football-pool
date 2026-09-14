@@ -729,6 +729,33 @@ html:not([data-me]) .row.is-leader .row-rank { color: var(--live); }
 }
 .row-live-now[hidden] { display: none; }
 
+/* This week's story on each row's four chips. Green ring = win in the books,
+   red ring = loss; a pulsing green ring is a game on right now — the chip lit
+   from behind while its team leads, grayed while it trails, plain while tied.
+   Rings are box-shadows so the chips never change size, and the global
+   reduced-motion rule stills the pulse. */
+.row-teams .team-chip.is-won { box-shadow: 0 0 0 2px var(--live); }
+.row-teams .team-chip.is-lost { box-shadow: 0 0 0 2px var(--heat); }
+.row-teams .team-chip.is-live {
+  box-shadow: 0 0 0 2px var(--live);
+  animation: chip-live-ring 1.6s infinite;
+}
+.row-teams .team-chip.is-live-up {
+  filter: brightness(1.2) saturate(1.25);
+  box-shadow: 0 0 0 2px var(--live), 0 0 14px color-mix(in srgb, var(--live) 60%, transparent);
+  animation: chip-live-ring-up 1.6s infinite;
+}
+.row-teams .team-chip.is-live-down { filter: grayscale(0.75) opacity(0.8); }
+
+@keyframes chip-live-ring {
+  0%, 100% { box-shadow: 0 0 0 2px var(--live), 0 0 0 0 color-mix(in srgb, var(--live) 45%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--live), 0 0 0 6px transparent; }
+}
+@keyframes chip-live-ring-up {
+  0%, 100% { box-shadow: 0 0 0 2px var(--live), 0 0 0 0 color-mix(in srgb, var(--live) 45%, transparent), 0 0 14px color-mix(in srgb, var(--live) 60%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--live), 0 0 0 6px transparent, 0 0 14px color-mix(in srgb, var(--live) 60%, transparent); }
+}
+
 .board-live-status {
   font-family: var(--mono);
   font-size: 0.72rem;

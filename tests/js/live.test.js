@@ -761,7 +761,9 @@ function boardMarkup(data) {
       ${data.entrants.map((e, i) => `
       <div class="row${i === 0 ? ' is-leader' : ''}" data-slug="${e.slug}">
         <span class="row-rank">${i + 1}</span>
-        <span class="row-who"><a class="row-link" href="/entrant/${e.slug}/"><span class="row-name">${e.name}</span></a>${
+        <span class="row-who"><a class="row-link" href="/entrant/${e.slug}/"><span class="row-name">${e.name}</span></a><span class="row-teams">${
+  e.teams.map((t) => `<a class="team-chip dim" href="/team/${t}/"><img class="chip-logo" alt="">${t}</a>`).join('')
+}</span>${
   i === 0 ? '<span class="row-week">Week 1: +0.00 · 1 game left</span>' : ''
 }</span>
         <span class="row-score"><span class="row-points">${e.banked.toFixed(2)}</span></span>
@@ -835,11 +837,32 @@ describe('Live standings board', () => {
     expect($('[data-slug="alex"] [data-live-now]').textContent).toBe('1 game live now');
     expect($('[data-slug="alex"] .row-week').nextElementSibling.dataset.liveNow).toBe('');
     expect($('[data-slug="blair"] .row-who [data-live-now]').textContent).toBe('1 game live now');
-    // The game going final clears the "live now" count while its points stay.
+    // Rings on the chips tell the same story per team: the live leader is
+    // ringed green and lit, the live trailer ringed green and grayed.
+    const tb = $('[data-slug="alex"] .row-teams .team-chip');
+    const atl = $('[data-slug="blair"] .row-teams .team-chip');
+    // ATL scored 24 in the lead-change step above, so ATL leads and TB trails.
+    expect(atl.classList.contains('is-live')).toBe(true);
+    expect(atl.classList.contains('is-live-up')).toBe(true);
+    expect(atl.title).toBe('ATL leading TB live, 24–21');
+    expect(tb.classList.contains('is-live')).toBe(true);
+    expect(tb.classList.contains('is-live-down')).toBe(true);
+    expect(tb.title).toContain('trailing');
+    // The game going final clears the "live now" count while its points stay,
+    // and the rings settle into a green win and a red loss.
     board = scoreboard(summary('post'));
     await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
     expect($('[data-slug="alex"] [data-live-now]').hidden).toBe(true);
     expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    expect(tb.classList.contains('is-won')).toBe(true);
+    expect(tb.classList.contains('is-live')).toBe(false);
+    expect(tb.title).toBe('TB beat ATL 21–17');
+    expect(atl.classList.contains('is-lost')).toBe(true);
+    expect(atl.classList.contains('is-live-up')).toBe(false);
+    // Cam holds both sides, so their pair reads one win, one loss.
+    const camChips = document.querySelectorAll('[data-slug="cam"] .row-teams .team-chip');
+    expect(camChips[0].classList.contains('is-won')).toBe(true);
+    expect(camChips[1].classList.contains('is-lost')).toBe(true);
   });
 
   test('a tied live game leaves the official board untouched until a lead lands', async () => {
@@ -851,6 +874,11 @@ describe('Live standings board', () => {
     expect($('[data-live-standings-status]').hidden).toBe(true);
     // The one thing a tied game does say: the reader's games are on right now.
     expect($('[data-slug="cam"] [data-live-now]').textContent).toBe('1 game live now');
+    const chip = $('[data-slug="alex"] .row-teams .team-chip');
+    expect(chip.classList.contains('is-live')).toBe(true);
+    expect(chip.classList.contains('is-live-up')).toBe(false);
+    expect(chip.classList.contains('is-live-down')).toBe(false);
+    expect(chip.title).toContain('tied 21–21');
     homeSide().score = '17';
     await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
     expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
@@ -943,6 +971,10 @@ describe('Live standings board', () => {
     expect(requestsFor('scoreboard?')).toBe(0);
     expect($('[data-slug="alex"] .row-points').textContent).toBe('10.00');
     expect($('[data-live-now]')).toBeNull();
+    // Banked finals still ring the chips — no ESPN feed required.
+    expect($('[data-slug="alex"] .row-teams .team-chip').classList.contains('is-won')).toBe(true);
+    expect($('[data-slug="alex"] .row-teams .team-chip').title).toBe('TB beat ATL 21–17');
+    expect($('[data-slug="blair"] .row-teams .team-chip').classList.contains('is-lost')).toBe(true);
   });
 
   test('does nothing without a board, rows, or a valid baseline', () => {
