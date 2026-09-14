@@ -730,12 +730,17 @@ html:not([data-me]) .row.is-leader .row-rank { color: var(--live); }
 .row-live-now[hidden] { display: none; }
 
 /* This week's story on each row's four chips. Green ring = win in the books,
-   red ring = loss; a pulsing green ring is a game on right now — the chip lit
-   from behind while its team leads, grayed while it trails, plain while tied.
-   Rings are box-shadows so the chips never change size, and the global
-   reduced-motion rule stills the pulse. */
-.row-teams .team-chip.is-won { box-shadow: 0 0 0 2px var(--live); }
-.row-teams .team-chip.is-lost { box-shadow: 0 0 0 2px var(--heat); }
+   red ring = loss, and BOTH finals glow — a lit chip always means the game is
+   over, in its result's colour. A pulsing green ring is a game on right now:
+   the chip brightened while its team leads, grayed while it trails, plain
+   while tied. Rings are box-shadows so the chips never change size, and the
+   global reduced-motion rule stills the pulse. */
+.row-teams .team-chip.is-won {
+  box-shadow: 0 0 0 2px var(--live), 0 0 14px color-mix(in srgb, var(--live) 60%, transparent);
+}
+.row-teams .team-chip.is-lost {
+  box-shadow: 0 0 0 2px var(--heat), 0 0 14px color-mix(in srgb, var(--heat) 60%, transparent);
+}
 .row-teams .team-chip.is-live {
   box-shadow: 0 0 0 2px var(--live);
   animation: chip-live-ring 1.6s infinite;

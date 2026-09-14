@@ -449,9 +449,10 @@ off, and nothing else changes.
   "3 games left" alone hides that two of them are on — and that count shows
   even while a game is tied and not yet moving anyone's points. The four
   team chips on each row carry the week's story as rings: green for a win
-  in the books, red for a loss, and a pulsing green ring while the game is
-  on — the chip lit up while its team leads, grayed while it trails — with
-  a hover title spelling each one out. With scripting off the page is
+  in the books, red for a loss — both finals glow, so a lit chip always
+  means the game is over, in its result's colour — and a pulsing green
+  ring while the game is on, the chip brightened while its team leads and
+  grayed while it trails, with a hover title spelling each one out. With scripting off the page is
   simply the official board.
 - **Schedule** — the NFL slate week by week, opening on the week being played,
   with what each side of every game is worth and who in the pool holds it.
