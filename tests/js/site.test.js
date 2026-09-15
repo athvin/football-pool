@@ -722,6 +722,65 @@ describe('Gameday DOM wiring', () => {
       .toContain('paste it into a text or group chat');
   });
 
+  test('a dream tap without identity walks to the picker and finishes on the pick', () => {
+    const data = {
+      entrants: [
+        { slug: 'a', name: 'Alex', teams: ['SEA'], banked: 10 },
+        { slug: 'b', name: 'Blair', teams: ['KC', 'MIA'], banked: 12 },
+      ],
+      games: [
+        {
+          id: 'g', away: 'KC', home: 'SEA', tie: true, favorite: 'KC', chaos: 'SEA',
+          points: { a: { KC: 0, SEA: 5, TIE: 2 }, b: { KC: 4, SEA: 0, TIE: 2 } },
+        },
+      ],
+    };
+    document.body.innerHTML = `
+      <select data-me-select><option value=""></option><option value="a">Alex</option></select>
+      <section data-scenario>
+        <button data-scenario-preset="likely">Likely</button>
+        <button data-scenario-preset="dream">Dream</button>
+        <fieldset data-scenario-game="g"><button data-scenario-choice="SEA">SEA</button></fieldset>
+        <ol data-scenario-board>
+          <li data-slug="a"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+          <li data-slug="b"><i class="scenario-rank"></i><span class="scenario-total"></span></li>
+        </ol>
+        <p data-scenario-status></p>
+      </section>
+      <script id="gameday-data" type="application/json">${JSON.stringify(data)}</script>`;
+    const win = fakeWindow();
+    win.location = { href: 'https://example.test/gameday/' };
+    init(document, win);
+    const select = document.querySelector('[data-me-select]');
+    const dream = document.querySelector('[data-scenario-preset="dream"]');
+
+    // On a phone the picker has scrolled away and the status line paints a
+    // screen below the button; the tap must lead somewhere visible.
+    dream.click();
+    expect(document.querySelector('[data-scenario-status]').textContent).toContain('Choose who');
+    expect(document.activeElement).toBe(select);
+
+    // The pick answers the tap: the dream slate applies without a second tap.
+    select.value = 'a';
+    select.dispatchEvent(new Event('change'));
+    expect(dream.getAttribute('aria-pressed')).toBe('true');
+    expect(document.querySelector('[data-scenario-status]').textContent)
+      .toContain("Alex's best slate lands at #1");
+    expect(document.querySelector('[data-scenario-choice="SEA"]').getAttribute('aria-pressed')).toBe('true');
+
+    // Declining ends the ask: a later identity change replays nothing.
+    select.value = '';
+    select.dispatchEvent(new Event('change'));
+    dream.click();
+    expect(document.querySelector('[data-scenario-status]').textContent).toContain('Choose who');
+    document.querySelector('[data-scenario-preset="likely"]').click();
+    expect(document.querySelector('[data-scenario-preset="likely"]').getAttribute('aria-pressed')).toBe('true');
+    select.value = 'a';
+    select.dispatchEvent(new Event('change'));
+    expect(dream.getAttribute('aria-pressed')).toBe('false');
+    expect(document.querySelector('[data-scenario-preset="likely"]').getAttribute('aria-pressed')).toBe('true');
+  });
+
   test('the rooting-board button shows only consequential teams outside my picks', () => {
     const data = {
       entrants: [
