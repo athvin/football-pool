@@ -387,6 +387,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,CAR,WR,85,DEV,Casey Washington,Illinois,WashCa01,2
 2026,CAR,WR,19,RES,Chris Brazzell II,Tennessee; Tulane,BrazCh01,0
 2026,CAR,WR,83,DEV,David Moore,East Central,MoorDa03,9
+2026,CAR,WR,88,DEV,E.J. Williams Jr.,,,0
 2026,CAR,WR,86,DEV,Ja'Seem Reed,San Diego,ReedJa05,1
 2026,CAR,WR,18,ACT,Jalen Coker,Holy Cross,CokeJa01,2
 2026,CAR,WR,13,ACT,John Metchie III,Alabama,MetcJo00,4
@@ -621,7 +622,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,CLE,TE,44,ACT,Harold Fannin Jr.,Bowling Green,FannHa00,1
 2026,CLE,TE,18,RES,Joe Royer,Cincinnati; Ohio State,RoyeJo01,0
 2026,CLE,TE,84,DEV,Messiah Swinson,Arizona State; Missouri,,2
-2026,CLE,WR,80,DEV,Bryce Oliver,Youngstown State; Kentucky,OlivBr02,2
 2026,CLE,WR,81,DEV,Bub Means,Pittsburgh; Louisiana Tech,MeanBu00,2
 2026,CLE,WR,12,ACT,Denzel Boston,Washington,BostDe00,0
 2026,CLE,WR,0,ACT,Isaiah Bond,Texas; Alabama,BondIs00,1
@@ -689,6 +689,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,DAL,QB,16,ACT,Sam Howell,North Carolina,HoweSa00,4
 2026,DAL,RB,31,ACT,Emari Demercado,TCU,DemeEm00,3
 2026,DAL,RB,30,ACT,Hunter Luepke,North Dakota State,LuepHu00,3
+2026,DAL,RB,25,DEV,Israel Abanikanda,Pittsburgh,AbanIs00,3
 2026,DAL,RB,33,ACT,Javonte Williams,North Carolina,WillJa10,5
 2026,DAL,RB,20,RES,Malik Davis,Florida,DaviMa02,4
 2026,DAL,RB,25,ACT,Tyler Goodson,Iowa,GoodTy00,4
@@ -907,6 +908,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,GB,LS,46,DEV,Scott Daly,Notre Dame,,8
 2026,GB,OL,65,ACT,Aaron Banks,Notre Dame,,5
 2026,GB,OL,71,ACT,Anthony Belton,N.C. State; Georgia Military,,1
+2026,GB,OL,73,DEV,Cordell Volson,North Dakota State,,4
 2026,GB,OL,78,DEV,Dalton Cooper,Oklahoma State; Texas State-San Marcos,,1
 2026,GB,OL,68,DEV,Dillon Wade,Auburn; Tulsa,,0
 2026,GB,OL,67,ACT,Donovan Jennings,University of South Florida,,2
@@ -1008,7 +1010,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,HOU,QB,7,ACT,C.J. Stroud,Ohio State,StroCJ00,3
 2026,HOU,QB,10,ACT,Davis Mills,Stanford,MillDa02,5
 2026,HOU,QB,18,RES,Graham Mertz,Florida; Wisconsin,MertGr00,1
-2026,HOU,QB,16,DEV,Mark Gronowski,Iowa; South Dakota,GronMa00,0
 2026,HOU,RB,44,ACT,British Brooks,North Carolina,BrooBr01,2
 2026,HOU,RB,32,ACT,David Montgomery,Iowa State,MontDa01,7
 2026,HOU,RB,25,DEV,Jawhar Jordan,Louisville; Syracuse,JordJa00,2
@@ -1020,6 +1021,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,HOU,TE,87,ACT,Foster Moreau,LSU,MoreFo00,7
 2026,HOU,TE,83,ACT,Marlin Klein,Michigan,KleiMa00,0
 2026,HOU,TE,88,DEV,Zaire Mitchell-Paden,Florida Atlantic,MitcZa00,4
+2026,HOU,WR,80,DEV,Bryce Oliver,Youngstown State; Kentucky,OlivBr02,2
 2026,HOU,WR,89,DEV,Daniel Sobkowicz,Illinois State,,0
 2026,HOU,WR,17,ACT,Jared Wayne,Pittsburgh,WaynJa01,3
 2026,HOU,WR,81,RES,Jayden Higgins,Iowa State; Eastern Kentucky,HiggJa00,1
@@ -1271,8 +1273,8 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,LAC,DB,2,ACT,Elijah Molden,Washington,MoldEl00,5
 2026,LAC,DB,22,ACT,Genesis Smith,Arizona,SmitGe01,0
 2026,LAC,DB,37,DEV,Isas Waxter,Villanova,,1
+2026,LAC,DB,29,DEV,Kaiir Elam,Florida,ElamKa00,4
 2026,LAC,DB,32,ACT,Kendall Williamson,Stanford,WillKe07,3
-2026,LAC,DB,46,DEV,Nikko Reed,Oregon; Colorado,ReedNi00,1
 2026,LAC,DB,27,ACT,R.J. Mickens,Clemson,MickRJ00,1
 2026,LAC,DB,24,ACT,Rodney Shelley,Georgia Tech,,0
 2026,LAC,DB,4,ACT,Tarheeb Still,Maryland,StilTa00,2
@@ -1374,7 +1376,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,LAR,LB,54,DEV,Jamie Sheriff,South Alabama; Mississippi Gulf Coast CC,SherJa01,2
 2026,LAR,LB,10,ACT,Josaiah Stewart,Michigan; Coastal Carolina,StewJo03,1
 2026,LAR,LB,11,RES,Keir Thomas,Florida State,ThomKe04,4
-2026,LAR,LB,95,ACT,Myles Garrett,Texas A&M,GarrMy00,9
+2026,LAR,LB,95,RES,Myles Garrett,Texas A&M,GarrMy00,9
 2026,LAR,LB,53,ACT,Nate Landman,Colorado,LandNa01,4
 2026,LAR,LB,48,ACT,Omar Speights,LSU; Oregon State,SpeiOm00,2
 2026,LAR,LB,56,ACT,Shaun Dolac,Buffalo,DolaSh00,1
@@ -1707,7 +1709,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,NE,OL,74,ACT,Caleb Lomu,Utah,,0
 2026,NE,OL,68,ACT,Dametrious Crownover,Texas A&M,,0
 2026,NE,OL,70,ACT,Greg Van Roten,Penn,,14
-2026,NE,OL,64,DEV,Jacob Rizy,Florida State; Harvard,,0
 2026,NE,OL,63,DEV,Jake Kubas,North Dakota State,,2
 2026,NE,OL,55,ACT,Jared Wilson,Georgia,,1
 2026,NE,OL,61,DEV,Lorenz Metz,Cincinnati,,3
@@ -1716,6 +1717,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,NE,OL,76,ACT,Morgan Moses,Virginia,,12
 2026,NE,OL,72,ACT,Walter Rouse,Oklahoma; Stanford,,2
 2026,NE,OL,66,ACT,Will Campbell,LSU,,1
+2026,NE,OL,65,DEV,Xavier Newman-Johnson,Baylor,,4
 2026,NE,P,17,RES,Bryce Baringer,Michigan State; Illinois,BariBr00,3
 2026,NE,P,19,DEV,Mitch Wishnowsky,Utah; Santa Barbara,WishMi00,7
 2026,NE,QB,15,ACT,Behren Morton,Texas Tech,MortBe00,0
@@ -1834,6 +1836,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,NYG,DB,28,ACT,Elijah Campbell,Northern Iowa,CampEl00,8
 2026,NYG,DB,37,DEV,Elijah Jones,Boston College,JoneEl00,2
 2026,NYG,DB,20,ACT,Greg Newsome II,Northwestern,NewsGr00,5
+2026,NYG,DB,33,DEV,Jaden Robinson,Oregon State,,1
 2026,NYG,DB,35,RES,Jarrick Bernard-Converse,LSU; Oklahoma State,BernJa01,3
 2026,NYG,DB,25,ACT,Jason Pinnock,Pittsburgh,PinnJa01,5
 2026,NYG,DB,8,ACT,Jevon Holland,Oregon,HollJe02,5
@@ -1879,7 +1882,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,NYG,OL,76,ACT,Jon Runyan,Michigan,,6
 2026,NYG,OL,67,DEV,Kingsley Eguakun,Florida,,2
 2026,NYG,OL,71,ACT,Marcus Mbow,Purdue,,1
-2026,NYG,OL,70,DEV,Ryan Schernecke,Kutztown,,0
 2026,NYG,P,15,ACT,Jordan Stout,Penn State,StouJo00,4
 2026,NYG,QB,18,DEV,Jake Haener,Fresno State; Washington,HaenJa00,3
 2026,NYG,QB,19,ACT,Jameis Winston,Florida State,WinsJa00,11
@@ -2460,7 +2462,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,WAS,DB,2,ACT,Amik Robertson,Louisiana Tech,RobeAm00,6
 2026,WAS,DB,24,ACT,Fabian Moreau,UCLA,MoreFa00,9
 2026,WAS,DB,38,DEV,Fred Davis,Northwestern; Jacksonville State; UCF; Clemson,,0
-2026,WAS,DB,37,DEV,Isaac Yiadom,Boston College,YiadIs00,8
+2026,WAS,DB,37,ACT,Isaac Yiadom,Boston College,YiadIs00,8
 2026,WAS,DB,39,ACT,Jeremy Reaves,South Alabama,ReavJe00,8
 2026,WAS,DB,36,RES,Malik Spencer,,,0
 2026,WAS,DB,0,ACT,Mike Sainristil,Michigan,SainMi00,2
@@ -2478,7 +2480,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,WAS,DL,99,ACT,Javon Kinlaw,South Carolina; Jones County JC,KinlJa00,6
 2026,WAS,DL,60,DEV,Jeffrey M'ba,SMU; Purdue; Auburn; Independence Comm. College,,0
 2026,WAS,DL,95,RES,Jer'Zhan Newton,Illinois,NewtJe00,2
-2026,WAS,DL,50,ACT,Ricky Barber,UCF; Western Kentucky,BarbRi00,1
 2026,WAS,DL,96,ACT,Shy Tuttle,Tennessee,TuttSh00,7
 2026,WAS,DL,97,ACT,Tim Settle,Virginia Tech,SettTi00,8
 2026,WAS,K,19,ACT,Drew Stevens,Iowa,StevDr00,0
