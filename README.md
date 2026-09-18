@@ -112,6 +112,21 @@ uv run pytest                 # Python tests
 npm ci && npx vitest run      # JavaScript tests
 ```
 
+Both suites are hermetic — every ESPN and nflverse response is a fixture — so
+they cannot notice ESPN changing its API underneath the live features, which
+is exactly how the live overlay once went dark while CI stayed green (ESPN
+began rejecting the date-range scoreboard queries everything used). The
+*contract* tests exist for that: run against the real ESPN API, they send the
+exact requests the shipped code builds and read the responses through the
+shipped parsers. They skip unless asked for, and the `espn-contract` workflow
+asks daily in season; a red run there means ESPN moved, not that a deploy is
+blocked.
+
+```bash
+ESPN_CONTRACT=1 uv run pytest tests/test_espn_contract.py --no-cov  # server chain
+ESPN_CONTRACT=1 npx vitest run tests/js/espn-contract.test.js       # browser chain
+```
+
 To preview the site locally:
 
 ```bash

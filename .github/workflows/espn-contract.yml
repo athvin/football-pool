@@ -1,0 +1,82 @@
+name: ESPN contract
+
+# The live overlay and the finals supplement depend on ESPN request shapes
+# that ESPN can change without notice — and did: date-range scoreboard
+# queries started returning 400, every live surface went dark at once, and
+# the whole mocked test suite stayed green because mocks accept whatever URL
+# the code builds. This workflow runs the two contract suites — the tests
+# skipped by default so the unit runs stay hermetic — against the real API:
+#
+#   tests/js/espn-contract.test.js   the browser's chain: URL builders,
+#                                    scoreboard/summary parsing, matching
+#   tests/test_espn_contract.py      the build's chain: re-derive the most
+#                                    recent committed finals from ESPN alone
+#
+# Deliberately a separate workflow from daily.yml: a red run here means "ESPN
+# moved or is down" and must page the owner, but it must never block a deploy
+# — the site builds fine from nflverse data while the live layer is broken,
+# and holding the scoreboard hostage to ESPN's uptime would be worse than the
+# outage. The daily data commits are what keep GitHub's 60-day inactivity
+# timer reset, so this schedule stays alive on the back of that same push.
+on:
+  schedule:
+    # Once a day, mid-morning Eastern, August (preseason overlay) through the
+    # Super Bowl. Off the top of the hour for the same load-delay reason as
+    # daily.yml; the timezone is honoured, see the comment there.
+    - cron: '37 10 * 1,2,8-12 *'
+      timezone: America/New_York
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-python: true
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Cache node_modules
+        id: node-modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ runner.arch }}-node22-${{ hashFiles('package-lock.json') }}
+
+      - name: Install dependencies
+        run: |
+          uv sync --frozen
+          if [ "${{ steps.node-modules.outputs.cache-hit }}" != "true" ]; then npm ci; fi
+
+      - name: Server contract (finals supplement)
+        env:
+          ESPN_CONTRACT: '1'
+        run: uv run --no-sync pytest tests/test_espn_contract.py --no-cov -q
+
+      - name: Browser contract (live overlay)
+        if: ${{ !cancelled() }}
+        env:
+          ESPN_CONTRACT: '1'
+        run: npx vitest run tests/js/espn-contract.test.js
+
+      - name: Explain a red run
+        if: ${{ failure() }}
+        run: |
+          echo "::error title=ESPN contract broken::A query form or response \
+          shape the live features depend on no longer works against the real \
+          ESPN API. The site still builds and deploys from nflverse data, but \
+          the live standings overlay, the Game Center, and ESPN-confirmed \
+          finals are degraded until the builders and parsers in assets/live.js, \
+          assets/site.js, and src/football_pool/espn.py are brought back in \
+          line with what ESPN now serves. See the failing assertions above for \
+          which request or field moved."
