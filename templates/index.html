@@ -27,7 +27,7 @@
   <div class="state-cell">
     <p class="state-label">Where we are</p>
     <p class="state-value">{{ state.phase }}</p>
-    {% if state.progress and state.progress.started %}<p class="state-note">{{ state.progress.played }} of {{ state.progress.total }} games final</p>{% endif %}
+    {% if state.progress and state.progress.started %}<p class="state-note" data-live-progress-note>{{ state.progress.played }} of {{ state.progress.total }} games final</p>{% endif %}
   </div>
   <div class="state-cell">
     <p class="state-label">In the pot{{ info('pot') }}</p>
@@ -72,18 +72,22 @@
 {% if state.progress and state.progress.started %}
 <section class="week-snapshot" aria-label="Results included in these standings">
   <div class="section-head">
-    <h2 class="section-title">{{ state.progress.label }} {{ state.progress.status }}</h2>
+    <h2 class="section-title" data-live-week-title>{{ state.progress.label }} {{ state.progress.status }}</h2>
     <a href="{{ ('/schedule/#week-' ~ state.progress.number)|url }}">Full schedule ↗</a>
   </div>
-  <p><strong>{{ state.progress.played }} of {{ state.progress.total }} games final</strong>{% if state.progress.remaining %} · {{ state.progress.remaining }} awaiting results{% endif %}.</p>
+  <p data-live-progress><strong>{{ state.progress.played }} of {{ state.progress.total }} games final</strong>{% if state.progress.remaining %} · {{ state.progress.remaining }} awaiting results{% endif %}.</p>
   {% if state.leaders and not state.all_tied %}
   <p>{% if state.leaders|length > 1 %}Tied for the lead{% else %}Leading{% endif %} at {{ state.leaders[0].points|points }} points:
     {% for leader in state.leaders %}{{ entrant_link(leader.slug, leader.name, cls='') }}{{ ', ' if not loop.last else '.' }}{% endfor %}
   </p>
   {% endif %}
-  {% if state.progress.finals %}
-  <p class="week-results-label">Latest finals included</p>
-  <ul class="week-results">
+  {# The finals below are the build's snapshot and the whole scripting-off
+     story. With scripting on, the live board overlay takes this list over at
+     the window's first kickoff and repaints it from ESPN — every game in the
+     current week with its live score, clock, and current leader — so the
+     label and list render (hidden when empty) even before any final lands. #}
+  <p class="week-results-label" data-live-games-label{% if not state.progress.finals %} hidden{% endif %}>{% if state.progress.finals %}Latest finals included{% endif %}</p>
+  <ul class="week-results" data-live-games{% if not state.progress.finals %} hidden{% endif %}>
     {% for game in state.progress.finals %}
     <li>
       <span class="week-result-status">Final{% if game.source == 'ESPN' %} · ESPN{% endif %}</span>
@@ -92,7 +96,6 @@
     </li>
     {% endfor %}
   </ul>
-  {% endif %}
   <p class="week-snapshot-note">Every rebuild counts new confirmed finals{% if state.progress.remaining %}; the remaining games can change the standings{% endif %}.
     <a href="{{ '/gameday/'|url }}#game-center">Follow scores between rebuilds ↗</a></p>
 </section>
@@ -188,6 +191,9 @@
 </div>
 <p class="board-live-status" data-live-standings-status role="status" hidden></p>
 {% if live %}
+{# Chip templates for the live week strip: the overlay clones these to draw
+   any matchup in the window, including teams nobody in the pool picked. #}
+<div data-live-chips hidden>{% for team in season.teams %}<span data-live-chip="{{ team }}">{{ team_chip(team, 'scored') }}</span>{% endfor %}</div>
 <script type="application/json" id="live-data">{{ live|tojson }}</script>
 <script type="module">
   import { initLiveBoard } from '{{ "/assets/live.js"|url }}';

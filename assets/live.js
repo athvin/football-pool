@@ -819,6 +819,18 @@ export function initLiveBoard(doc, win, helpers) {
   if (!rows.size) return null;
 
   const status = doc.querySelector('[data-live-standings-status]');
+  // The week snapshot above the board hands these hooks to the overlay so the
+  // whole slate — not just the totals — goes live in the browser: every game
+  // in the current window with its score straight from ESPN, and a progress
+  // line counted from the same events. Pages built before the hooks existed
+  // simply skip the strip.
+  const gamesList = doc.querySelector('[data-live-games]');
+  const gamesLabel = doc.querySelector('[data-live-games-label]');
+  const weekTitle = doc.querySelector('[data-live-week-title]');
+  const progressLine = doc.querySelector('[data-live-progress]');
+  const progressNote = doc.querySelector('[data-live-progress-note]');
+  const chipTemplates = new Map(Array.from(doc.querySelectorAll('[data-live-chip]'),
+    (el) => [el.dataset.liveChip, el.firstElementChild]));
   const events = new Map();
   const requests = new Set();
   const listeners = [];
@@ -1023,8 +1035,106 @@ export function initLiveBoard(doc, win, helpers) {
     }
   }
 
+  /** The week snapshot's game list and progress line, live from ESPN.
+   *
+   * The build ships the last confirmed finals and a baked "X of Y games
+   * final" count; both go stale the moment football starts. Once the current
+   * window's first game kicks off, this repaints the whole slate in place —
+   * games on now first with score and clock, the leader's chip lit and the
+   * trailer's dimmed, then the coming kickoffs, then finals — and recounts
+   * the progress line from the same events, so nobody waits for a rebuild to
+   * see that Buffalo is winning. Before that first kickoff the static
+   * snapshot stands untouched, still telling last week's finished story.
+   * Purely informational, so it stays outside the `touched` gate that
+   * protects the official totals. */
+  const node = (tag, className = '', text = '') => {
+    const element = doc.createElement(tag);
+    if (className) element.className = className;
+    element.textContent = text;
+    return element;
+  };
+  const chip = (team) => chipTemplates.get(team)?.cloneNode(true)
+    || node('span', 'team-chip scored', team);
+
+  function paintGames() {
+    if (!gamesList) return;
+    const w = currentWindow();
+    const games = w ? windowGames(w) : [];
+    const begun = games.some((g) => g.scored || Date.parse(g.kickoff) <= now()
+      || ['in', 'post'].includes(observed(g)?.state));
+    if (!begun) return;
+    const order = { in: 0, pre: 1, post: 2 };
+    const entries = games.map((g) => {
+      const event = g.scored ? null : observed(g);
+      const state = g.scored || (event?.state === 'post' && event.completed) ? 'post'
+        : event?.state === 'in' ? 'in' : 'pre';
+      return { g, event, state };
+    }).sort((a, b) => order[a.state] - order[b.state] || a.g.kickoff.localeCompare(b.g.kickoff));
+    // The static finals carry no data-game key; the first live paint clears
+    // them along with any game that left the window.
+    const keep = new Set(games.map((g) => g.id));
+    for (const el of Array.from(gamesList.children)) {
+      if (!el.dataset.game || !keep.has(el.dataset.game)) el.remove();
+    }
+    const previous = new Map(Array.from(gamesList.children, (el) => [el.dataset.game, el]));
+    for (const [index, { g, event, state }] of entries.entries()) {
+      let li = previous.get(g.id);
+      if (!li) {
+        li = node('li');
+        li.dataset.game = g.id;
+        li.append(node('span', 'week-result-status'));
+        for (const team of [g.away, g.home]) {
+          const side = node('div');
+          side.append(chip(team), node('strong', '', '—'));
+          li.append(side);
+        }
+      }
+      const scores = g.scored ? [g.awayScore, g.homeScore]
+        : event && event.scoresAvailable !== false ? [event.awayScore, event.homeScore] : null;
+      const readable = Array.isArray(scores)
+        && scores.every((s) => Number.isInteger(Number(s)) && Number(s) >= 0);
+      li.classList.toggle('is-live', state === 'in');
+      li.firstChild.textContent = state === 'in' ? `Live · ${event.clock || event.status || 'In progress'}`
+        : state === 'post' ? 'Final' : `Kickoff ${stamp(Date.parse(g.kickoff))}`;
+      for (const [i, side] of [li.children[1], li.children[2]].entries()) {
+        side.lastChild.textContent = state !== 'pre' && readable ? String(Number(scores[i])) : '—';
+        // The same scored/dim story the build tells for finals, extended to
+        // live leads; tied and pregame chips both keep their colours.
+        const behind = state !== 'pre' && readable && Number(scores[i]) < Number(scores[1 - i]);
+        side.firstChild.classList.toggle('dim', behind);
+        side.firstChild.classList.toggle('scored', !behind);
+      }
+      if (gamesList.children[index] !== li) {
+        const focused = doc.activeElement;
+        const restore = li.contains(focused);
+        gamesList.insertBefore(li, gamesList.children[index] || null);
+        if (restore) focused.focus({ preventScroll: true });
+      }
+    }
+    if (gamesLabel) {
+      gamesLabel.textContent = `${w.label} games · live`;
+      gamesLabel.hidden = false;
+    }
+    gamesList.hidden = false;
+    const finals = entries.filter((entry) => entry.state === 'post').length;
+    const live = entries.filter((entry) => entry.state === 'in').length;
+    const waiting = games.length - finals - live;
+    if (progressLine) {
+      const parts = [];
+      if (live) parts.push(`${live} live now`);
+      if (waiting) parts.push(`${waiting} awaiting results`);
+      progressLine.replaceChildren(
+        node('strong', '', `${finals} of ${games.length} games final`),
+        doc.createTextNode(`${parts.length ? ` · ${parts.join(' · ')}` : ''}.`),
+      );
+    }
+    if (progressNote) progressNote.textContent = `${finals} of ${games.length} games final`;
+    if (weekTitle) weekTitle.textContent = `${w.label} ${finals === games.length ? 'complete' : 'in progress'}`;
+  }
+
   function render(failed = false) {
     const board = livePoolStandings(baseline, [...events.values()], now());
+    paintGames();
     paintLiveNow();
     paintTeamStates();
     if (board.contributing || touched) {

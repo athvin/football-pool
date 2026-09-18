@@ -755,8 +755,21 @@ describe('Live page controller', () => {
 function boardMarkup(data) {
   document.body.innerHTML = `
     <select data-tz-select><option>America/New_York</option><option>UTC</option></select>
+    <p class="state-note" data-live-progress-note>0 of 1 games final</p>
     <div data-you><a href="/entrant/alex/"><span class="you-rank">#1</span><span class="you-label">your entry</span><span>Alex</span><span class="you-pts">10.00 pts</span></a></div>
     <button data-live-fast-refresh aria-pressed="false"><span data-live-fast-state aria-hidden="true">Off</span></button>
+    <section class="week-snapshot">
+      <h2 class="section-title" data-live-week-title>Week 1 in progress</h2>
+      <p data-live-progress><strong>0 of 1 games final</strong> · 1 awaiting results.</p>
+      <p class="week-results-label" data-live-games-label hidden></p>
+      <ul class="week-results" data-live-games hidden><li>
+        <span class="week-result-status">Static final</span>
+      </li></ul>
+    </section>
+    <div data-live-chips hidden>
+      <span data-live-chip="TB"><a class="team-chip scored" href="/team/TB/" style="--team-bg:#d50a0a">TB</a></span>
+      <span data-live-chip="ATL"><a class="team-chip scored" href="/team/ATL/" style="--team-bg:#a71930">ATL</a></span>
+    </div>
     <div class="board" data-live-board data-baseline-url="/data/live.json">
       ${data.entrants.map((e, i) => `
       <div class="row${i === 0 ? ' is-leader' : ''}" data-slug="${e.slug}">
@@ -863,6 +876,55 @@ describe('Live standings board', () => {
     const camChips = document.querySelectorAll('[data-slug="cam"] .row-teams .team-chip');
     expect(camChips[0].classList.contains('is-won')).toBe(true);
     expect(camChips[1].classList.contains('is-lost')).toBe(true);
+  });
+
+  test('paints the week strip live from ESPN: scores, clock, leader, and progress', async () => {
+    await start();
+    // The static finals are replaced by the live slate, live games first.
+    const list = $('[data-live-games]');
+    expect(list.hidden).toBe(false);
+    expect(list.textContent).not.toContain('Static final');
+    const li = list.querySelector('[data-game="2025_01_TB_ATL"]');
+    expect(li.classList.contains('is-live')).toBe(true);
+    expect(li.querySelector('.week-result-status').textContent).toBe('Live · Q3 8:12');
+    const [awaySide, homeSide] = li.querySelectorAll(':scope > div');
+    expect(awaySide.textContent).toContain('TB');
+    expect(awaySide.querySelector('strong').textContent).toBe('21');
+    expect(homeSide.querySelector('strong').textContent).toBe('17');
+    // TB leads: its chip keeps colour, the trailer's chip is dimmed.
+    expect(awaySide.querySelector('.team-chip').classList.contains('dim')).toBe(false);
+    expect(homeSide.querySelector('.team-chip').classList.contains('dim')).toBe(true);
+    expect($('[data-live-games-label]').hidden).toBe(false);
+    expect($('[data-live-games-label]').textContent).toBe('Week 1 games · live');
+    // The progress line and the state tile recount from the feed.
+    expect($('[data-live-progress]').textContent).toBe('0 of 1 games final · 1 live now.');
+    expect($('[data-live-progress-note]').textContent).toBe('0 of 1 games final');
+    expect($('[data-live-week-title]').textContent).toBe('Week 1 in progress');
+    // The game going final settles the tile and completes the week.
+    board = scoreboard(summary('post'));
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect(li.classList.contains('is-live')).toBe(false);
+    expect(li.querySelector('.week-result-status').textContent).toBe('Final');
+    expect($('[data-live-progress]').textContent).toBe('1 of 1 games final.');
+    expect($('[data-live-week-title]').textContent).toBe('Week 1 complete');
+  });
+
+  test('before the window kicks off the static snapshot stands untouched', async () => {
+    baseline.games[0].kickoff = new Date(NOW + 3 * 3600_000).toISOString();
+    boardMarkup(baseline);
+    board = scoreboard(summary('pre'));
+    await start();
+    expect($('[data-live-games]').hidden).toBe(true);
+    expect($('[data-live-games]').textContent).toContain('Static final');
+    expect($('[data-live-progress]').textContent).toBe('0 of 1 games final · 1 awaiting results.');
+    expect($('[data-live-week-title]').textContent).toBe('Week 1 in progress');
+    // The first kickoff hands the snapshot to the overlay, upcoming games
+    // shown by kickoff time even before ESPN reports anything.
+    vi.setSystemTime(NOW + 4 * 3600_000);
+    await vi.advanceTimersByTimeAsync(WAIT_INTERVAL); await flush();
+    expect($('[data-live-games]').hidden).toBe(false);
+    const li = $('[data-live-games] [data-game="2025_01_TB_ATL"]');
+    expect(li.querySelector('.week-result-status').textContent).toContain('Kickoff');
   });
 
   test('a tied live game leaves the official board untouched until a lead lands', async () => {

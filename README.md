@@ -452,8 +452,14 @@ off, and nothing else changes.
   in the books, red for a loss — both finals glow, so a lit chip always
   means the game is over, in its result's colour — and a pulsing green
   ring while the game is on, the chip brightened while its team leads and
-  grayed while it trails, with a hover title spelling each one out. With scripting off the page is
-  simply the official board.
+  grayed while it trails, with a hover title spelling each one out. The week
+  snapshot above the board goes live the same way: at the window's first
+  kickoff the browser takes over the build's "latest finals" list and
+  repaints the whole slate from ESPN — games on now first with score, clock,
+  and the current leader's chip lit, then the coming kickoffs, then finals —
+  and recounts the "X of Y games final" progress line from the same feed, so
+  who's winning right now never waits for a rebuild. With scripting off the
+  page is simply the official board and the build's snapshot.
 - **Schedule** — the NFL slate week by week, opening on the week being played,
   with what each side of every game is worth and who in the pool holds it.
 - **Season** — what happened and how it moved, in one place: points scored in
