@@ -618,16 +618,42 @@ def _named(
 
 
 def _standings_week(ctx: SiteContext) -> dict[str, Any] | None:
-    """Progress in the latest week with results, or the opening week."""
+    """Progress in the week that owns ``fetched_at``, on the schedule clock.
+
+    Which week this is comes from kickoff windows — the same clock the
+    schedule page, the Game Center and the browser's live overlay read — and
+    never from results. The old rule, "the latest week with a final", looked
+    equivalent and was not: a Thursday-night kickoff starts the new week hours
+    before its first final can reach the data, so the standings sat on
+    "Week 1 · complete" while Week 2 was being played. Deriving it from the
+    first week with an *unplayed* game would fail differently: one cancelled
+    game pins that rule to its week for the rest of the season.
+
+    One refinement over the raw window rule: a window that has not opened yet
+    (the Tuesday–Wednesday gap between Monday night and the next kickoff)
+    hands the page back to the week just finished, whose recap is still the
+    story. Only the season's opening window has no such predecessor, and it
+    reads "upcoming" — the preseason state.
+    """
     windows = schedule_mod.week_windows(ctx.games)
     if not windows:
         return None
-    weeks = ctx.history.attrs.get("weeks", [])
-    window = next(w for w in windows if w.week == weeks[-1]) if weeks else windows[0]
-    slate = ctx.games[(ctx.games["week"] == window.week) & (ctx.games["game_type"] == window.game_type)]
+
+    def slate_of(w: schedule_mod.WeekWindow) -> pd.DataFrame:
+        return ctx.games[(ctx.games["week"] == w.week) & (ctx.games["game_type"] == w.game_type)]
+
+    index = next(
+        (i for i, w in enumerate(windows) if w.closes > ctx.data.fetched_at),
+        len(windows) - 1,
+    )
+    window, slate = windows[index], slate_of(windows[index])
+    started = bool(slate["played"].any()) or ctx.data.fetched_at >= window.opens
+    if not started and index:
+        # The previous window closed before this one opened, so it has
+        # certainly started — no need to re-derive that from its kickoffs.
+        window, slate, started = windows[index - 1], slate_of(windows[index - 1]), True
     finals = slate[slate["played"]].sort_values(["gameday", "gametime", "game_id"], ascending=False)
     played, total = len(finals), len(slate)
-    started = bool(played) or ctx.data.fetched_at >= window.opens
     status = "complete" if played == total else "in progress" if played else "awaiting results" if started else "upcoming"
     return {
         "number": window.week, "label": window.label, "played": played, "total": total,
@@ -657,14 +683,18 @@ def _pool_state(ctx: SiteContext, rows: list[dict[str, Any]]) -> dict[str, Any]:
     # over with the entire postseason still to play.
     sb_done = bool(((games["game_type"] == "SB") & games["played"]).any())
 
-    if ctx.data.current_week is None:
-        phase = week["label"] if week and week["started"] else "Preseason"
-    elif not ctx.seeds_final:
-        phase = f"Week {ctx.data.current_week}"
-    elif sb_done:
+    # In the regular season the headline follows the schedule clock, through
+    # ``week`` — the same window rule the schedule page and the live overlay
+    # use — rather than ``current_week``, which is read off completed games
+    # and therefore said "Week 1" all through Week 2's Thursday-night game.
+    if sb_done:
         phase = "Final"
-    else:
+    elif ctx.seeds_final:
         phase = "Playoffs"
+    elif week and week["started"]:
+        phase = week["label"]
+    else:
+        phase = "Preseason"
 
     return {
         "phase": phase,

@@ -74,16 +74,25 @@ def preseason_data(games_2025):
     """
     g = games_2025[games_2025["game_type"] == "REG"].copy()
     g[["played", "home_won", "away_won", "is_tie"]] = False
-    return GameData(g, 2025, NOW, None, "cache")
+    # Fetched in August, like the data says: the standings week is read off
+    # kickoff windows against this clock, so a February timestamp on a
+    # nothing-played file would describe a state the site can never be in.
+    return GameData(g, 2025, datetime(2025, 8, 1, 12, 0, tzinfo=timezone.utc), None, "cache")
 
 
 @pytest.fixture(scope="module")
 def mid_season(games_2025):
-    """Week 11 of 18 — the state the site spends most of its life in."""
+    """Week 11 of 18 — the state the site spends most of its life in.
+
+    Fetched on the Tuesday after week 11's Monday night, so the clock agrees
+    with the data — the same invariant ``days_behind`` enforces on every real
+    build. The old ``NOW`` (February) put the schedule clock a season past the
+    results, which no published build can reach.
+    """
     g = games_2025.copy()
     g.loc[g["week"] > 11, "played"] = False
     g.loc[g["game_type"] != "REG", "played"] = False
-    return GameData(g, 2025, NOW, None, "cache")
+    return GameData(g, 2025, datetime(2025, 11, 18, 12, 0, tzinfo=timezone.utc), None, "cache")
 
 
 # NB: this `pool` is a Season, and predates there being a PoolInfo of that
@@ -521,6 +530,43 @@ def test_a_pool_with_a_single_entrant_builds(make_season, game_data, tmp_path):
 # -- mid-season -------------------------------------------------------------
 def test_mid_season_shows_the_current_week(site_mid):
     assert "Week 11" in (site_mid.path / "index.html").read_text()
+
+
+def test_standings_roll_to_the_new_week_at_its_first_kickoff(pool, mid_season, tmp_path):
+    """A Thursday kickoff starts the new week hours before its first final can
+    reach the data. The standings used to sit on 'Week 11 · complete' — read
+    off banked results — while week 12 was being played."""
+    from datetime import timedelta
+
+    from football_pool.schedule import week_windows
+
+    twelve = next(w for w in week_windows(mid_season.games) if w.week == 12)
+    during_tnf = twelve.opens + timedelta(hours=1)
+    render_site(pool, GameData(mid_season.games, 2025, during_tnf, None, "cache"), tmp_path)
+    html = (tmp_path / "index.html").read_text()
+    assert "Week 12 awaiting results" in html  # the progress strip rolled over
+    assert '<p class="state-value">Week 12</p>' in html  # and the headline with it
+
+
+def test_between_weeks_the_finished_week_still_owns_the_standings(pool, mid_season, tmp_path):
+    """On the Tuesday and Wednesday before the next kickoff, the finished
+    week's recap is still the story — rolling at the old week's close would
+    blank the finals strip for two days."""
+    render_site(pool, mid_season, tmp_path)  # fetched the Tuesday after week 11
+    html = (tmp_path / "index.html").read_text()
+    assert "Week 11 complete" in html
+    assert '<p class="state-value">Week 11</p>' in html
+
+
+def test_a_cancelled_game_does_not_pin_the_standings_week(pool, mid_season, tmp_path):
+    """The week is the window owning the clock, never 'the first week with an
+    unplayed game' — one never-made-up game would pin that rule for months."""
+    g = mid_season.games.copy()
+    reg = g[(g["game_type"] == "REG") & (g["week"] == 4)]
+    g.loc[reg.index[0], "played"] = False
+    render_site(pool, GameData(g, 2025, mid_season.fetched_at, None, "cache"), tmp_path)
+    html = (tmp_path / "index.html").read_text()
+    assert '<p class="state-value">Week 11</p>' in html
 
 
 def test_weeks_page_has_a_column_per_played_week(site_mid):
