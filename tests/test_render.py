@@ -2116,6 +2116,36 @@ def test_live_baseline_carries_exact_official_totals_and_unbanked_outcomes(site_
     assert all(not game["espnId"] for game in data["games"])
 
 
+def test_live_baseline_keeps_gains_while_the_week_window_is_open(pool, games_2025, tmp_path):
+    """A scored game's per-outcome points survive until its window closes.
+
+    The Gameday "my teams" widget totals a week that mixes banked finals with
+    live leads from the one points map, so the map must outlive the final —
+    but only until the window closes and the official build has the week."""
+    g = games_2025.copy()
+    g.loc[g["week"] > 11, "played"] = False
+    g.loc[g["game_type"] != "REG", "played"] = False
+    # Late Monday night inside week 11: its games are final in the frame but
+    # the window (last kickoff + tail) has hours to run.
+    data = GameData(g, 2025, datetime(2025, 11, 18, 2, 0, tzinfo=timezone.utc), None, "cache")
+    render_site(pool, data, tmp_path)
+    baseline = json.loads((tmp_path / "data" / "live.json").read_text())
+    current = [x for x in baseline["games"] if x["week"] == 11 and x["kind"] == "REG"]
+    assert current and all(x["scored"] and x["points"] for x in current)
+    past = [x for x in baseline["games"] if x["week"] < 11 and x["kind"] == "REG"]
+    assert past and all(x["points"] == {} for x in past)
+
+
+def test_gameday_ships_the_my_teams_widget_shell(pair_site_based):
+    """The viewer's week-at-a-glance widget: server-rendered shell, hidden
+    until the browser knows who is looking."""
+    for subpath in ["", "friends"]:
+        html = (pair_site_based.path / subpath / "gameday" / "index.html").read_text()
+        assert "data-my-week hidden" in html
+        for hook in ["data-my-week-teams", "data-my-week-total", "data-my-week-note"]:
+            assert hook in html
+
+
 def test_live_baseline_preserves_optional_event_ids(pool, game_data, tmp_path):
     import pandas as pd
 

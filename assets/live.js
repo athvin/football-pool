@@ -577,6 +577,117 @@ export function initLivePage(doc, win, helpers) {
     }
   }
 
+  /** The viewer's four teams at a glance, above the rooting board.
+   *
+   * One row per pick, in pick order: the matchup, its moment — kickoff time,
+   * live score and clock, or the final — and what it pays, straight from the
+   * baseline's per-outcome points map (a win banks that team's leveling-
+   * factor gain). The headline number rolls the week up: banked finals plus
+   * current leads, totalled per game so a derby between two of the viewer's
+   * own teams counts its winner once. The shell ships hidden; it appears
+   * only once "who are you?" names somebody, because the server cannot know
+   * the viewer. */
+  const myWeek = doc.querySelector('[data-my-week]');
+  function renderMyWeek() {
+    if (!myWeek) return;
+    const me = doc.querySelector('[data-me-select]')?.value;
+    const entrant = baseline.entrants.find((e) => e.slug === me);
+    const w = currentWindow();
+    if (!entrant || !w) { myWeek.hidden = true; return; }
+    myWeek.hidden = false;
+    const games = windowGames(w)
+      .filter((g) => [g.away, g.home].some((team) => entrant.teams.includes(team)));
+    const moments = new Map();
+    let total = 0;
+    let live = 0;
+    let toPlay = 0;
+    for (const g of games) {
+      const event = g.scored ? null : observed(g);
+      const state = g.scored || (event?.state === 'post' && event.completed) ? 'post'
+        : event?.state === 'in' ? 'in' : 'pre';
+      const outcome = g.scored
+        ? (g.awayScore === g.homeScore ? (g.kind === 'REG' ? 'TIE' : null)
+          : g.awayScore > g.homeScore ? g.away : g.home)
+        : liveOutcome(event, g.kind);
+      const readable = g.scored ? [g.awayScore, g.homeScore]
+        : event && event.scoresAvailable !== false
+          && [event.awayScore, event.homeScore]
+            .every((s) => Number.isInteger(Number(s)) && Number(s) >= 0)
+          ? [Number(event.awayScore), Number(event.homeScore)] : null;
+      moments.set(g.id, { event, state, outcome, scores: readable });
+      if (state === 'in') live++;
+      if (state === 'pre') toPlay++;
+      const gain = outcome ? Number(g.points?.[entrant.slug]?.[outcome]) : 0;
+      if (Number.isFinite(gain)) total += cents(gain);
+    }
+    const list = myWeek.querySelector('[data-my-week-teams]');
+    const previous = new Map(Array.from(list.children, (el) => [el.dataset.team, el]));
+    for (const [index, team] of entrant.teams.entries()) {
+      let li = previous.get(team);
+      if (!li) {
+        li = node('li'); li.dataset.team = team;
+        const detail = node('span', 'my-week-detail'); detail.append(node('b'), node('small'));
+        const pts = node('span', 'my-week-pts'); pts.append(node('strong'), node('small'));
+        li.append(chip(team), detail, pts);
+      }
+      previous.delete(team);
+      const g = games.find((game) => game.away === team || game.home === team);
+      const moment = g && moments.get(g.id);
+      const detail = li.children[1];
+      const pts = li.children[2];
+      let earned = 0;
+      let sub = '';
+      if (!g) {
+        detail.firstChild.textContent = w.kind === 'REG' ? 'Bye week' : 'Not in this round';
+        detail.lastChild.textContent = '';
+      } else {
+        const home = team === g.home;
+        detail.firstChild.textContent = `${home ? 'vs' : 'at'} ${home ? g.away : g.home}`;
+        const gains = g.points?.[entrant.slug];
+        const pays = Number(gains?.[team]);
+        const mine = moment.scores ? moment.scores[home ? 1 : 0] : null;
+        const theirs = moment.scores ? moment.scores[home ? 0 : 1] : null;
+        if (moment.state === 'pre') {
+          detail.lastChild.textContent = `Kickoff ${stamp(Date.parse(g.kickoff))}`;
+          sub = Number.isFinite(pays) ? `a win pays ${points(pays)}` : '';
+        } else if (moment.state === 'in') {
+          detail.lastChild.textContent = moment.scores
+            ? `${mine > theirs ? 'Leading' : mine < theirs ? 'Trailing' : 'Tied'} ${mine}–${theirs} · ${moment.event.clock || 'Live'}`
+            : moment.event.status || 'In progress';
+          if (moment.outcome === team && Number.isFinite(pays)) { earned = pays; sub = 'if they hold on'; }
+          else sub = Number.isFinite(pays) ? `a win pays ${points(pays)}` : '';
+        } else {
+          const result = moment.outcome === team ? 'W'
+            : moment.outcome === 'TIE' ? 'T' : moment.outcome ? 'L' : '—';
+          detail.lastChild.textContent = `Final · ${result}${moment.scores ? ` ${mine}–${theirs}` : ''}`;
+          if (moment.outcome === team && Number.isFinite(pays)) { earned = pays; sub = 'in the books'; }
+          else if (moment.outcome === 'TIE' && gains) {
+            // A tie splits the game's TIE payout across the viewer's held
+            // sides in proportion to what each side's win pays: the whole
+            // amount when they hold one side, half each way in a derby of
+            // equals, and by leveling factor when the derby is lopsided.
+            const held = Number(gains[g.away]) + Number(gains[g.home]);
+            earned = held > 0 && Number.isFinite(pays) ? Number(gains.TIE) * (pays / held) : 0;
+            if (earned > 0) sub = 'tie · in the books';
+          }
+        }
+        if (!Number.isFinite(earned)) earned = 0;
+      }
+      li.classList.toggle('is-live', Boolean(moment && moment.state === 'in'));
+      li.classList.toggle('is-earning', earned > 0);
+      pts.firstChild.textContent = earned > 0 ? `+${points(earned)}` : '0.00';
+      pts.lastChild.textContent = sub;
+      place(list, li, index);
+    }
+    for (const el of previous.values()) el.remove();
+    myWeek.querySelector('[data-my-week-total]').textContent = `+${points(total / 100)}`;
+    myWeek.querySelector('[data-my-week-label]').textContent = `${w.label} so far`;
+    myWeek.querySelector('[data-my-week-note]').textContent =
+      `${live ? `${live} of your games live now — leads count as wins until the final. `
+        : toPlay ? `${toPlay} of your games still to play. ` : ''}`
+      + 'Points are this week’s leveling-factor gains; division and playoff bonuses land with the official standings.';
+  }
+
   /** A game that ends while the page is open is a fact, not a scenario. The
    * what-if scoreboard listens for these and calls those results itself. */
   let announcedFinals = '{}';
@@ -597,7 +708,7 @@ export function initLivePage(doc, win, helpers) {
   }
 
   function render() {
-    renderRail(); renderBoard(); renderGame(); renderSummary(); renderStrips();
+    renderRail(); renderBoard(); renderGame(); renderSummary(); renderStrips(); renderMyWeek();
     $('[data-live-detail-status]').textContent = detailState;
     announceFinals();
   }

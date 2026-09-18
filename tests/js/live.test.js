@@ -179,10 +179,15 @@ describe('Live feed and scoring contracts', () => {
 
 function markup(data) {
   document.body.innerHTML = `
-    <select data-me-select><option value="">Everyone</option><option value="alex">Alex</option></select>
+    <select data-me-select><option value="">Everyone</option><option value="alex">Alex</option><option value="cam">Cam</option></select>
     <select data-tz-select><option>America/New_York</option><option>UTC</option></select>
     <button data-live-refresh>Refresh</button><p data-live-connection></p>
     <button data-live-fast-refresh aria-pressed="false">5-second updates <span data-live-fast-state aria-hidden="true">Off</span></button>
+    <section data-my-week hidden>
+      <span data-my-week-label>This week</span><strong data-my-week-total>+0.00</strong>
+      <ul data-my-week-teams></ul>
+      <p data-my-week-note></p>
+    </section>
     <div data-live-center data-baseline-url="/data/live.json" data-entrant-base="/entrant/">
       <h2 data-live-slate-title></h2><nav data-live-game-rail></nav>
       <span data-live-game-status></span><a data-live-espn></a><div data-live-scoreboard></div>
@@ -229,6 +234,73 @@ describe('Live page controller', () => {
     await controller.ready; await flush();
   }
   const requestsFor = (name) => fetcher.mock.calls.filter(([url]) => String(url).includes(name)).length;
+
+  test('rolls the viewer’s week up: live leads, byes, finals, in pick order', async () => {
+    baseline.entrants[0].teams = ['TB', 'SEA']; // SEA has no game this window
+    markup(baseline);
+    await start();
+    const widget = $('[data-my-week]');
+    expect(widget.hidden).toBe(true); // nobody chosen yet
+    const select = $('[data-me-select]');
+    select.value = 'alex'; select.dispatchEvent(new Event('change'));
+    expect(widget.hidden).toBe(false);
+    const rows = widget.querySelectorAll('[data-my-week-teams] > li');
+    expect([...rows].map((el) => el.dataset.team)).toEqual(['TB', 'SEA']);
+    expect(rows[0].querySelector('.my-week-detail b').textContent).toBe('at ATL');
+    expect(rows[0].querySelector('.my-week-detail small').textContent).toBe('Leading 21–17 · Q3 8:12');
+    expect(rows[0].classList.contains('is-live')).toBe(true);
+    expect(rows[0].classList.contains('is-earning')).toBe(true);
+    expect(rows[0].querySelector('.my-week-pts strong').textContent).toBe('+2.00');
+    expect(rows[0].querySelector('.my-week-pts small').textContent).toBe('if they hold on');
+    expect(rows[1].querySelector('.my-week-detail b').textContent).toBe('Bye week');
+    expect(rows[1].querySelector('.my-week-pts strong').textContent).toBe('0.00');
+    expect($('[data-my-week-total]').textContent).toBe('+2.00');
+    expect($('[data-my-week-label]').textContent).toBe('Week 1 so far');
+    expect($('[data-my-week-note]').textContent).toContain('1 of your games live now');
+    expect($('[data-my-week-note]').textContent).toContain('leveling-factor');
+    // The game going final banks the win in the books.
+    details = summary('post'); board = scoreboard(details);
+    await vi.advanceTimersByTimeAsync(LIVE_INTERVAL); await flush();
+    expect(rows[0].querySelector('.my-week-detail small').textContent).toBe('Final · W 21–17');
+    expect(rows[0].querySelector('.my-week-pts small').textContent).toBe('in the books');
+    expect(rows[0].classList.contains('is-live')).toBe(false);
+    expect($('[data-my-week-total]').textContent).toBe('+2.00');
+    // Back to "Everyone" hides the widget again.
+    select.value = ''; select.dispatchEvent(new Event('change'));
+    expect(widget.hidden).toBe(true);
+  });
+
+  test('a derby tie splits the payout by leveling factor and totals it once', async () => {
+    const data = summary('post');
+    data.header.competitions[0].competitors.find((c) => c.homeAway === 'home').score = '21';
+    details = data; board = scoreboard(data);
+    await start();
+    const select = $('[data-me-select]');
+    select.value = 'cam'; select.dispatchEvent(new Event('change'));
+    const rows = document.querySelectorAll('[data-my-week-teams] > li');
+    expect(rows[0].querySelector('.my-week-detail small').textContent).toBe('Final · T 21–21');
+    expect(rows[0].querySelector('.my-week-pts strong').textContent).toBe('+1.00');
+    expect(rows[0].querySelector('.my-week-pts small').textContent).toBe('tie · in the books');
+    expect(rows[1].querySelector('.my-week-detail b').textContent).toBe('vs TB');
+    expect(rows[1].querySelector('.my-week-pts strong').textContent).toBe('+1.50');
+    // cam holds both sides: the total is the game's one TIE payout, not the
+    // two row shares added to it.
+    expect($('[data-my-week-total]').textContent).toBe('+2.50');
+  });
+
+  test('banked finals count from the baseline alone while the window is open', async () => {
+    baseline.games[0].scored = true;
+    baseline.games[0].awayScore = 21; baseline.games[0].homeScore = 17;
+    // The build keeps the per-outcome gains for a scored game until its
+    // window closes, exactly so this widget can total the week offline.
+    markup(baseline);
+    await start();
+    const select = $('[data-me-select]');
+    select.value = 'alex'; select.dispatchEvent(new Event('change'));
+    const row = document.querySelector('[data-my-week-teams] > li');
+    expect(row.querySelector('.my-week-detail small').textContent).toBe('Final · W 21–17');
+    expect($('[data-my-week-total]').textContent).toBe('+2.00');
+  });
 
   test('switches both feeds to five seconds and back without keeping old timers', async () => {
     await start();

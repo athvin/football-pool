@@ -1451,9 +1451,18 @@ def _gameday(ctx: SiteContext) -> dict[str, Any]:
 def _live_data(ctx: SiteContext) -> dict[str, Any]:
     """An immutable scoring baseline; ESPN updates happen only in the browser."""
     banked = ctx.outlook.set_index("name")["banked"].to_dict()
+    # A scored game keeps its per-outcome points while its week's window is
+    # still open: the Gameday "my teams" widget totals a week that mixes
+    # banked finals with live leads from the one map. Once the window closes
+    # the official build has banked the week, and the map is dead weight the
+    # browser never reads again — so it is dropped, and the file shrinks as
+    # the season ages instead of growing.
+    week_windows = schedule_mod.week_windows(ctx.games)
+    closes = {(w.game_type, w.week): w.closes for w in week_windows}
     games = []
     for row in ctx.games.itertuples():
         event_id = _optional(row, "espn")
+        window_open = closes[(row.game_type, int(row.week))] > ctx.data.fetched_at
         games.append({
             "id": str(row.game_id),
             "espnId": str(int(event_id)) if event_id is not None else "",
@@ -1466,10 +1475,12 @@ def _live_data(ctx: SiteContext) -> dict[str, Any]:
             "awayScore": int(row.away_score) if row.played else None,
             "homeScore": int(row.home_score) if row.played else None,
             "scored": bool(row.played),
-            "points": _scenario_gains(ctx.season, row) if not row.played else {},
+            "points": _scenario_gains(ctx.season, row)
+            if not row.played or window_open
+            else {},
         })
     windows = []
-    for window in schedule_mod.week_windows(ctx.games):
+    for window in week_windows:
         dates = [g["date"] for g in games
                  if g["week"] == window.week and g["kind"] == window.game_type]
         windows.append({

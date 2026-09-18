@@ -280,7 +280,14 @@ standings, projections, or deployment.
 
 Every pool's Gameday page carries a Game Center section (the former Live tab;
 `/live/` forwards there, carrying its query string). Game Center links on the
-rooting cards, the schedule, and team pages open that matchup. Games that end
+rooting cards, the schedule, and team pages open that matchup.
+Above the rooting board, a **My teams** widget gives the viewer their week at
+a glance once "who are you?" is set: one row per pick with the matchup and its
+moment — kickoff time, live score and clock, or the final — and the week's
+points rolled up, banked finals plus current leads, each win paying that
+team's leveling-factor gain from the same baseline map the live standings
+read. So a scored game's per-outcome points stay in `data/live.json` until
+its week's window closes, then drop as before. Games that end
 while the page is open are called into the what-if scoreboard by their real
 score and locked. The browser reads ESPN's public
 `site.web.api.espn.com` NFL `scoreboard` and `summary?event=...` endpoints directly;

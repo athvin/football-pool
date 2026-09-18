@@ -22,6 +22,23 @@
   </p>
 </div>
 
+{# The viewer's four teams at a glance: their games this week with live
+   scores, and the week's points rolled up — each win pays that team's
+   leveling factor, banked finals plus current leads. The server cannot know
+   the viewer, so the shell ships hidden and the Game Center's own ESPN loop
+   fills it once "who are you?" is set in the viewer bar. #}
+<section class="my-week" data-my-week hidden aria-labelledby="my-week-title">
+  <div class="section-head gameday-section-head">
+    <div>
+      <p class="eyebrow">Your week at a glance</p>
+      <h2 class="section-title" id="my-week-title">My teams</h2>
+    </div>
+    <p class="my-week-total"><span data-my-week-label>This week</span><strong data-my-week-total>+0.00</strong></p>
+  </div>
+  <ul class="my-week-teams" data-my-week-teams></ul>
+  <p class="my-week-note" data-my-week-note role="status"></p>
+</section>
+
 {% if not gameday.cards %}
 <p class="empty">The schedule has not produced a gameday slate yet.</p>
 {% else %}

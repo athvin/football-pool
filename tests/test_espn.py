@@ -255,7 +255,10 @@ def test_one_espn_final_rebuilds_standings_and_live_baseline_for_a_partial_week(
     assert payload["generated"]["espn_finals"] == [row.game_id]
     live = json.loads((site / "data/live.json").read_text())
     match = next(g for g in live["games"] if g["id"] == row.game_id)
-    assert match["scored"] is True and match["points"] == {}
+    # The week is still being played, so the scored game keeps its gains: the
+    # Gameday "my teams" widget totals the week's finals from this map.
+    assert match["scored"] is True
+    assert match["points"]["alex"][row.home_team] == pool.lf_of(row.home_team)
     assert (match["homeScore"], match["awayScore"]) == (27, 20)
     assert next(e for e in live["entrants"] if e["name"] == "Alex")["banked"] == pool.lf_of(row.home_team)
 

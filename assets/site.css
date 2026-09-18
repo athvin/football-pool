@@ -3222,6 +3222,56 @@ html:not([data-detail='on']) .board .row {
 
 .gameday-section-head { align-items: end; justify-content: space-between; }
 .gameday-section-head .eyebrow { margin-bottom: 0.25rem; }
+
+/* Your week at a glance: the viewer's four teams, their games, and the
+   week's leveling-factor points rolled up. Painted entirely client-side —
+   the shell ships hidden and appears once "who are you?" is set. */
+.my-week {
+  padding: 1rem;
+  margin: 0 0 1.4rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.my-week[hidden] { display: none; }
+.my-week .section-head { margin: 0 0 0.75rem; }
+.my-week-total {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+  margin: 0;
+  font: 600 0.6rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+}
+.my-week-total strong { font: 700 1.35rem var(--mono); letter-spacing: 0; color: var(--live); }
+.my-week-teams {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.6rem;
+  padding: 0;
+  margin: 0;
+}
+.my-week-teams li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--rule);
+  border-radius: 5px;
+  background: var(--surface-2);
+}
+.my-week-teams li.is-live { border-color: color-mix(in srgb, var(--live) 45%, var(--rule)); }
+.my-week-detail { flex: 1; min-width: 0; display: grid; gap: 0.1rem; }
+.my-week-detail b { font: 600 0.78rem/1.4 var(--body); }
+.my-week-detail small, .my-week-pts small { color: var(--chalk-dim); font: 0.6rem/1.5 var(--mono); }
+.my-week-teams li.is-live .my-week-detail small { color: var(--live); }
+.my-week-pts { display: grid; gap: 0.1rem; text-align: right; white-space: nowrap; }
+.my-week-pts strong { font: 700 0.95rem var(--mono); color: var(--chalk-dim); }
+.my-week-teams li.is-earning .my-week-pts strong { color: var(--live); }
+.my-week-note { margin: 0.75rem 0 0; color: var(--chalk-dim); font: 0.68rem/1.7 var(--mono); }
 .rooting-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.45rem 0.75rem; }
 .rooting-filter {
   border: 1px solid var(--rule);
