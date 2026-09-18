@@ -66,7 +66,9 @@ def test_final_updates_scores_records_and_pool_totals_once(pending, make_season,
     assert entrant_scores(pool, score_teams(pool, updated.games)).iloc[0].total == pool.lf_of(row.home_team)
     again = espn.supplement_results(pending, cache)
     pd.testing.assert_frame_equal(again.games, updated.games)
-    assert len(calls) == 2 and calls[0][1]["params"]["dates"] == "20250904-20250905"
+    # One request per outstanding gameday — ESPN 400s date-range queries now.
+    assert len(calls) == 4
+    assert [c[1]["params"]["dates"] for c in calls] == ["20250904", "20250905"] * 2
     assert json.loads(cache.read_text())["events"][0]["id"] == event["id"]
     assert not list(tmp_path.glob("*.partial"))
 

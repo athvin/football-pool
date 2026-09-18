@@ -173,7 +173,10 @@ describe('Live feed and scoring contracts', () => {
     expect(liveRefreshDelay([game({ state: 'post', completed: true })])).toBe(0);
     expect(liveRefreshDelay([], 1)).toBe(60_000);
     expect(liveRefreshDelay([], 5)).toBe(WAIT_INTERVAL);
-    expect(liveScoreboardUrl(seed().windows[0])).toContain('dates=20250907-20250908&limit=1000');
+    // ESPN 400s date-range queries; the slate is asked for by season and week.
+    expect(liveScoreboardUrl(seed().windows[0], 2025)).toContain('dates=2025&seasontype=2&week=1&limit=1000');
+    expect(liveScoreboardUrl({ key: 'SB-22', kind: 'SB', week: 22 }, 2025)).toContain('dates=2025&seasontype=3&week=5&limit=1000');
+    expect(liveScoreboardUrl({ key: 'WC-19', kind: 'WC', week: 19 }, 2025)).toContain('dates=2025&seasontype=3&week=1&limit=1000');
   });
 });
 
@@ -726,7 +729,7 @@ describe('Live page controller', () => {
     const current = summary('pre', '999'); current.header.week = 2;
     current.header.competitions[0].date = '2025-09-14T19:00:00Z';
     fetcher.mockImplementation(async (url) => ({ ok: true, status: 200,
-      json: async () => clone(String(url).includes('summary?') ? current : String(url).includes('20250907') ? oldBoard : String(url).includes('scoreboard?') ? scoreboard(current) : baseline) }));
+      json: async () => clone(String(url).includes('summary?') ? current : String(url).includes('week=1') ? oldBoard : String(url).includes('scoreboard?') ? scoreboard(current) : baseline) }));
     await start();
     expect($('[data-live-slate-title]').textContent).toBe('Week 2');
     expect($('[data-live-standings]').textContent).toContain('12.00');

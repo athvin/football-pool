@@ -630,10 +630,13 @@ export const ESPN_SCOREBOARD_LEGACY =
 export const LIVE_POLL_MS = 20_000;
 export const PREGAME_POLL_MS = 180_000;
 
-/** One request covers Canton through the last preseason weekend. */
+/** One request covers Canton through the last preseason weekend. ESPN rejects
+ * date-range queries (dates=YYYYMMDD-YYYYMMDD) with a 400 now, so this asks
+ * for the league year instead; that response spans season types and can reach
+ * into the prior season's postseason, so callers filter what comes back by
+ * seasonType and seasonYear rather than trusting the query to. */
 export function preseasonScoreboardUrl(season) {
-  const year = String(season);
-  return `${ESPN_SCOREBOARD}?seasontype=1&dates=${year}0715-${year}0915&limit=1000`;
+  return `${ESPN_SCOREBOARD}?seasontype=1&dates=${season}&limit=1000`;
 }
 
 /** ESPN and nflverse use different abbreviations for two clubs. */
@@ -1450,7 +1453,7 @@ function initPreseasonSchedule(doc, win) {
     try {
       const season = root.dataset.espnSeason || new Date().getFullYear();
       games = (await fetchEspnGames(win, preseasonScoreboardUrl(season)))
-        .filter((game) => game.seasonType === 1);
+        .filter((game) => game.seasonType === 1 && game.seasonYear === Number(season));
       if (mine !== request) return;
       delete root.dataset.loading;
       root.dataset.loaded = 'true';

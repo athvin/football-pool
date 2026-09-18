@@ -92,8 +92,13 @@ export function livePoolStandings(baseline, events, nowMs) {
   return { rows, missing, contributing };
 }
 
-export function liveScoreboardUrl(window) {
-  return `${ESPN_BASE}scoreboard?dates=${window.start}-${window.end}&limit=1000`;
+/** ESPN's scoreboard once accepted dates=YYYYMMDD-YYYYMMDD spans and now
+ * rejects them with a 400, which silenced every live surface at once. Asking
+ * by season, phase and week number gets the same slate in one request — and
+ * unlike a date span, it still finds a game rescheduled out of its window. */
+export function liveScoreboardUrl(window, season) {
+  return `${ESPN_BASE}scoreboard?dates=${season}&seasontype=${PHASE[window.kind]}`
+    + `&week=${PLAYOFF_WEEK[window.kind] || window.week}&limit=1000`;
 }
 
 export function liveRefreshDelay(events, failures = 0, liveInterval = LIVE_INTERVAL) {
@@ -678,7 +683,7 @@ export function initLivePage(doc, win, helpers) {
       for (let i = 0; i < wanted.length && active(); i += 3) {
         await Promise.all(wanted.slice(i, i + 3).map(async (w) => {
           try {
-            const payload = await request(liveScoreboardUrl(w));
+            const payload = await request(liveScoreboardUrl(w, baseline.season));
             if (!Array.isArray(payload?.events)) throw new Error('Invalid scoreboard');
             const parsed = helpers.parseEspnScoreboard(payload);
             if (payload.events.length && !parsed.length) throw new Error('Invalid scoreboard');
@@ -1086,7 +1091,7 @@ export function initLiveBoard(doc, win, helpers) {
       for (let i = 0; i < wanted.length && active(); i += 3) {
         await Promise.all(wanted.slice(i, i + 3).map(async (w) => {
           try {
-            const payload = await request(liveScoreboardUrl(w));
+            const payload = await request(liveScoreboardUrl(w, baseline.season));
             if (!Array.isArray(payload?.events)) throw new Error('Invalid scoreboard');
             const parsed = helpers.parseEspnScoreboard(payload);
             if (payload.events.length && !parsed.length) throw new Error('Invalid scoreboard');

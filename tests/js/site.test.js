@@ -493,7 +493,8 @@ describe('ESPN live scoreboard adapter', () => {
       network: 'ESPN', homeWinner: true, awayWinner: false,
       seasonType: 1,
     });
-    expect(preseasonScoreboardUrl(2026)).toContain('dates=20260715-20260915');
+    // ESPN 400s date-range queries; the whole league year is one request.
+    expect(preseasonScoreboardUrl(2026)).toContain('seasontype=1&dates=2026&limit=1000');
   });
 
   test('polls by game state instead of hammering a quiet feed', () => {
@@ -916,7 +917,7 @@ describe('Gameday DOM wiring', () => {
     const win = fakeWindow();
     const finished = structuredClone(postPayload);
     finished.events[0].date = '2026-08-21T23:00:00Z';
-    finished.events[0].season = { type: 1 };
+    finished.events[0].season = { type: 1, year: 2026 };
     finished.events[0].week = { number: 3 };
     finished.events[0].status.type.shortDetail = 'Final';
     finished.events[0].competitions[0].venue = { fullName: 'Test Field' };

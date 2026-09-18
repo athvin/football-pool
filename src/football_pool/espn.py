@@ -121,20 +121,30 @@ def supplement_results(data: GameData, cache_path: Path, *, offline: bool = Fals
                         & (data.games["gameday"] <= today.isoformat())]
     if not offline and not recent.empty:
         try:
-            start = str(recent["gameday"].min()).replace("-", "")
-            response = httpx.get(SCOREBOARD_URL, params={"dates": f"{start}-{today:%Y%m%d}", "limit": 1000},
-                                 timeout=10, follow_redirects=True)
-            response.raise_for_status()
-            payload = response.json()
-            if not isinstance(payload.get("events"), list):
-                raise ValueError("Missing ESPN events")
-            # Conflicting duplicate event IDs are ambiguous, so neither result
-            # should replace a previously confirmed snapshot.
+            # One request per outstanding Eastern gameday — at most eight,
+            # bounded by the seven-day lookback above. ESPN's scoreboard once
+            # accepted dates=YYYYMMDD-YYYYMMDD spans and now rejects them with
+            # a 400, which silently stopped every supplemental final at once.
+            #
+            # Duplicate event IDs whose bodies *conflict* are ambiguous, so
+            # neither result should replace a previously confirmed snapshot.
+            # Identical bodies are one snapshot reported twice — which the
+            # per-day loop makes routine — and stay a single candidate.
             observed: dict[str, list[dict]] = {}
-            for event in payload["events"]:
-                result = parse_final(event)
-                if result is not None and _match(result, data) is not None:
-                    observed.setdefault(result.id, []).append(event)
+            for day in sorted(set(recent["gameday"])):
+                response = httpx.get(SCOREBOARD_URL,
+                                     params={"dates": str(day).replace("-", ""), "limit": 1000},
+                                     timeout=10, follow_redirects=True)
+                response.raise_for_status()
+                payload = response.json()
+                if not isinstance(payload.get("events"), list):
+                    raise ValueError("Missing ESPN events")
+                for event in payload["events"]:
+                    result = parse_final(event)
+                    if result is not None and _match(result, data) is not None:
+                        candidates = observed.setdefault(result.id, [])
+                        if event not in candidates:
+                            candidates.append(event)
             for id, candidates in observed.items():
                 if len(candidates) == 1:
                     events[id] = candidates[0]
