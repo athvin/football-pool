@@ -29,7 +29,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_02_PHI_TEN,2026,REG,2,2026-09-20,13:00,PHI,,TEN,,,,Home,-7.0,39.5,-325.0,260.0,401872939,Nick Sirianni,Robert Saleh,7,7,outdoors,grass,,,Jalen Hurts,Cam Ward,,NAS00,Nissan Stadium
 2026_02_PIT_NE,2026,REG,2,2026-09-20,13:00,PIT,,NE,,,,Home,5.5,41.5,180.0,-218.0,401872946,Mike McCarthy,Mike Vrabel,7,11,outdoors,fieldturf,,,Aaron Rodgers,Drake Maye,,BOS00,Gillette Stadium
 2026_02_SEA_ARI,2026,REG,2,2026-09-20,16:25,SEA,,ARI,,,,Home,-3.5,40.5,-218.0,180.0,401872943,Mike Macdonald,Jonathan Gannon,11,7,,grass,,,Drew Lock,Jacoby Brissett,,PHO00,State Farm Stadium
-2026_02_WAS_DAL,2026,REG,2,2026-09-20,16:25,WAS,,DAL,,,,Home,4.5,50.5,180.0,-218.0,401872944,Dan Quinn,Brian Schottenheimer,7,7,,matrixturf,,,Jayden Daniels,Dak Prescott,,DAL00,AT&T Stadium
+2026_02_WAS_DAL,2026,REG,2,2026-09-20,16:25,WAS,,DAL,,,,Home,3.5,50.5,180.0,-218.0,401872944,Dan Quinn,Brian Schottenheimer,7,7,,matrixturf,,,Jayden Daniels,Dak Prescott,,DAL00,AT&T Stadium
 2026_02_NYG_LA,2026,REG,2,2026-09-21,20:15,NYG,,LAR,,,,Home,7.0,48.5,285.0,-360.0,401872947,John Harbaugh,Sean McVay,8,11,dome,matrixturf,,,Jaxson Dart,Matthew Stafford,,LAX01,SoFi Stadium
 2026_03_ATL_GB,2026,REG,3,2026-09-24,20:15,ATL,,GB,,,,Home,6.5,46.5,240.0,-298.0,401872948,Raheem Morris,Matt LaFleur,4,4,outdoors,grass,,,Tua Tagovailoa,Jordan Love,,GNB00,Lambeau Field
 2026_03_ARI_SF,2026,REG,3,2026-09-27,16:05,ARI,,SF,,,,Home,8.5,47.5,360.0,-470.0,401872958,Jonathan Gannon,Kyle Shanahan,7,7,outdoors,grass,,,Jacoby Brissett,Brock Purdy,,SFO01,Levi's Stadium
