@@ -25,7 +25,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_02_LV_LAC,2026,REG,2,2026-09-20,16:05,LV,,LAC,,,,Home,6.5,43.5,240.0,-298.0,401872941,Klint Kubliak,Jim Harbaugh,7,7,dome,matrixturf,,,Kirk Cousins,Justin Herbert,,LAX01,SoFi Stadium
 2026_02_MIA_SF,2026,REG,2,2026-09-20,16:25,MIA,,SF,,,,Home,13.5,44.5,600.0,-900.0,401872942,Jeff Hafley,Kyle Shanahan,7,10,outdoors,grass,,,Malik Willis,Brock Purdy,,SFO01,Levi's Stadium
 2026_02_MIN_CHI,2026,REG,2,2026-09-20,13:00,MIN,,CHI,,,,Home,4.5,48.5,170.0,-205.0,401872937,Kevin O'Connell,Ben Johnson,7,7,outdoors,grass,,,Carson Wentz,Caleb Williams,,CHI98,Soldier Field
-2026_02_NO_BAL,2026,REG,2,2026-09-20,13:00,NO,,BAL,,,,Home,8.5,46.5,320.0,-410.0,401872938,Kellen Moore,Jesse Minter,7,7,outdoors,grass,,,Tyler Shough,Lamar Jackson,,BAL00,M&T Bank Stadium
+2026_02_NO_BAL,2026,REG,2,2026-09-20,13:00,NO,,BAL,,,,Home,8.5,46.5,310.0,-395.0,401872938,Kellen Moore,Jesse Minter,7,7,outdoors,grass,,,Tyler Shough,Lamar Jackson,,BAL00,M&T Bank Stadium
 2026_02_PHI_TEN,2026,REG,2,2026-09-20,13:00,PHI,,TEN,,,,Home,-7.0,39.5,-325.0,260.0,401872939,Nick Sirianni,Robert Saleh,7,7,outdoors,grass,,,Jalen Hurts,Cam Ward,,NAS00,Nissan Stadium
 2026_02_PIT_NE,2026,REG,2,2026-09-20,13:00,PIT,,NE,,,,Home,5.5,41.5,180.0,-218.0,401872946,Mike McCarthy,Mike Vrabel,7,11,outdoors,fieldturf,,,Aaron Rodgers,Drake Maye,,BOS00,Gillette Stadium
 2026_02_SEA_ARI,2026,REG,2,2026-09-20,16:25,SEA,,ARI,,,,Home,-3.5,40.5,-218.0,180.0,401872943,Mike Macdonald,Jonathan Gannon,11,7,,grass,,,Drew Lock,Jacoby Brissett,,PHO00,State Farm Stadium
