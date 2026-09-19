@@ -628,7 +628,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,CLE,WR,3,ACT,Jerry Jeudy,Alabama,JeudJe00,6
 2026,CLE,WR,15,DEV,Jimmy Horn Jr.,Colorado; University of South Florida,HornJi00,1
 2026,CLE,WR,1,ACT,KC Concepcion,Texas A&M; N.C. State,ConcKC00,0
-2026,CLE,WR,87,DEV,Kole Wilson,Baylor; Texas State-San Marcos,,0
 2026,CLE,WR,11,ACT,Malachi Corley,Western Kentucky,CorlMa00,2
 2026,CLE,WR,16,ACT,Tylan Wallace,Oklahoma State,WallTy00,5
 2026,DAL,DB,11,ACT,Alijah Clark,Syracuse; Rutgers,ClarAl01,1
@@ -2059,7 +2058,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,TE,83,ACT,Johnny Mundt,Oregon,MundJo00,9
 2026,PHI,TE,46,DEV,Josiah Deguara,Cincinnati,DeguJo00,6
 2026,PHI,WR,85,ACT,Britain Covey,Utah,CoveBr00,4
-2026,PHI,WR,82,DEV,Danny Gray,SMU,GrayDa02,4
 2026,PHI,WR,80,ACT,Darius Cooper,Tarleton State,CoopDa01,1
 2026,PHI,WR,6,ACT,DeVonta Smith,Alabama,SmitDe07,5
 2026,PHI,WR,13,ACT,Dontayvion Wicks,Virginia,WickDo00,3
