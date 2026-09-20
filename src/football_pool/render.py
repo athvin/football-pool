@@ -767,6 +767,85 @@ def _team_rows(ctx: SiteContext) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda r: (-r["points"], -r["lf"], r["team"]))
 
 
+def _team_standings(
+    ctx: SiteContext,
+    teams: list[dict[str, Any]],
+    rows: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """The hindsight board: which teams have been worth holding, and how far
+    each entry's actual picks sit behind the best set available today.
+
+    Ranks are competition-style (ties share a rank, 1-2-2-4) over the order
+    :func:`_team_rows` already sorts into — points, then leveling factor, then
+    name. A tie means the same points *and* the same leveling factor: two
+    teams level on points but not on LF are not equally good holdings, and in
+    the preseason — everyone on zero — points alone would call all 32 teams
+    rank 1 when the leveling factor is the only ranking that exists yet.
+
+    The perfect entry is simply the top ``picks_per_entrant`` teams by points
+    generated so far. Deliberately unconstrained by division or conference —
+    the question this page answers is hindsight ("what should have been
+    picked, knowing what we know now"), and nothing in the rules stops an
+    entry holding the four highest scorers.
+    """
+    ranked: list[dict[str, Any]] = []
+    for i, t in enumerate(teams):
+        tied = (
+            bool(ranked)
+            and t["points"] == ranked[-1]["points"]
+            and t["lf"] == ranked[-1]["lf"]
+        )
+        ranked.append({**t, "rank": ranked[-1]["rank"] if tied else i + 1})
+
+    n = ctx.season.picks_per_entrant
+    dream = ranked[:n]
+    dream_total = round(sum(t["points"] for t in dream), 2)
+
+    rank_of = {t["team"]: t["rank"] for t in ranked}
+    points_of = {t["team"]: t["points"] for t in ranked}
+
+    entries = []
+    for row in rows:
+        picks = sorted(
+            (
+                {"team": t, "rank": rank_of[t], "points": points_of[t]}
+                for t in row["teams"]
+            ),
+            key=lambda p: (p["rank"], p["team"]),
+        )
+        # Summed from the same per-team numbers the ranked table prints, so the
+        # two tables on this page cannot disagree. It equals the leaderboard's
+        # banked total, and a test holds the three to it.
+        total = round(sum(p["points"] for p in picks), 2)
+        share = (total / dream_total) if dream_total else 0.0
+        entries.append(
+            {
+                "name": row["name"],
+                "slug": row["slug"],
+                "picks": picks,
+                "total": total,
+                "behind": round(dream_total - total, 2),
+                "share": share,
+                "avg_rank": round(sum(p["rank"] for p in picks) / len(picks), 1)
+                if picks
+                else 0.0,
+                # Green, not cyan: everything on this page has already
+                # happened. The one rule the palette has.
+                "bar": svg.meter(min(share, 1.0), width=240, height=10, fill=svg.BANKED),
+            }
+        )
+    entries.sort(key=lambda e: (-e["total"], e["name"]))
+
+    return {
+        "ranked": ranked,
+        "dream": dream,
+        "dream_total": dream_total,
+        "n_picks": n,
+        "entries": entries,
+        "best_entry": entries[0] if entries else None,
+    }
+
+
 def _week_rows(ctx: SiteContext, rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Per-entrant week-by-week points and ranks, as plain lists."""
     weeks = ctx.history.attrs.get("weeks", [])
@@ -1664,6 +1743,12 @@ def render_site(
     written.append(live_path)
     write("rules/index.html", "rules.html", page="rules", deadlines=_deadlines(ctx))
     write("teams/index.html", "teams.html", page="teams")
+    write(
+        "team-standings/index.html",
+        "team-standings.html",
+        page="team-standings",
+        board=_team_standings(ctx, teams, rows),
+    )
     # Weeks and Trends merged into one Season page: what happened and how it
     # moved are one story, and six tabs was three too many for a family pool.
     # The old addresses live in a year of group-chat links, so they forward.

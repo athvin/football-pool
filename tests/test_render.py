@@ -35,6 +35,7 @@ from football_pool.render import (
     _schedule,
     _team_page,
     _team_rows,
+    _team_standings,
     build_context,
     make_environment,
     render_pools,
@@ -2400,6 +2401,76 @@ def test_the_teams_table_order_is_stable_across_rebuilds(pool, games_2025):
     first = [r["team"] for r in _team_rows(build_context(pool, data))]
     second = [r["team"] for r in _team_rows(build_context(pool, data))]
     assert first == second
+
+
+# -- the team standings board ------------------------------------------------
+def test_the_team_standings_tab_is_in_the_nav_on_every_page(site_final):
+    for page, text in _real_pages(site_final.written):
+        assert 'href="/team-standings/"' in text, page
+
+
+def test_team_standings_agrees_with_the_league_and_the_leaderboard(pool, game_data):
+    """One arithmetic, read three ways — the board must match both of them.
+
+    The ranked table is the teams table with rank numbers; the perfect entry
+    is its top slice; and each entry's total is the leaderboard's banked
+    number, summed from the same per-team figures the ranked table prints. If
+    any pair of those drifts apart, this page is publishing a contradiction.
+    """
+    ctx = build_context(pool, game_data)
+    teams = _team_rows(ctx)
+    rows = _entrant_rows(ctx)
+    board = _team_standings(ctx, teams, rows)
+
+    n = pool.picks_per_entrant
+    assert [t["team"] for t in board["dream"]] == [t["team"] for t in teams[:n]]
+    assert board["dream_total"] == pytest.approx(
+        sum(t["points"] for t in teams[:n]), abs=0.01
+    )
+
+    # Hindsight never loses to the field: no actual entry outbanks the top n.
+    assert all(e["total"] <= board["dream_total"] + 1e-9 for e in board["entries"])
+    assert board["best_entry"]["total"] == max(e["total"] for e in board["entries"])
+
+    banked = {r["slug"]: r["banked"] for r in rows}
+    for e in board["entries"]:
+        assert e["total"] == pytest.approx(banked[e["slug"]], abs=0.01)
+        assert e["behind"] == pytest.approx(board["dream_total"] - e["total"], abs=0.01)
+        # Picks arrive best first, wearing the rank the league table gives them.
+        assert [p["rank"] for p in e["picks"]] == sorted(p["rank"] for p in e["picks"])
+
+    # Competition ranking: rank 1 leads, a rank never decreases down the
+    # table, and only a genuine tie — same points, same LF — shares one.
+    ranked = board["ranked"]
+    assert len(ranked) == 32 and ranked[0]["rank"] == 1
+    for i, (a, b) in enumerate(zip(ranked, ranked[1:]), start=2):
+        tied = b["points"] == a["points"] and b["lf"] == a["lf"]
+        assert b["rank"] == (a["rank"] if tied else i)
+
+
+def test_team_standings_page_ranks_all_32_and_links_every_name(pool, site_final):
+    html = (site_final.path / "team-standings" / "index.html").read_text()
+
+    assert "The perfect entry" in html
+    linked_teams = set(re.findall(r'href="/team/([A-Z]{2,3})/"', html))
+    assert linked_teams == set(pool.teams)
+    for e in pool.entrants:
+        assert f'href="/entrant/{e.slug}/"' in html, e.name
+
+
+def test_team_standings_preseason_ranks_by_leveling_factor(pool, games_2025):
+    """Before a kickoff the only ranking that exists is what a win would pay."""
+    empty = games_2025.copy()
+    empty[["played", "home_won", "away_won", "is_tie"]] = False
+    ctx = build_context(pool, GameData(empty, 2025, NOW, None, "cache"))
+    board = _team_standings(ctx, _team_rows(ctx), _entrant_rows(ctx))
+
+    assert board["dream_total"] == 0
+    lfs = [t["lf"] for t in board["ranked"]]
+    assert lfs == sorted(lfs, reverse=True)
+    # All on zero points, yet not all rank 1: the tie test reads the LF too.
+    assert board["ranked"][0]["rank"] == 1
+    assert board["ranked"][-1]["rank"] > 1
 
 
 def test_a_sorted_table_says_so_in_aria_sort(site_final):
