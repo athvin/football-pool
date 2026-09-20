@@ -120,26 +120,33 @@ def supplement_results(data: GameData, cache_path: Path, *, offline: bool = Fals
                         & (data.games["gameday"] >= (today - timedelta(days=7)).isoformat())
                         & (data.games["gameday"] <= today.isoformat())]
     if not offline and not recent.empty:
-        try:
-            start = str(recent["gameday"].min()).replace("-", "")
-            response = httpx.get(SCOREBOARD_URL, params={"dates": f"{start}-{today:%Y%m%d}", "limit": 1000},
-                                 timeout=10, follow_redirects=True)
-            response.raise_for_status()
-            payload = response.json()
-            if not isinstance(payload.get("events"), list):
-                raise ValueError("Missing ESPN events")
-            # Conflicting duplicate event IDs are ambiguous, so neither result
-            # should replace a previously confirmed snapshot.
-            observed: dict[str, list[dict]] = {}
-            for event in payload["events"]:
-                result = parse_final(event)
-                if result is not None and _match(result, data) is not None:
-                    observed.setdefault(result.id, []).append(event)
-            for id, candidates in observed.items():
-                if len(candidates) == 1:
-                    events[id] = candidates[0]
-        except (httpx.HTTPError, ValueError, TypeError, AttributeError):
+        # ESPN's scoreboard stopped accepting dates=START-END ranges (HTTP 400
+        # since September 2026), so each gameday still missing a result is
+        # requested on its own — at most eight single-date queries.
+        observed: dict[str, list[tuple[dict, FinalResult]]] = {}
+        failed = False
+        for day in sorted(recent["gameday"].unique()):
+            try:
+                response = httpx.get(SCOREBOARD_URL, params={"dates": str(day).replace("-", ""), "limit": 1000},
+                                     timeout=10, follow_redirects=True)
+                response.raise_for_status()
+                payload = response.json()
+                if not isinstance(payload.get("events"), list):
+                    raise ValueError("Missing ESPN events")
+                for event in payload["events"]:
+                    result = parse_final(event)
+                    if result is not None and _match(result, data) is not None:
+                        observed.setdefault(result.id, []).append((event, result))
+            except (httpx.HTTPError, ValueError, TypeError, AttributeError):
+                failed = True
+        if failed:
             warnings.warn("ESPN finals unavailable; retaining previously confirmed results.", stacklevel=2)
+        # Conflicting duplicate event IDs are ambiguous, so neither result
+        # should replace a previously confirmed snapshot. The same final
+        # echoed by two adjacent days is one observation, not a conflict.
+        for id, candidates in observed.items():
+            if len({result for _, result in candidates}) == 1:
+                events[id] = candidates[0][0]
 
     games = data.games.copy()
     applied: list[str] = []

@@ -173,7 +173,11 @@ describe('Live feed and scoring contracts', () => {
     expect(liveRefreshDelay([game({ state: 'post', completed: true })])).toBe(0);
     expect(liveRefreshDelay([], 1)).toBe(60_000);
     expect(liveRefreshDelay([], 5)).toBe(WAIT_INTERVAL);
-    expect(liveScoreboardUrl(seed().windows[0])).toContain('dates=20250907-20250908&limit=1000');
+    // ESPN rejects dates=YYYYMMDD-YYYYMMDD ranges with HTTP 400 (observed
+    // 2026-09-20), so windows are addressed by season, phase, and week.
+    expect(liveScoreboardUrl(seed().windows[0], 2025)).toContain('scoreboard?dates=2025&seasontype=2&week=1&limit=1000');
+    expect(liveScoreboardUrl(seed().windows[0], 2025)).not.toMatch(/dates=\d{8}/);
+    expect(liveScoreboardUrl({ key: 'SB-22', kind: 'SB', week: 22 }, 2025)).toContain('dates=2025&seasontype=3&week=5&limit=1000');
   });
 });
 
@@ -726,7 +730,7 @@ describe('Live page controller', () => {
     const current = summary('pre', '999'); current.header.week = 2;
     current.header.competitions[0].date = '2025-09-14T19:00:00Z';
     fetcher.mockImplementation(async (url) => ({ ok: true, status: 200,
-      json: async () => clone(String(url).includes('summary?') ? current : String(url).includes('20250907') ? oldBoard : String(url).includes('scoreboard?') ? scoreboard(current) : baseline) }));
+      json: async () => clone(String(url).includes('summary?') ? current : String(url).includes('week=1&') ? oldBoard : String(url).includes('scoreboard?') ? scoreboard(current) : baseline) }));
     await start();
     expect($('[data-live-slate-title]').textContent).toBe('Week 2');
     expect($('[data-live-standings]').textContent).toContain('12.00');
@@ -863,6 +867,27 @@ describe('Live standings board', () => {
     const camChips = document.querySelectorAll('[data-slug="cam"] .row-teams .team-chip');
     expect(camChips[0].classList.contains('is-won')).toBe(true);
     expect(camChips[1].classList.contains('is-lost')).toBe(true);
+  });
+
+  test('paints live scores against a server that rejects ranged-date queries', async () => {
+    // Replicates production on 2026-09-20: ESPN's scoreboard began answering
+    // dates=YYYYMMDD-YYYYMMDD with 400 {"code":400,"message":"Failed to get
+    // events endpoint."} while season/seasontype/week queries kept working.
+    // The standings overlay must still receive events and repaint the board.
+    fetcher.mockImplementation(async (url) => {
+      if (String(url).includes('scoreboard?') && /dates=\d{8}-\d{8}/.test(String(url))) {
+        return { ok: false, status: 400,
+          json: async () => ({ code: 400, message: 'Failed to get events endpoint.' }) };
+      }
+      return { ok: true, status: 200, json: async () => clone(
+        String(url).includes('scoreboard?') ? board : baseline) };
+    });
+    await start();
+    expect(fetcher.mock.calls.some(([url]) =>
+      String(url).includes('dates=2025&seasontype=2&week=1'))).toBe(true);
+    expect($('[data-slug="alex"] .row-points').textContent).toBe('12.00');
+    expect($('[data-live-standings-status]').textContent).toContain('1 live result');
+    expect($('[data-live-standings-status]').textContent).not.toContain('unavailable');
   });
 
   test('a tied live game leaves the official board untouched until a lead lands', async () => {

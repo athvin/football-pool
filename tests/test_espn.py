@@ -4,6 +4,7 @@ from copy import deepcopy
 from dataclasses import replace
 from datetime import datetime, timezone
 import json
+import re
 import warnings
 from pathlib import Path
 
@@ -66,7 +67,9 @@ def test_final_updates_scores_records_and_pool_totals_once(pending, make_season,
     assert entrant_scores(pool, score_teams(pool, updated.games)).iloc[0].total == pool.lf_of(row.home_team)
     again = espn.supplement_results(pending, cache)
     pd.testing.assert_frame_equal(again.games, updated.games)
-    assert len(calls) == 2 and calls[0][1]["params"]["dates"] == "20250904-20250905"
+    # ESPN rejects ranged dates (HTTP 400 since September 2026): one
+    # single-date request per gameday still missing a result, per build.
+    assert [c[1]["params"]["dates"] for c in calls] == ["20250904", "20250905"] * 2
     assert json.loads(cache.read_text())["events"][0]["id"] == event["id"]
     assert not list(tmp_path.glob("*.partial"))
 
@@ -118,6 +121,41 @@ def test_wrong_team_conflicting_id_and_duplicate_schedule_are_rejected(pending, 
     assert espn.supplement_results(pending, cache).espn_finals
     duplicated = replace(pending, games=pd.concat([pending.games, pending.games.iloc[:1]], ignore_index=True))
     assert not espn.supplement_results(duplicated, cache).espn_finals
+
+
+def test_finals_land_although_espn_rejects_ranged_dates(pending, monkeypatch, tmp_path):
+    """Replicates the 2026-09-20 outage: dates=START-END answers 400."""
+    event = final(pending)
+    calls = []
+
+    def get(url, **kwargs):
+        dates = kwargs["params"]["dates"]
+        calls.append(dates)
+        if not re.fullmatch(r"[0-9]{8}", dates):
+            return httpx.Response(400, json={"code": 400, "message": "Failed to get events endpoint."},
+                                  request=httpx.Request("GET", url))
+        # Every day of the window echoes the same confirmed final, as the
+        # real feed does around midnight — one observation, not a conflict.
+        return httpx.Response(200, json={"events": [event]}, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(espn.httpx, "get", get)
+    updated = espn.supplement_results(pending, tmp_path / "finals.json")
+    assert updated.espn_finals == (pending.games.iloc[0].game_id,)
+    assert calls and all(re.fullmatch(r"[0-9]{8}", dates) for dates in calls)
+
+
+def test_one_failing_day_keeps_the_other_days_finals(pending, monkeypatch, tmp_path):
+    event = final(pending)
+
+    def get(url, **kwargs):
+        if kwargs["params"]["dates"] == "20250905":
+            raise httpx.ConnectError("ESPN unavailable")
+        return httpx.Response(200, json={"events": [event]}, request=httpx.Request("GET", url))
+
+    monkeypatch.setattr(espn.httpx, "get", get)
+    with pytest.warns(UserWarning, match="retaining"):
+        updated = espn.supplement_results(pending, tmp_path / "finals.json")
+    assert updated.espn_finals == (pending.games.iloc[0].game_id,)
 
 
 def test_ambiguous_espn_events_do_not_choose_a_winner(pending, monkeypatch, tmp_path):
