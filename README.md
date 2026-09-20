@@ -243,8 +243,9 @@ corrections. Both feeds use the same scoring engine, so wins are counted once.
 Confirmed supplemental finals are stored separately in
 `data/<year>/espn-finals.json`, preserving them through ESPN outages and offline
 builds without changing the raw nflverse CSV. The existing data snapshot step
-commits that cache. Builds query at most one scoreboard date range, covering
-missing results from the last seven days, with a ten-second timeout. ESPN is an
+commits that cache. Builds query one scoreboard date per gameday still missing
+a result from the last seven days (ESPN rejects date ranges with HTTP 400 since
+September 2026), each with a ten-second timeout. ESPN is an
 unofficial feed; if it fails, the build uses previously confirmed results and
 the existing staleness guard still applies.
 

@@ -92,8 +92,13 @@ export function livePoolStandings(baseline, events, nowMs) {
   return { rows, missing, contributing };
 }
 
-export function liveScoreboardUrl(window) {
-  return `${ESPN_BASE}scoreboard?dates=${window.start}-${window.end}&limit=1000`;
+/** ESPN's scoreboard stopped accepting dates=YYYYMMDD-YYYYMMDD ranges (HTTP
+ * 400 since September 2026), so a window is addressed by season, phase, and
+ * week instead — which also keeps a game that slides to another calendar day
+ * inside its week's response. */
+export function liveScoreboardUrl(window, season) {
+  const week = PLAYOFF_WEEK[window.kind] || window.week;
+  return `${ESPN_BASE}scoreboard?dates=${season}&seasontype=${PHASE[window.kind]}&week=${week}&limit=1000`;
 }
 
 export function liveRefreshDelay(events, failures = 0, liveInterval = LIVE_INTERVAL) {
@@ -678,7 +683,7 @@ export function initLivePage(doc, win, helpers) {
       for (let i = 0; i < wanted.length && active(); i += 3) {
         await Promise.all(wanted.slice(i, i + 3).map(async (w) => {
           try {
-            const payload = await request(liveScoreboardUrl(w));
+            const payload = await request(liveScoreboardUrl(w, baseline.season));
             if (!Array.isArray(payload?.events)) throw new Error('Invalid scoreboard');
             const parsed = helpers.parseEspnScoreboard(payload);
             if (payload.events.length && !parsed.length) throw new Error('Invalid scoreboard');
@@ -1086,7 +1091,7 @@ export function initLiveBoard(doc, win, helpers) {
       for (let i = 0; i < wanted.length && active(); i += 3) {
         await Promise.all(wanted.slice(i, i + 3).map(async (w) => {
           try {
-            const payload = await request(liveScoreboardUrl(w));
+            const payload = await request(liveScoreboardUrl(w, baseline.season));
             if (!Array.isArray(payload?.events)) throw new Error('Invalid scoreboard');
             const parsed = helpers.parseEspnScoreboard(payload);
             if (payload.events.length && !parsed.length) throw new Error('Invalid scoreboard');
