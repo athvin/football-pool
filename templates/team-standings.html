@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{# 'with context' so the macros can see the glossary dict the build passes in. #}
+{% from '_glossary.html' import info, term with context %}
+{% from '_links.html' import team_chip, entrant_link %}
+
+{% block title %}Team Standings · {{ season.year }} {{ season.pool.name }}{% endblock %}
+{% block description %}All 32 teams ranked by what they have banked for the pool, the perfect hindsight entry, and how everyone's actual picks stack up against it.{% endblock %}
+
+{% block content %}
+
+<div class="page-head">
+  <h1 class="page-title">Team Standings</h1>
+  <p class="page-sub">
+    {% if state.week %}
+      Which teams have been the best to pick, as of right now. The league is
+      ranked by {{ term('team_points', 'points') }} actually banked — wins at
+      each team's {{ term('lf', 'leveling factor') }}, plus any berth and
+      playoff bonuses — and each entry's four are held against the best four
+      on the board today.
+    {% else %}
+      Nothing has been played yet, so every team has banked zero and the
+      ranking falls back to the leveling factor: what one win by each team
+      would be worth. Once the season starts, this page ranks the league by
+      points actually generated and measures every entry against the best
+      four teams on the board.
+    {% endif %}
+  </p>
+</div>
+
+<h2 class="section-title">The picks to have made</h2>
+<p class="page-sub">
+  {% if state.week %}
+    The {{ board.n_picks }} highest-scoring teams so far — the entry a
+    perfect crystal ball would have turned in. Nobody had one in August,
+    which is the fun of the comparison.
+  {% else %}
+    The {{ board.n_picks }} most valuable teams per win. Until a game is
+    played, this is a statement about leveling factors, not results.
+  {% endif %}
+</p>
+
+<div class="stat-grid">
+  <div class="stat">
+    <p class="stat-label">The perfect entry</p>
+    <p class="stat-note">
+      <span class="row-teams">
+        {% for t in board.dream %}{{ team_chip(t.team, 'scored' if t.points > 0 else 'dim', large=true) }}{% endfor %}
+      </span>
+    </p>
+  </div>
+  <div class="stat">
+    <p class="stat-label">It has banked</p>
+    <p class="stat-value">{{ board.dream_total|points }}</p>
+  </div>
+  {% if board.best_entry %}
+  <div class="stat">
+    <p class="stat-label">Best actual entry</p>
+    <p class="stat-value">{{ board.best_entry.total|points }}</p>
+    <p class="stat-note">
+      {{ entrant_link(board.best_entry.slug, board.best_entry.name, cls='') }}
+      {%- if state.week %} — {{ board.best_entry.behind|points }} behind perfect{% endif %}
+    </p>
+  </div>
+  {% endif %}
+</div>
+
+<h2 class="section-title">How the entries stack up</h2>
+<div class="table-scroll">
+  <table>
+    <caption>
+      Everyone's four picks with each team's current league rank, against the
+      perfect entry. Best entry first — click a column heading to sort by it
+      instead.
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col" data-sort>Entrant</th>
+        <th scope="col">Their picks, best first</th>
+        {# Small is good here, as with rank everywhere else: an average of 3
+           means four top-of-the-table teams. #}
+        <th scope="col" class="num" data-sort="ascending">Avg rank</th>
+        <th scope="col" class="num" data-sort aria-sort="descending">{{ term('team_points', 'Points') }}</th>
+        <th scope="col" class="num" data-sort="ascending">Behind perfect</th>
+        <th scope="col">Of the perfect entry</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in board.entries %}
+      <tr>
+        <th scope="row" data-value="{{ e.name }}">{{ entrant_link(e.slug, e.name, cls='') }}</th>
+        <td>
+          <span class="row-teams">
+            {% for p in e.picks %}{{ team_chip(p.team, 'scored' if p.points > 0 else 'dim', suffix=' · ' ~ p.rank|ordinal) }}{% endfor %}
+          </span>
+        </td>
+        <td class="num" data-value="{{ e.avg_rank }}">{{ '%.1f'|format(e.avg_rank) }}</td>
+        <td class="num" data-value="{{ e.total }}">{{ e.total|points }}</td>
+        <td class="num" data-value="{{ e.behind }}">{{ '—' if not e.behind else e.behind|points }}</td>
+        <td data-value="{{ '%.4f'|format(e.share) }}">
+          {{ e.bar|safe }}
+          <span class="card-meta"><span>{{ '%.0f%%'|format(e.share * 100) }}</span></span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2 class="section-title">All 32, ranked</h2>
+<p class="page-sub">
+  The whole league in one table, best pick first. Teams on equal points share
+  a rank. "Picked by" is who in the pool is holding each one — a highly
+  ranked team nobody picked is where the field left points on the table.
+</p>
+
+{# Thirty-two rows is long enough that a header which scrolls away costs you
+   the column meanings half way down, so this one keeps its own scrollport. #}
+<div class="table-scroll is-tall">
+  <table>
+    <caption>All 32 teams for {{ season.year }}, ranked by points generated.</caption>
+    <thead>
+      <tr>
+        <th scope="col" class="num" data-sort="ascending" aria-sort="ascending">Rank</th>
+        <th scope="col" data-sort>Team</th>
+        <th scope="col" class="num" data-sort>{{ term('lf', 'LF') }}</th>
+        <th scope="col" data-sort>Record</th>
+        <th scope="col" class="num" data-sort>{{ term('team_points', 'Points') }}</th>
+        <th scope="col" data-sort>Seed</th>
+        <th scope="col" data-sort>Picked by</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in board.ranked %}
+      <tr>
+        <td class="num" data-value="{{ t.rank }}">{{ t.rank }}</td>
+        {# data-value carries the sort key wherever the displayed text would
+           sort wrongly — see teams.html, which this table is a ranked twin of. #}
+        <th scope="row" data-value="{{ t.team }}">
+          {{ team_chip(t.team, 'scored' if t.points > 0 else 'dim', large=true) }}
+        </th>
+        <td class="num" data-value="{{ t.lf }}">{{ '%.2f'|format(t.lf) }}</td>
+        <td data-value="{{ '%.4f'|format(t.win_pct) }}">{{ t.record }}</td>
+        <td class="num" data-value="{{ t.points }}">{{ t.points|points }}</td>
+        <td data-value="{{ t.seed if t.seed else 99 }}">
+          {% if t.seed %}
+            <span class="badge money">{{ t.seed }}</span>
+          {% else %}—{% endif %}
+        </td>
+        <td data-value="{{ t.owners|length }}">
+          {% if t.owners %}
+            <span class="row-teams">
+            {# Looked up by name because the ownership map is keyed by name —
+               the same lookup teams.html does, macro-linked for the same
+               reason: `data-slug` is what lights these up for "who are you?". #}
+            {% for owner in t.owners %}
+              {% set match = rows | selectattr('name', 'equalto', owner) | first %}
+              {{ entrant_link(match.slug, owner, cls='team-chip scored') }}
+            {% endfor %}
+            </span>
+          {% else %}
+            <span style="color:var(--chalk-dim)">nobody</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

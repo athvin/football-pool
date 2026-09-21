@@ -83,9 +83,9 @@
       </span>
     </a>
 
-    {# Three destinations, not six. What happened (Standings), how it moved
-       (Season), where it ends (Forecast). Teams and Rules are reference, and
-       reference lives in the footer. #}
+    {# What happened (Standings), how it moved (Season), which teams were the
+       ones to hold (Team Standings), where it ends (Forecast). Teams and
+       Rules are reference, and reference lives in the footer. #}
     <nav class="tabs" aria-label="Sections">
       <a href="{{ '/'|url }}" {% if page == 'standings' %}aria-current="page"{% endif %}>Standings</a>
       <a href="{{ '/schedule/'|url }}" {% if page == 'schedule' %}aria-current="page"{% endif %}>Schedule</a>
@@ -95,6 +95,7 @@
          {% if page == 'gameday' %}aria-current="page"{% endif %}
          {% if page == 'entrant' and entrant.projection %}title="Open Gameday as {{ entrant.name }} with the best slate preselected"{% endif %}>Gameday</a>
       <a href="{{ '/season/'|url }}" {% if page == 'season' %}aria-current="page"{% endif %}>Season</a>
+      <a href="{{ '/team-standings/'|url }}" {% if page == 'team-standings' %}aria-current="page"{% endif %}>Team&nbsp;Standings</a>
       <a href="{{ '/forecast/'|url }}" {% if page == 'forecast' %}aria-current="page"{% endif %}>Forecast</a>
     </nav>
 

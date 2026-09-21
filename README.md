@@ -472,6 +472,14 @@ off, and nothing else changes.
   worth one thing there and another here. The bye is named where it falls,
   because a list that jumps from week 5 to week 7 has said nothing about week
   6. All 32 get a page, including the ones nobody picked.
+- **Team Standings** — the hindsight board, all on one page: the 32 teams
+  ranked by what they have actually banked for the pool, the perfect entry a
+  crystal ball would have turned in (the top four on that ranking, and what
+  it would be worth), and every real entry held against it — each pick wearing
+  its current league rank, with the points gap back to perfect. The ranked
+  table is the teams table's arithmetic with rank numbers on it, and each
+  entry's total here is its banked total on the leaderboard; a test holds all
+  three to the same numbers.
 - **Rules** — rendered from `rules.yaml`, the same file the engine reads. It
   opens with the two deadlines and how to pay: picks are due before the
   season's first kickoff and payment by the end of week 1 — both dates read
