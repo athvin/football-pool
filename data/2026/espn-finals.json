@@ -1,52 +1,5 @@
 {
   "version": 1,
   "season": 2026,
-  "events": [
-    {
-      "id": "401872944",
-      "season": {
-        "year": 2026,
-        "type": 2,
-        "slug": "regular-season"
-      },
-      "week": {
-        "number": 2
-      },
-      "date": "2026-09-20T20:25Z",
-      "status": {
-        "clock": 0.0,
-        "displayClock": "0:00",
-        "period": 4,
-        "type": {
-          "id": "3",
-          "name": "STATUS_FINAL",
-          "state": "post",
-          "completed": true,
-          "description": "Final",
-          "detail": "Final",
-          "shortDetail": "Final"
-        }
-      },
-      "competitions": [
-        {
-          "competitors": [
-            {
-              "homeAway": "home",
-              "score": "37",
-              "team": {
-                "abbreviation": "DAL"
-              }
-            },
-            {
-              "homeAway": "away",
-              "score": "20",
-              "team": {
-                "abbreviation": "WSH"
-              }
-            }
-          ]
-        }
-      ]
-    }
-  ]
+  "events": []
 }
