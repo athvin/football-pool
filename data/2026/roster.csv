@@ -98,7 +98,6 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,ATL,DL,79,DEV,Carlos Allen Jr.,,,0
 2026,ATL,DL,90,RES,Da'Shawn Hand,Alabama,HandDa00,8
 2026,ATL,DL,95,ACT,Gervon Dexter Sr.,Florida,DextGe00,3
-2026,ATL,DL,51,ACT,Jared Ivey,Mississippi; Georgia Tech,IveyJa00,1
 2026,ATL,DL,94,ACT,LaCale London,Western Illinois,LondLa00,6
 2026,ATL,DL,92,ACT,Maason Smith,LSU,SmitMa07,2
 2026,ATL,DL,52,ACT,Samson Ebukam,Eastern Washington,EbukSa00,9
@@ -114,6 +113,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,ATL,LB,40,RES,JD Bertrand,Notre Dame,BertJD00,2
 2026,ATL,LB,11,RES,Jalon Walker,Georgia,WalkJa02,1
 2026,ATL,LB,27,RES,James Pearce Jr.,Tennessee,PearJa00,1
+2026,ATL,LB,51,ACT,Jared Ivey,Mississippi; Georgia Tech,IveyJa00,1
 2026,ATL,LB,42,ACT,Josh Woods,Maryland,WoodJo02,8
 2026,ATL,LB,53,ACT,Kendal Daniels,Oklahoma; Oklahoma State,DaniKe00,0
 2026,ATL,LB,22,ACT,Yasir Abdullah,Louisville,AbduYa00,3
@@ -2125,11 +2125,11 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PIT,RB,30,ACT,Jaylen Warren,Oklahoma State,WarrJa01,4
 2026,PIT,RB,31,DEV,Lew Nichols III,Central Michigan,NichLe00,3
 2026,PIT,RB,13,ACT,Rico Dowdle,South Carolina,DowdRi01,6
+2026,PIT,RB,37,ACT,Riley Nowakowski,Indiana; Wisconsin,NowaRi00,0
 2026,PIT,RB,21,DEV,Travis Homer,Miami,HomeTr00,7
 2026,PIT,TE,80,ACT,Darnell Washington,Georgia,WashDa03,3
 2026,PIT,TE,81,DEV,Lake McRee,USC,,0
 2026,PIT,TE,88,ACT,Pat Freiermuth,Penn State,FreiPa00,5
-2026,PIT,TE,37,ACT,Riley Nowakowski,Indiana; Wisconsin,NowaRi00,0
 2026,PIT,TE,85,ACT,Robert Tonyan,Indiana State,TonyRo00,9
 2026,PIT,WR,15,ACT,Ben Skowronek,Notre Dame; Northwestern,SkowBe00,5
 2026,PIT,WR,82,DEV,Brandon Johnson,UCF; Tennessee,JohnBr23,4
