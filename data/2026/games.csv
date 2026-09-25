@@ -38,7 +38,7 @@ game_id,season,game_type,week,gameday,gametime,away_team,away_score,home_team,ho
 2026_03_CIN_PIT,2026,REG,3,2026-09-27,13:00,CIN,,PIT,,,,Home,-3.5,42.5,-185.0,154.0,401872950,Zac Taylor,Mike McCarthy,7,7,outdoors,grass,,,Joe Burrow,Aaron Rodgers,,PIT00,Acrisure Stadium
 2026_03_HOU_IND,2026,REG,3,2026-09-27,13:00,HOU,,IND,,,,Home,-1.5,42.5,-125.0,105.0,401872951,DeMeco Ryans,Shane Steichen,7,7,,fieldturf,,,C.J. Stroud,Daniel Jones,,IND00,Lucas Oil Stadium
 2026_03_KC_MIA,2026,REG,3,2026-09-27,13:00,KC,,MIA,,,,Home,-10.5,45.5,-650.0,470.0,401872952,Andy Reid,Jeff Hafley,7,7,outdoors,grass,,,Patrick Mahomes,Malik Willis,,MIA00,Hard Rock Stadium
-2026_03_LAC_BUF,2026,REG,3,2026-09-27,13:00,LAC,,BUF,,,,Home,7.0,50.5,260.0,-325.0,401872953,Jim Harbaugh,Sean McDermott,7,10,outdoors,a_turf,,,Justin Herbert,Josh Allen,,BUF00,Highmark Stadium
+2026_03_LAC_BUF,2026,REG,3,2026-09-27,13:00,LAC,,BUF,,,,Home,7.0,50.5,270.0,-340.0,401872953,Jim Harbaugh,Sean McDermott,7,10,outdoors,a_turf,,,Justin Herbert,Josh Allen,,BUF00,Highmark Stadium
 2026_03_LA_DEN,2026,REG,3,2026-09-27,20:20,LAR,,DEN,,,,Home,-2.5,44.5,-130.0,110.0,401872962,Sean McVay,Sean Payton,6,7,outdoors,grass,,,Matthew Stafford,Bo Nix,,DEN00,Empower Field at Mile High
 2026_03_LV_NO,2026,REG,3,2026-09-27,16:25,LV,,NO,,,,Home,3.0,43.5,150.0,-180.0,401872961,Klint Kubliak,Kellen Moore,7,7,dome,sportturf,,,Kirk Cousins,Tyler Shough,,NOR00,Caesars Superdome
 2026_03_MIN_TB,2026,REG,3,2026-09-27,16:05,MIN,,TB,,,,Home,-1.5,42.5,-122.0,102.0,401872959,Kevin O'Connell,Todd Bowles,7,7,outdoors,grass,,,Kyler Murray,Baker Mayfield,,TAM00,Raymond James Stadium
