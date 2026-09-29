@@ -422,8 +422,8 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,CHI,DL,55,ACT,Dayo Odeyingbo,Vanderbilt,OdeyDa00,5
 2026,CHI,DL,50,ACT,Grady Jarrett,Clemson,JarrGr00,11
 2026,CHI,DL,97,ACT,James Lynch,Baylor,LyncJa00,6
-2026,CHI,DL,59,ACT,Jamree Kromah,James Madison; Rutgers,,2
-2026,CHI,DL,91,ACT,Jayden Loving,Wake Forest,,0
+2026,CHI,DL,59,INA,Jamree Kromah,James Madison; Rutgers,,2
+2026,CHI,DL,91,INA,Jayden Loving,Wake Forest,,0
 2026,CHI,DL,96,ACT,Jordan van den Berg,Georgia Tech; Penn State; Iowa Western CC,vandJo00,0
 2026,CHI,DL,93,ACT,Kentavius Street,N.C. State,StreKe00,8
 2026,CHI,DL,52,DEV,Marcus Davenport,Texas-San Antonio,DaveMa00,8
@@ -452,13 +452,13 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,CHI,OL,67,ACT,Garrett Bradbury,N.C. State,,7
 2026,CHI,OL,62,ACT,Joe Thuney,N.C. State,,10
 2026,CHI,OL,73,ACT,Jonah Jackson,Ohio State; Rutgers,,6
-2026,CHI,OL,74,ACT,Jordan McFadden,Clemson,,3
+2026,CHI,OL,74,INA,Jordan McFadden,Clemson,,3
 2026,CHI,OL,54,ACT,Logan Jones,Iowa,,0
 2026,CHI,OL,65,ACT,Luke Newman,Michigan State; Holy Cross,,1
-2026,CHI,OL,75,ACT,Ozzy Trapilo,Boston College,,1
+2026,CHI,OL,75,INA,Ozzy Trapilo,Boston College,,1
 2026,CHI,OL,79,ACT,Theo Benedet,University of British Columbia,,2
 2026,CHI,P,19,ACT,Tory Taylor,Iowa,TaylTo01,2
-2026,CHI,QB,18,ACT,Caleb Williams,USC; Oklahoma,WillCa03,2
+2026,CHI,QB,18,INA,Caleb Williams,USC; Oklahoma,WillCa03,2
 2026,CHI,QB,11,ACT,Case Keenum,Houston,KeenCa00,14
 2026,CHI,QB,16,DEV,Miller Moss,Louisville,,0
 2026,CHI,QB,17,ACT,Tyson Bagent,Shepherd,BageTy00,3
@@ -2020,7 +2020,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,DB,2,ACT,Riq Woolen,Texas-San Antonio,WoolTa00,4
 2026,PHI,DB,30,DEV,Shaun Wade,Ohio State,WadeSh00,5
 2026,PHI,DB,37,RES,Tucker Large,Washington State; South Dakota State,,0
-2026,PHI,DL,57,ACT,A.J. Epenesa,Iowa,EpenAJ00,6
+2026,PHI,DL,57,INA,A.J. Epenesa,Iowa,EpenAJ00,6
 2026,PHI,DL,94,ACT,Byron Young,Alabama,YounBy00,3
 2026,PHI,DL,98,ACT,Jalen Carter,Georgia,CartJa05,3
 2026,PHI,DL,90,ACT,Jordan Davis,Georgia,DaviJo03,4
@@ -2029,7 +2029,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,DL,93,DEV,Uar Bernard,,BernUa00,0
 2026,PHI,K,4,ACT,Jake Elliott,Memphis,ElliJa03,9
 2026,PHI,LB,17,ACT,Arnold Ebiketie,Penn State,EbikAr00,4
-2026,PHI,LB,59,DEV,Chance Campbell,Mississippi,CampCh02,4
+2026,PHI,LB,59,ACT,Chance Campbell,Mississippi,CampCh02,4
 2026,PHI,LB,58,ACT,Jalyx Hunt,Houston Christian University; Cornell,HuntJa02,2
 2026,PHI,LB,54,ACT,Jeremiah Trotter Jr.,Clemson,TrotJe01,2
 2026,PHI,LB,11,ACT,Jihaad Campbell,Alabama,CampJi00,1
@@ -2043,7 +2043,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,LS,41,ACT,Rocco Underwood,Florida,,0
 2026,PHI,OL,51,ACT,Cam Jurgens,Nebraska,,4
 2026,PHI,OL,66,ACT,Drew Kendall,Boston College,,1
-2026,PHI,OL,74,ACT,Fred Johnson,Florida,,7
+2026,PHI,OL,74,INA,Fred Johnson,Florida,,7
 2026,PHI,OL,75,DEV,Jake Majors,Texas,,1
 2026,PHI,OL,67,DEV,John Ojukwu,Boise State,,3
 2026,PHI,OL,68,ACT,Jordan Mailata,,,8
@@ -2056,22 +2056,22 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,OL,61,ACT,Willie Lampkin,North Carolina; Coastal Carolina,,1
 2026,PHI,P,10,ACT,Braden Mann,Texas A&M,MannBr01,6
 2026,PHI,QB,14,ACT,Andy Dalton,TCU,DaltAn00,15
-2026,PHI,QB,18,ACT,Cole Payton,North Dakota State,PaytCo00,0
+2026,PHI,QB,18,INA,Cole Payton,North Dakota State,PaytCo00,0
 2026,PHI,QB,1,ACT,Jalen Hurts,Oklahoma; Alabama,HurtJa00,6
-2026,PHI,QB,16,ACT,Tanner McKee,Stanford,McKeTa01,3
+2026,PHI,QB,16,INA,Tanner McKee,Stanford,McKeTa01,3
 2026,PHI,RB,34,DEV,Carson Steele,UCLA; Ball State,SteeCa00,2
 2026,PHI,RB,39,DEV,Dameon Pierce,Florida,PierDa01,4
 2026,PHI,RB,30,DEV,Jaydon Blue,Texas,BlueJa01,1
 2026,PHI,RB,26,ACT,Saquon Barkley,Penn State,BarkSa00,8
 2026,PHI,RB,8,ACT,Tank Bigsby,Auburn,BigsTa00,3
 2026,PHI,RB,28,ACT,Will Shipley,Clemson,ShipWi00,2
-2026,PHI,TE,88,ACT,Dallas Goedert,South Dakota State,GoedDa00,8
+2026,PHI,TE,88,INA,Dallas Goedert,South Dakota State,GoedDa00,8
 2026,PHI,TE,84,ACT,E.J. Jenkins,Georgia Tech; South Carolina; St. Francis PA,JenkEJ00,3
 2026,PHI,TE,87,RES,Eli Stowers,Vanderbilt; New Mexico State; Texas A&M,StowEl00,0
 2026,PHI,TE,81,RES,Grant Calcaterra,SMU; Oklahoma,CalcGr00,4
 2026,PHI,TE,83,ACT,Johnny Mundt,Oregon,MundJo00,9
 2026,PHI,TE,45,DEV,Josiah Deguara,Cincinnati,DeguJo00,6
-2026,PHI,TE,86,DEV,Zach Ertz,Stanford,ErtzZa00,13
+2026,PHI,TE,86,ACT,Zach Ertz,Stanford,ErtzZa00,13
 2026,PHI,WR,85,ACT,Britain Covey,Utah,CoveBr00,4
 2026,PHI,WR,80,ACT,Darius Cooper,Tarleton State,CoopDa01,1
 2026,PHI,WR,6,ACT,DeVonta Smith,Alabama,SmitDe07,5
@@ -2079,7 +2079,7 @@ season,team,position,jersey_number,status,full_name,college,pfr_id,years_exp
 2026,PHI,WR,19,ACT,Elijah Moore,Mississippi,MoorEl00,5
 2026,PHI,WR,89,RES,Johnny Wilson,Florida State; Arizona State,WilsJo03,2
 2026,PHI,WR,9,ACT,Makai Lemon,USC,LemoMa00,0
-2026,PHI,WR,0,ACT,Marquise Brown,Oklahoma; College of the Canyons,BrowMa04,7
+2026,PHI,WR,0,INA,Marquise Brown,Oklahoma; College of the Canyons,BrowMa04,7
 2026,PHI,WR,47,DEV,Xavier Gipson,Stephen F. Austin State,GipsXa00,3
 2026,PIT,DB,22,ACT,Asante Samuel Jr.,Florida State,SamuAs00,5
 2026,PIT,DB,26,ACT,Brandin Echols,Kentucky,EchoBr00,5
