@@ -41,7 +41,7 @@ import {
   firstSortDirection,
   flipShifts,
   formatTimestamp,
-  gamedayLaunchParams,
+  launchParams,
   headToHeadReadout,
   init,
   isStale,
@@ -333,10 +333,10 @@ describe('Gameday scenario helpers', () => {
   });
 
   test('entrant links carry identity into one initial preset and keep it shareable', () => {
-    expect(gamedayLaunchParams('?me=julie&preset=dream')).toEqual({
+    expect(launchParams('?me=julie&preset=dream')).toEqual({
       me: 'julie', preset: 'dream',
     });
-    expect(gamedayLaunchParams('?me=julie&preset=unknown')).toEqual({
+    expect(launchParams('?me=julie&preset=unknown')).toEqual({
       me: 'julie', preset: '',
     });
     expect(scenarioLocation(
@@ -3459,5 +3459,133 @@ describe('tracing a team through the playoffs', () => {
   test('a page with no bracket is left alone', () => {
     document.body.innerHTML = '<main><p>standings</p></main>';
     expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The viewer bar's fold
+// ---------------------------------------------------------------------------
+describe('the viewer bar fold', () => {
+  test('opens and closes from its button, and says which it will do next', () => {
+    document.body.innerHTML = `
+      <div class="viewer-bar">
+        <button data-viewer-more-toggle aria-expanded="false" title="Show the live-update and time zone settings"></button>
+        <div data-viewer-more><select data-tz-select><option value="UTC">UTC</option></select></div>
+      </div>`;
+    init(document, fakeWindow());
+
+    const bar = document.querySelector('.viewer-bar');
+    const button = document.querySelector('[data-viewer-more-toggle]');
+    expect(bar.classList.contains('is-open')).toBe(false);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+
+    button.click();
+    expect(bar.classList.contains('is-open')).toBe(true);
+    expect(button.getAttribute('aria-expanded')).toBe('true');
+    expect(button.title).toMatch(/^Hide /);
+
+    button.click();
+    expect(bar.classList.contains('is-open')).toBe(false);
+    expect(button.getAttribute('aria-expanded')).toBe('false');
+    expect(button.title).toMatch(/^Show /);
+  });
+
+  test('a page without the fold is left alone', () => {
+    document.body.innerHTML = '<div class="viewer-bar"></div>';
+    expect(() => init(document, fakeWindow())).not.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Copy link
+// ---------------------------------------------------------------------------
+describe('copy link', () => {
+  const markup = () => {
+    document.body.innerHTML = `
+      <section id="games"><button data-copy-link="#games">Copy link</button></section>`;
+  };
+  const flush = async () => { await setImmediate(); await setImmediate(); };
+
+  test('copies the page address with the section hash, keeping ?me=', async () => {
+    markup();
+    const win = fakeWindow();
+    win.location = { href: 'https://example.test/football-pool/?me=aunt-carol#standings' };
+    win.navigator = { clipboard: { writeText: vi.fn(async () => {}) } };
+    const later = [];
+    win.setTimeout = (fn) => { later.push(fn); return later.length; };
+    win.clearTimeout = vi.fn();
+    init(document, win);
+
+    const button = document.querySelector('[data-copy-link]');
+    button.click();
+    await flush();
+
+    expect(win.navigator.clipboard.writeText).toHaveBeenCalledWith(
+      'https://example.test/football-pool/?me=aunt-carol#games',
+    );
+    expect(button.textContent).toBe('Link copied');
+    expect(button.classList.contains('is-copied')).toBe(true);
+
+    // The confirmation steps back to the label once the moment has passed.
+    for (const fn of later) fn();
+    expect(button.textContent).toBe('Copy link');
+    expect(button.classList.contains('is-copied')).toBe(false);
+  });
+
+  test('without a clipboard the hash goes into the address bar and the button says so', async () => {
+    markup();
+    const win = fakeWindow();
+    win.location = { href: 'https://example.test/', hash: '' };
+    win.navigator = {};
+    win.setTimeout = () => 1;
+    init(document, win);
+
+    const button = document.querySelector('[data-copy-link]');
+    button.click();
+    await flush();
+
+    expect(win.location.hash).toBe('#games');
+    expect(button.textContent).toBe('Link is in the address bar');
+    expect(button.classList.contains('is-copied')).toBe(false);
+  });
+
+  test('a clipboard that refuses is handled the same way', async () => {
+    markup();
+    const win = fakeWindow();
+    win.location = { href: 'https://example.test/', hash: '' };
+    win.navigator = { clipboard: { writeText: vi.fn(async () => { throw new Error('denied'); }) } };
+    win.setTimeout = () => 1;
+    init(document, win);
+
+    document.querySelector('[data-copy-link]').click();
+    await flush();
+
+    expect(win.location.hash).toBe('#games');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Identity from the URL, on any page
+// ---------------------------------------------------------------------------
+describe('identity from a shared URL', () => {
+  beforeEach(boardMarkup);
+
+  test('?me= names the viewer on the standings page, not only on Gameday', () => {
+    const win = fakeWindow();
+    win.location = { search: '?me=paul-moore', href: 'https://example.test/?me=paul-moore' };
+    init(document, win);
+
+    expect(document.documentElement.dataset.me).toBe('paul-moore');
+    expect(document.querySelector('[data-slug="paul-moore"]').classList.contains('is-me')).toBe(true);
+    expect(win._store.get(ME_KEY)).toBe('paul-moore');
+  });
+
+  test('a slug that is not in this pool is ignored rather than stored', () => {
+    const win = fakeWindow();
+    win.location = { search: '?me=somebody-else', href: '' };
+    init(document, win);
+
+    expect(document.documentElement.dataset.me).toBeUndefined();
+    expect(win._store.get(ME_KEY) ?? '').toBe('');
   });
 });

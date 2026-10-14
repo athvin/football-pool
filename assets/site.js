@@ -37,8 +37,14 @@ export function scopedKey(key, scope) {
   return scope ? `${key}:${scope}` : key;
 }
 
-/** Identity and initial scenario requested by a shareable Gameday URL. */
-export function gamedayLaunchParams(search = '') {
+/**
+ * What a shared URL asks for: `?me=<slug>` names the viewer on any page, and
+ * `?preset=` opens Gameday's what-if board on a slate. Identity used to be
+ * read on Gameday alone; now `/?me=aunt-carol#entry-aunt-carol` lands
+ * somebody on their own row with it lit, which is the whole of what a link
+ * in a family text needs to do.
+ */
+export function launchParams(search = '') {
   let params;
   try {
     params = new URLSearchParams(String(search));
@@ -1625,6 +1631,71 @@ function initDetail(doc, storage) {
 }
 
 /**
+ * The fold in the viewer bar.
+ *
+ * Only a phone has one — the stylesheet gives the button a box there and
+ * nowhere else — and it is never remembered: it is a disclosure, not a
+ * preference. The bar carries the state as a class so the stylesheet can hide
+ * the folded controls without the client touching them one by one.
+ */
+function initViewerMore(doc) {
+  const button = doc.querySelector('[data-viewer-more-toggle]');
+  const bar = button?.closest('.viewer-bar');
+  if (!button || !bar) return;
+
+  const paint = (open) => {
+    bar.classList.toggle('is-open', open);
+    button.setAttribute('aria-expanded', String(open));
+    button.title = `${open ? 'Hide' : 'Show'} the live-update and time zone settings`;
+  };
+  paint(false);
+  button.addEventListener('click', () => paint(!bar.classList.contains('is-open')));
+}
+
+/**
+ * "Copy link": the address of this page, landing on one section of it.
+ *
+ * The sections already have ids, so the link is only the page's own address
+ * with a hash on the end — but "scroll down to the games" is not something
+ * that can be put in a text, and neither is "add #games to the URL". The
+ * address is taken from the page rather than built, so it is right at the
+ * site root and under the project prefix alike, and it keeps a `?me=` that
+ * is already there. Without a clipboard (an older phone, a page not served
+ * over https) the hash goes into the address bar instead, where it can be
+ * copied by hand, and the button says so.
+ */
+function initCopyLinks(doc, win) {
+  for (const button of doc.querySelectorAll('[data-copy-link]')) {
+    const idle = button.textContent;
+    let timer = 0;
+    const say = (text, copied) => {
+      button.textContent = text;
+      button.classList.toggle('is-copied', copied);
+      win.clearTimeout?.(timer);
+      timer = win.setTimeout?.(() => {
+        button.textContent = idle;
+        button.classList.remove('is-copied');
+      }, 2500);
+    };
+
+    button.addEventListener('click', async () => {
+      const hash = button.dataset.copyLink || '';
+      const here = win.location?.href || doc.location?.href || '';
+      const url = `${here.split('#')[0]}${hash}`;
+      try {
+        const copy = win.navigator?.clipboard?.writeText;
+        if (typeof copy !== 'function') throw new Error('clipboard unavailable');
+        await copy.call(win.navigator.clipboard, url);
+        say('Link copied', true);
+      } catch {
+        if (win.location) win.location.hash = hash;
+        say('Link is in the address bar', false);
+      }
+    });
+  }
+}
+
+/**
  * The schedule's filter: only the games the pool has a side in.
  *
  * A third of any week is games nobody here holds. They are always dimmed and
@@ -2698,14 +2769,14 @@ export function init(doc = document, win = window) {
   // Which pool this page belongs to — '' at the site root. Only the two keys
   // that name entrants are scoped by it; see scopedKey.
   const scope = doc.documentElement.dataset.pool || '';
-  const launch = doc.documentElement.dataset.page === 'gameday'
-    ? gamedayLaunchParams(win.location?.search || '')
-    : { me: '', preset: '' };
+  const launch = launchParams(win.location?.search || '');
   initTheme(doc, storage, win);
   initFastRefresh(doc, win);
   initPrimaryNavigation(doc);
   initStickyChrome(doc, win);
+  initViewerMore(doc);
   initDetail(doc, storage);
+  initCopyLinks(doc, win);
   initSlate(doc);
   initGameDetail(doc);
   // Identity first: the comparison chart opens on whoever the viewer says

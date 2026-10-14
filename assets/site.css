@@ -80,6 +80,12 @@
   --paint-endzone: rgb(198 255 61 / 3.5%);
   --paint-wordmark: rgb(198 255 61 / 9%);
   --paint-pylon: rgb(255 107 53 / 30%);
+
+  /* How much pinned chrome sits over the top of the page: both bars on a
+     desktop, the masthead alone on a phone, nothing in a short landscape
+     viewport — the breakpoints that unpin each bar reset it. Scroll targets
+     use it so a linked section lands below the chrome, not under it. */
+  --sticky-chrome: calc(var(--masthead-height, 60px) + var(--viewer-height, 90px));
 }
 
 /* Day game. Same semantics, repitched for a light surface. Opt-in only. */
@@ -334,6 +340,7 @@ a, button, select, summary, label { touch-action: manipulation; }
   position: sticky;
   top: 0;
   z-index: 20;
+  background: var(--field);
   background: color-mix(in srgb, var(--field) 88%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--rule);
@@ -2155,7 +2162,7 @@ svg.heat { touch-action: manipulation; -webkit-tap-highlight-color: transparent;
 }
 
 .game:target {
-  scroll-margin-top: calc(var(--masthead-height, 60px) + var(--viewer-height, 90px) + 1rem);
+  scroll-margin-top: calc(var(--sticky-chrome) + 1rem);
   border-color: var(--model);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--model) 22%, transparent), var(--shadow);
 }
@@ -2516,6 +2523,7 @@ a.owner.is-me:hover { color: var(--live); border-color: var(--live); }
   position: sticky;
   top: var(--masthead-height, 60px);
   z-index: 19;
+  background: var(--surface);
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--rule);
@@ -3613,6 +3621,7 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
      then scroll away with the opening screen instead of becoming 100px of
      permanent chrome. */
   .viewer-bar { position: relative; top: auto; }
+  :root { --sticky-chrome: var(--masthead-height, 54px); }
   .viewer-inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: stretch;
@@ -3710,6 +3719,7 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
    Keep all the controls, but let both bars scroll naturally with the page. */
 @media (max-height: 500px) {
   .masthead, .viewer-bar { position: relative; top: auto; }
+  :root { --sticky-chrome: 0px; }
 }
 
 /* Coarse pointers need controls sized for a finger. Dense identity chips use
@@ -3781,4 +3791,103 @@ html.is-goal-line .scenario-board-wrap { animation: goal-line 0.75s ease; box-sh
   body { background: none; color: #000; }
   /* Whatever the reveal observer had not got to yet must still print. */
   .will-reveal { opacity: 1; transform: none; }
+}
+
+/* --- landing on a section -------------------------------------------
+   Every section of the standings page, and every row on the board, is a real
+   destination: `/#games`, `/#entry-aunt-carol`. Two sticky bars sit over the
+   top of the page on a desktop, so a target scrolled flush to the top would be
+   under them; the margin is the height of whatever is pinned, which the
+   client measures and the phone breakpoints above reset as each bar stops
+   being pinned. `:where()` keeps this at zero specificity so the schedule's
+   weeks, which deliberately do not scroll at all, are left alone. */
+:where(main [id]) { scroll-margin-top: calc(var(--sticky-chrome) + 0.75rem); }
+
+/* The row a link landed on, lit the way a selected game is on the schedule:
+   somebody sent "here's your line", and the page should point at it. */
+.row:target {
+  --accent: var(--model);
+  border-color: var(--model);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--model) 22%, transparent), var(--shadow);
+}
+.row:target::before { transform: scaleY(1); }
+
+/* The controls beside a page title: Details and Copy link share one corner. */
+.page-tools {
+  position: absolute;
+  right: 0;
+  top: 0.45rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.page-tools .detail-toggle { position: static; top: auto; }
+
+.copy-link {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  min-height: 32px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.copy-link:hover { color: var(--chalk); border-color: var(--edge); }
+.copy-link:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+.copy-link.is-copied {
+  color: var(--live);
+  border-color: color-mix(in srgb, var(--live) 40%, var(--rule));
+}
+.section-head .copy-link { margin-inline-start: auto; }
+
+/* --- the viewer bar's fold ----------------------------------------------
+   On a wide screen the wrapper dissolves into the grid and the button does
+   not exist. On a phone, with a client present to open it again, the two
+   secondary settings start folded behind the button — the standings were
+   arriving a whole screen below a settings panel, and a settings panel is not
+   what anyone opened the site for. With scripting off nothing is folded. */
+.viewer-more { display: contents; }
+.viewer-more-toggle { display: none; }
+
+@media (max-width: 959px) {
+  html[data-js='on'] .viewer-more-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    align-self: end;
+    min-height: 40px;
+    padding: 0.3rem 0.6rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    color: var(--chalk-dim);
+    cursor: pointer;
+  }
+  html[data-js='on'] .viewer-more-toggle:hover { border-color: var(--edge); }
+  html[data-js='on'] .viewer-more-toggle:focus-visible { outline: 2px solid var(--model); outline-offset: 2px; }
+  .viewer-more-mark { font-size: 0.8rem; transition: transform 0.18s; }
+  .viewer-bar.is-open .viewer-more-mark { transform: rotate(180deg); }
+  html[data-js='on'] .viewer-bar:not(.is-open) .viewer-more { display: none; }
+  html[data-js='on'] .viewer-bar.is-open .viewer-more-toggle { color: var(--chalk); border-color: var(--edge); }
+  /* Opened, the time zone takes a full row under the updates toggle rather
+     than squeezing in beside the fold button's empty column. */
+  html[data-js='on'] .viewer-inner .tz { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  /* In normal flow under the title, like the lone Details button was. */
+  .page-tools {
+    position: static;
+    margin-top: 0.7rem;
+    flex-wrap: wrap;
+  }
+  .page-tools .detail-toggle { margin-top: 0; }
+  .section-head .copy-link { margin-inline-start: 0; }
 }

@@ -166,30 +166,45 @@
     </label>
     {% endif %}
 
-    {# The one live-data preference, beside the other viewer choices. The
-       Standings board and the Gameday Game Center both poll ESPN while
-       football is on; this switches both between 20-second and 5-second
-       updates, from one place, without each page growing its own button.
-       Owned by site.js like theme and time zone; live controllers listen. #}
-    <button class="fast-refresh" type="button" data-live-fast-refresh aria-pressed="false"
-            title="Refresh live scores every 5 seconds when on, or 20 seconds when off.">
-      <span class="viewer-label">5-second updates</span>
-      <span class="fast-refresh-state" data-live-fast-state aria-hidden="true">Off</span>
+    {# On a phone the two settings below are folded behind one button, because
+       a settings panel taller than the first screen was what people saw
+       instead of the standings. The fold exists only when there is a client
+       to unfold it (`data-js`), so with scripting off every control is simply
+       there; on a wide screen the wrapper is `display: contents` and the
+       button is hidden, so the bar is the one row it always was. #}
+    <button class="viewer-more-toggle" type="button" data-viewer-more-toggle
+            aria-expanded="false" aria-controls="viewer-more"
+            title="Show the live-update and time zone settings">
+      <span class="viewer-label">Settings</span>
+      <span class="viewer-more-mark" aria-hidden="true">▾</span>
     </button>
 
-    <label class="tz">
-      <span class="viewer-label">Time zone</span>
-      <select data-tz-select>
-        <option value="America/New_York">Eastern</option>
-        <option value="America/Chicago">Central</option>
-        <option value="America/Denver">Mountain</option>
-        <option value="America/Phoenix">Arizona</option>
-        <option value="America/Los_Angeles">Pacific</option>
-        <option value="America/Anchorage">Alaska</option>
-        <option value="Pacific/Honolulu">Hawaii</option>
-        <option value="UTC">UTC</option>
-      </select>
-    </label>
+    <div class="viewer-more" id="viewer-more" data-viewer-more>
+      {# The one live-data preference, beside the other viewer choices. The
+         Standings board and the Gameday Game Center both poll ESPN while
+         football is on; this switches both between 20-second and 5-second
+         updates, from one place, without each page growing its own button.
+         Owned by site.js like theme and time zone; live controllers listen. #}
+      <button class="fast-refresh" type="button" data-live-fast-refresh aria-pressed="false"
+              title="Refresh live scores every 5 seconds when on, or 20 seconds when off.">
+        <span class="viewer-label">5-second updates</span>
+        <span class="fast-refresh-state" data-live-fast-state aria-hidden="true">Off</span>
+      </button>
+
+      <label class="tz">
+        <span class="viewer-label">Time zone</span>
+        <select data-tz-select>
+          <option value="America/New_York">Eastern</option>
+          <option value="America/Chicago">Central</option>
+          <option value="America/Denver">Mountain</option>
+          <option value="America/Phoenix">Arizona</option>
+          <option value="America/Los_Angeles">Pacific</option>
+          <option value="America/Anchorage">Alaska</option>
+          <option value="Pacific/Honolulu">Hawaii</option>
+          <option value="UTC">UTC</option>
+        </select>
+      </label>
+    </div>
   </div>
 </div>
 

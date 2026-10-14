@@ -2671,3 +2671,93 @@ def test_each_pool_scopes_its_identity_storage(pair_site):
 
     assert 'data-pool=""' in (pair_site.path / "index.html").read_text()
     assert 'data-pool="friends"' in (pair_site.path / "friends" / "index.html").read_text()
+
+
+# -- the standings page reads top-down ----------------------------------------
+def test_the_board_is_the_first_thing_on_the_standings_page(site_mid):
+    """Title, then rows; the pulse tiles and the week's games come after.
+
+    The old order put the tiles and the week's results card above the board,
+    which on a phone left the first name a screen and a half below the top —
+    far enough that people who came to see who was winning concluded the site
+    was broken. The board is what the page is for, so it comes first.
+    """
+    html = (site_mid.path / "index.html").read_text()
+    main = html[html.index("<main") :]
+
+    title = main.index('<h1 class="page-title"')
+    board = main.index('class="board"')
+    tiles = main.index('class="state"')
+    games = main.index('id="games"')
+    assert title < board < tiles < games
+    # Nothing else sits between the title and the first row but the strip
+    # that becomes the viewer's own line.
+    between = main[title:board]
+    assert "<section" not in between
+    assert "week-results" not in between
+
+
+def test_every_section_of_the_standings_page_is_a_link_target(site_mid):
+    """`/#games`, `/#pot`: a link in a text lands on the thing, not the page.
+
+    And every row is `entry-<slug>`, in board order, so `/#entry-aunt-carol`
+    lands on one line. Each id appears exactly once — a second copy would make
+    the browser land on whichever it found first.
+    """
+    html = (site_mid.path / "index.html").read_text()
+
+    for anchor in ("standings", "pot", "games", "highlights"):
+        assert html.count(f'id="{anchor}"') == 1, anchor
+
+    rows = re.findall(r'<div id="entry-([\w-]+)"\s+class="row', html)
+    assert rows == re.findall(r'class="row-link" href="/entrant/([a-z-]+)/"', html)
+
+
+def test_ids_are_unique_on_every_page(site_solo):
+    """Anything with an id is somewhere a link can land, and it must land once.
+
+    Inline SVG is left out: a chart's hatch pattern carries the same id in
+    every bar on purpose — it is a paint reference, resolved within the
+    drawing, not a place a link lands.
+    """
+    for page, text in _real_pages(site_solo.written):
+        markup = re.sub(r"<svg\b.*?</svg>", "", text, flags=re.S)
+        ids = re.findall(r'\sid="([^"]+)"', markup)
+        duplicated = sorted({i for i in ids if ids.count(i) > 1})
+        assert not duplicated, (page, duplicated)
+
+
+def test_the_sections_carry_copy_link_buttons(site_mid):
+    """One beside the title, one on the week's games.
+
+    The address plus a hash is already the link; the button exists because
+    "add #games to the URL" is not an instruction anybody follows.
+    """
+    html = (site_mid.path / "index.html").read_text()
+
+    assert html.count('data-copy-link="#standings"') == 1
+    assert html.count('data-copy-link="#games"') == 1
+    # Each names a section that exists on the same page.
+    for target in re.findall(r'data-copy-link="#([\w-]+)"', html):
+        assert f'id="{target}"' in html, target
+
+
+def test_the_secondary_settings_are_folded_behind_one_button(site_solo):
+    """On a phone, the time zone and the refresh rate fold away; "who are you?"
+    does not, because finding yourself is the one setting about the standings.
+
+    The fold is only markup here — the stylesheet hides it on narrow screens
+    once `data-js` says there is a client to open it, and dissolves it into
+    the bar everywhere else. The board must come after it either way.
+    """
+    html = (site_solo.path / "index.html").read_text()
+
+    fold = re.search(
+        r'<div class="viewer-more" id="viewer-more" data-viewer-more>(.*?)</div>', html, re.S
+    ).group(1)
+    assert "data-tz-select" in fold
+    assert "data-live-fast-refresh" in fold
+    assert "data-me-select" not in fold
+    assert html.index("data-me-select") < html.index("data-viewer-more-toggle")
+    assert 'aria-controls="viewer-more"' in html
+    assert html.index("data-viewer-more") < html.index("<main")

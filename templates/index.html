@@ -20,37 +20,26 @@
 
 {% block content %}
 
-{# Three numbers, not five. The pool's pulse at a glance: where the season is,
-   what's at stake, and who's on top. Anything finer lives below or behind the
-   Details toggle. #}
-<section class="state" aria-label="State of the pool">
-  <div class="state-cell">
-    <p class="state-label">Where we are</p>
-    <p class="state-value">{{ state.phase }}</p>
-    {% if state.progress and state.progress.started %}<p class="state-note">{{ state.progress.played }} of {{ state.progress.total }} games final</p>{% endif %}
-  </div>
-  <div class="state-cell">
-    <p class="state-label">In the pot{{ info('pot') }}</p>
-    <p class="state-value">${{ '%.0f'|format(state.pot) }}<span class="unit"> · {{ state.entrants }} in</span></p>
-  </div>
-  <div class="state-cell">
-    <p class="state-label">Leader</p>
-    {# Bare anchor, no class: `a { color: inherit }` means the name keeps the
-       weight and colour the tile gives it and simply becomes reachable. #}
-    <p class="state-value sm">
-      {%- if state.all_tied %}All entries tied
-      {% elif state.leader %}{{ entrant_link(state.leader.slug, state.leader.name, cls='') }}
-      {% elif state.leaders %}{{ state.leaders|length }} tied for the lead{% else %}—{% endif -%}
-    </p>
-    {% if state.leaders %}<p class="state-note">{{ state.leaders[0].points|points }} points</p>{% endif %}
-  </div>
-</section>
+{# The board is the page. It used to sit under the pulse tiles and the week's
+   results card, which on a phone put the first name a full screen and a half
+   below the top — far enough that people who came for "who is winning"
+   concluded the site was broken and texted the commissioner. Now the title
+   and the first row are the first things under the chrome, and everything
+   that qualifies them (the pot, the week's games, the model) follows.
 
+   Every section carries a stable id so a link can land on it directly —
+   `/#games`, `/#pot` — and each row carries `entry-<slug>` for the same
+   reason. Both are listed in the README under "Linking to a section". #}
+<section class="standings" id="standings" aria-labelledby="standings-title">
 <div class="page-head">
-  <h1 class="page-title">Standings</h1>
-  <button class="detail-toggle" type="button" data-detail-toggle aria-pressed="false">
-    Details
-  </button>
+  <h1 class="page-title" id="standings-title">Standings</h1>
+  <div class="page-tools">
+    <button class="detail-toggle" type="button" data-detail-toggle aria-pressed="false">
+      Details
+    </button>
+    <button class="copy-link" type="button" data-copy-link="#standings"
+            title="Copy a link that opens this page on the standings">Copy link</button>
+  </div>
   <p class="page-sub">
     {% if state.progress and state.progress.started %}
       {{ state.progress.label }} {{ state.progress.status }}. Standings include completed games only.
@@ -69,47 +58,10 @@
   </div>
 </div>
 
-{% if state.progress and state.progress.started %}
-<section class="week-snapshot" aria-label="Results included in these standings">
-  <div class="section-head">
-    <h2 class="section-title">{{ state.progress.label }} {{ state.progress.status }}</h2>
-    <a href="{{ ('/schedule/#week-' ~ state.progress.number)|url }}">Full schedule ↗</a>
-  </div>
-  <p><strong>{{ state.progress.played }} of {{ state.progress.total }} games final</strong>{% if state.progress.remaining %} · {{ state.progress.remaining }} awaiting results{% endif %}.</p>
-  {% if state.leaders and not state.all_tied %}
-  <p>{% if state.leaders|length > 1 %}Tied for the lead{% else %}Leading{% endif %} at {{ state.leaders[0].points|points }} points:
-    {% for leader in state.leaders %}{{ entrant_link(leader.slug, leader.name, cls='') }}{{ ', ' if not loop.last else '.' }}{% endfor %}
-  </p>
-  {% endif %}
-  {% if state.progress.finals %}
-  <p class="week-results-label">Latest finals included</p>
-  <ul class="week-results">
-    {% for game in state.progress.finals %}
-    <li>
-      <span class="week-result-status">Final{% if game.source == 'ESPN' %} · ESPN{% endif %}</span>
-      <div>{{ team_chip(game.away, 'scored' if game.away_won else 'dim') }}<strong>{{ game.away_score }}</strong></div>
-      <div>{{ team_chip(game.home, 'scored' if game.home_won else 'dim') }}<strong>{{ game.home_score }}</strong></div>
-    </li>
-    {% endfor %}
-  </ul>
-  {% endif %}
-  <p class="week-snapshot-note">Every rebuild counts new confirmed finals{% if state.progress.remaining %}; the remaining games can change the standings{% endif %}.
-    <a href="{{ '/gameday/'|url }}#game-center">Follow scores between rebuilds ↗</a></p>
-</section>
-{% endif %}
-
 {# Filled client-side with the viewer's own row once "who are you?" is set.
    Server-rendered pages can't know the viewer, and the strip must never build
    an entrant URL of its own — it borrows the one on that row's name. #}
 <div class="you-strip" data-you hidden></div>
-
-{# Before a single kickoff every actual total is 0.00, so the model is the only
-   thing worth reading first: lead with it, then the picks. In season the board
-   comes first — what has happened beats what might. #}
-{% if (not state.progress or not state.progress.started) and forecast %}
-  {% include '_forecast_summary.html' %}
-  <h2 class="section-title">The field</h2>
-{% endif %}
 
 {% if not rows %}
   <p class="empty">No entries yet. Add people to <code>seasons/{{ season.year }}/picks.yaml</code>.</p>
@@ -129,10 +81,16 @@
      opens the entry, tapping a chip opens that team, and a phone keeps the
      full-width target it has always had.
 
+     The id makes the row a destination: `/#entry-<slug>` scrolls to it and
+     `:target` lights it up, so one link in a text lands somebody on their own
+     line. The live board moves rows rather than rebuilding them, so the id
+     survives a reorder.
+
      view-transition-name pairs this row with the hero on the entrant page, so
      clicking morphs the name and score into place instead of cross-fading the
      whole document. The names must be unique per document; a slug is. #}
-  <div class="row {% if r.rank == 1 and r.banked > 0 and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
+  <div id="entry-{{ r.slug }}"
+     class="row {% if r.rank == 1 and r.banked > 0 and not r.eliminated %}is-leader{% endif %} {% if r.eliminated %}is-eliminated{% endif %}"
      style="--i: {{ r.index }}"
      data-slug="{{ r.slug }}">
 
@@ -196,13 +154,81 @@
 </script>
 {% endif %}
 {% endif %}
+</section>
 
-{% if state.progress and state.progress.started and forecast %}
+{# Three numbers, not five. The pool's pulse at a glance: where the season is,
+   what's at stake, and who's on top. It sits under the board now rather than
+   over it — the board already says who is on top, and on a phone three tiles
+   above it were three tiles between the reader and the first name. #}
+<section class="state" id="pot" aria-label="State of the pool">
+  <div class="state-cell">
+    <p class="state-label">Where we are</p>
+    <p class="state-value">{{ state.phase }}</p>
+    {% if state.progress and state.progress.started %}<p class="state-note">{{ state.progress.played }} of {{ state.progress.total }} games final</p>{% endif %}
+  </div>
+  <div class="state-cell">
+    <p class="state-label">In the pot{{ info('pot') }}</p>
+    <p class="state-value">${{ '%.0f'|format(state.pot) }}<span class="unit"> · {{ state.entrants }} in</span></p>
+  </div>
+  <div class="state-cell">
+    <p class="state-label">Leader</p>
+    {# Bare anchor, no class: `a { color: inherit }` means the name keeps the
+       weight and colour the tile gives it and simply becomes reachable. #}
+    <p class="state-value sm">
+      {%- if state.all_tied %}All entries tied
+      {% elif state.leader %}{{ entrant_link(state.leader.slug, state.leader.name, cls='') }}
+      {% elif state.leaders %}{{ state.leaders|length }} tied for the lead{% else %}—{% endif -%}
+    </p>
+    {% if state.leaders %}<p class="state-note">{{ state.leaders[0].points|points }} points</p>{% endif %}
+  </div>
+</section>
+
+{# The games the board is built from: this week's finals, and how many are
+   still to come. Below the board on purpose — it explains the numbers, and an
+   explanation goes after the thing it explains. #}
+{% if state.progress and state.progress.started %}
+<section class="week-snapshot" id="games" aria-labelledby="games-title">
+  <div class="section-head">
+    <h2 class="section-title" id="games-title">{{ state.progress.label }} games</h2>
+    <a href="{{ ('/schedule/#week-' ~ state.progress.number)|url }}">Full schedule ↗</a>
+    <button class="copy-link" type="button" data-copy-link="#games"
+            title="Copy a link that opens this page on this week's games">Copy link</button>
+  </div>
+  <p><strong>{{ state.progress.played }} of {{ state.progress.total }} games final</strong>{% if state.progress.remaining %} · {{ state.progress.remaining }} awaiting results{% endif %}.</p>
+  {% if state.leaders and not state.all_tied %}
+  <p>{% if state.leaders|length > 1 %}Tied for the lead{% else %}Leading{% endif %} at {{ state.leaders[0].points|points }} points:
+    {% for leader in state.leaders %}{{ entrant_link(leader.slug, leader.name, cls='') }}{{ ', ' if not loop.last else '.' }}{% endfor %}
+  </p>
+  {% endif %}
+  {% if state.progress.finals %}
+  <p class="week-results-label">Latest finals included</p>
+  <ul class="week-results">
+    {% for game in state.progress.finals %}
+    <li>
+      <span class="week-result-status">Final{% if game.source == 'ESPN' %} · ESPN{% endif %}</span>
+      <div>{{ team_chip(game.away, 'scored' if game.away_won else 'dim') }}<strong>{{ game.away_score }}</strong></div>
+      <div>{{ team_chip(game.home, 'scored' if game.home_won else 'dim') }}<strong>{{ game.home_score }}</strong></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="week-snapshot-note">Every rebuild counts new confirmed finals{% if state.progress.remaining %}; the remaining games can change the standings{% endif %}.
+    <a href="{{ '/gameday/'|url }}#game-center">Follow scores between rebuilds ↗</a></p>
+</section>
+{% endif %}
+
+{# The model's view comes after the facts, before the first kickoff included:
+   one order all season, so the page never rearranges itself on someone who
+   learned where things are. #}
+{% if forecast %}
+<section class="forecast-summary" id="forecast" aria-label="Forecast">
   {% include '_forecast_summary.html' %}
+</section>
 {% endif %}
 
 {% if state.week_leaders %}
-<h2 class="section-title">Week {{ state.scored_week }} highlights{% if state.progress.remaining %} so far{% endif %}</h2>
+<section id="highlights" aria-labelledby="highlights-title">
+<h2 class="section-title" id="highlights-title">Week {{ state.scored_week }} highlights{% if state.progress.remaining %} so far{% endif %}</h2>
 <div class="stat-grid">
   {% for m in state.week_leaders %}
   <div class="stat">
@@ -212,6 +238,7 @@
   </div>
   {% endfor %}
 </div>
+</section>
 {% endif %}
 
 {% endblock %}
