@@ -890,10 +890,15 @@ create it:
   role, not to the token, so a collaborator's PAT with contents:write is still
   refused by the ruleset.
 * **Set the expiry past the end of the season.** The default is 30 days, which
-  would lapse in October and take the keepalive down with it, silently — every
-  run still reports success. `daily.yml` carries a PAT-free backstop for
-  exactly that day, but the backstop only keeps the site building; restoring
-  the snapshot needs the secret renewed.
+  lapses in October. It did, in October 2026, and it took more than the
+  keepalive down with it: the token was also being handed to the checkout
+  step, so every scheduled run died at the fetch — forty seconds each, two
+  weeks running — and the live site sat on week 3 while week 6 was being
+  played. Checkout now uses the default token and the PAT is supplied only
+  at push time, so a lapsed token costs exactly what it should: the snapshot
+  stops, every run logs `Data snapshot not committed`, and the site keeps
+  deploying from freshly fetched results. That warning in the Actions log is
+  the signal to renew the secret.
 
 Verify it without waiting for the 1st or the 15th:
 

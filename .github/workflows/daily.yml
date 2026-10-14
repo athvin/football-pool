@@ -151,11 +151,22 @@ jobs:
       # you in a circle: told to add a secret you have already added.
       HAS_PUSH_TOKEN: ${{ secrets.DATA_PUSH_TOKEN != '' }}
     steps:
+      # Never with DATA_PUSH_TOKEN. The PAT used to be handed to this step so
+      # the two push steps below could ride on its credentials, and the day it
+      # expired every run died right here, at the fetch, before a test ran or a
+      # page was built: two weeks of scheduled runs failing in forty seconds
+      # each while the live scoreboard sat on week 3 with week 6 being played.
+      # The PAT's one job is the best-effort push at the end, and those steps
+      # now supply it themselves, so a lapsed token costs exactly what their
+      # warnings promise — a stale snapshot — and the site still deploys.
+      #
+      # `persist-credentials: false` is what makes that clean: with the default
+      # token still wired into the git config, a push by token URL sends two
+      # sets of credentials and the wrong one can win. Nothing else in the job
+      # pushes or fetches from GitHub through git.
       - uses: actions/checkout@v7
         with:
-          # DATA_PUSH_TOKEN is optional. Without it the data commit below is
-          # simply skipped — see that step for why you may want to add it.
-          token: ${{ secrets.DATA_PUSH_TOKEN || github.token }}
+          persist-credentials: false
 
       - uses: astral-sh/setup-uv@v10.0.1
         with:
@@ -245,6 +256,12 @@ jobs:
       # every run — only the committed snapshot pauses, and nothing about the
       # published scoreboard depends on it.
       - name: Commit the day's data
+        env:
+          # Supplied here and in the keepalive step, nowhere else — see the
+          # checkout step. Actions masks both values in the log, so a push that
+          # fails cannot print either; the URL below is never echoed anyway.
+          DATA_PUSH_TOKEN: ${{ secrets.DATA_PUSH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           git config user.name 'pool-bot'
           git config user.email 'pool-bot@users.noreply.github.com'
@@ -258,7 +275,8 @@ jobs:
           # DATA_PUSH_TOKEN exists. Deliberately not a skip-ci marker in the
           # message — see the trigger for why.
           git commit -m "data: refresh $(date -u +%Y-%m-%d)"
-          if git push; then
+          token="${DATA_PUSH_TOKEN:-$GITHUB_TOKEN}"
+          if git push "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/main; then
             echo 'data snapshot committed'
           elif [ "$HAS_PUSH_TOKEN" = 'true' ]; then
             echo "::warning title=Data snapshot not committed::DATA_PUSH_TOKEN \
@@ -299,13 +317,17 @@ jobs:
       # 15th, and a token that silently does not work costs the offseason.
       - name: Keep the schedule alive
         if: ${{ !cancelled() && (github.event.schedule == '37 12 1,15 * *' || inputs.keepalive) }}
+        env:
+          DATA_PUSH_TOKEN: ${{ secrets.DATA_PUSH_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           date -u +'%Y-%m-%dT%H:%M:%SZ' > data/last-keepalive
           git config user.name 'pool-bot'
           git config user.email 'pool-bot@users.noreply.github.com'
           git add data/last-keepalive
           git commit -m "chore: keepalive $(date -u +%Y-%m-%d)"
-          if git push; then
+          token="${DATA_PUSH_TOKEN:-$GITHUB_TOKEN}"
+          if git push "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.git" HEAD:refs/heads/main; then
             echo 'keepalive committed — the 60-day inactivity timer is reset'
           elif [ "$HAS_PUSH_TOKEN" = 'true' ]; then
             echo "::warning title=Schedule keepalive failed::DATA_PUSH_TOKEN is \
