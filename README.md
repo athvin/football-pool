@@ -440,7 +440,14 @@ off, and nothing else changes.
 ## The pages
 
 - **Standings** — the leaderboard, with the banked/guaranteed/ceiling bar, plus
-  the projection table. During games the browser recomputes it live from the
+  the projection table. The board is the first thing on the page: the title,
+  then the rows, and only then the pulse tiles (where the season is, the pot,
+  the leader), the week's games, the model's top three and the week's best
+  scores. It used to be the other way up, and on a phone that put the first
+  name a screen and a half below the top — under the settings bar, three
+  tiles and the results card — which is exactly far enough for someone who
+  opened the site to see who was winning to decide it was broken and text
+  the commissioner. During games the browser recomputes it live from the
   same `data/live.json` baseline and ESPN feed the Game Center uses: unbanked
   finals and current leaders move the totals, ranks, and row order in place,
   each live row wearing a green `+x.xx live` gain, with a status line naming
@@ -486,6 +493,52 @@ off, and nothing else changes.
   off the schedule data, not typed — with the pool's Venmo link and a QR code
   (`venmo:` in the pool's file, validated at load because real money follows
   that URL).
+
+### Linking straight to a section
+
+Every section of the standings page is a real address, so a link in a text
+can land somebody on the exact thing rather than at the top of a page they
+then have to scroll:
+
+| Link | Lands on |
+|---|---|
+| `/#standings` | the board |
+| `/#entry-aunt-carol` | one row, lit up — the slug is the one in that entrant's own page URL |
+| `/#pot` | where the season is, the pot, and the leader |
+| `/#games` | this week's games and the finals already counted |
+| `/#forecast` | the model's top three |
+| `/#highlights` | the week's best scores |
+| `/schedule/#week-7`, `/schedule/#bracket` | one week of the schedule, or the playoffs |
+| `/gameday/#game-center` | live scores |
+
+Add `?me=<slug>` to any page and it also answers *who are you?* for whoever
+opens it, on every page from then on. `/?me=aunt-carol#entry-aunt-carol` is
+the link to send Aunt Carol: her row lit, her own line pinned above the board,
+her name picked in the bar. Identity used to be read off the URL on Gameday
+alone; now every page reads it. For the friends pool, prefix each of these
+with `/friends`.
+
+The **Copy link** buttons beside the standings title and the games heading put
+the right address on the clipboard, with any `?me=` already in the address bar
+kept, so nobody has to type a hash. A phone with no clipboard (or a page not
+served over https) gets the hash in its address bar instead, and the button
+says so.
+
+A linked section lands just below the pinned chrome rather than under it. The
+scroll margin is `--sticky-chrome`, the measured height of whatever is
+actually sticky: both bars on a desktop, the masthead alone on a phone, nothing
+in a short landscape viewport — the same breakpoints that unpin each bar reset
+it. The schedule's weeks keep their own rule, which is deliberately not to
+scroll at all.
+
+**On a phone the viewer bar folds.** The two stamps and *who are you?* stay
+in view; the refresh rate and the time zone sit behind one *Settings* button.
+A settings panel taller than the first screen was what people saw instead of
+the standings, and a settings panel is not what anyone opened the site for.
+The fold exists only where there is a client to open it again — the
+stylesheet hangs it off `data-js` — so with scripting off every control is
+simply there, and on a wide screen the wrapper dissolves into the bar's grid
+and the button does not exist.
 
 Every one of these exists once **per pool**, under that pool's prefix — team
 pages included. The football on a team page is identical in both pools, but the
